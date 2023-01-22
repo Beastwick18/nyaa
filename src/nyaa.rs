@@ -58,7 +58,7 @@ impl Categories {
 }
 
 pub async fn get_feed(query: String) -> Result<Channel, Box<dyn Error>> {
-    let encoded_url = format!("https://nyaa.si/?page=rss&f=0&c=1_2&q={}", encode(&query));
+    let encoded_url = format!("https://nyaa.si/?page=rss&f=0&c=1_2&q={}&m", encode(&query));
     debug!("{}", encoded_url);
     let content = reqwest::get(encoded_url)
         .await?
