@@ -90,9 +90,8 @@ impl Default for App {
     fn default() -> App {
         App {
             input: String::new(),
-            input_mode: InputMode::Normal,
+            input_mode: InputMode::Editing,
             items: StatefulList::with_items(Vec::new(), Vec::new())
-            
         }
     }
 }
@@ -204,6 +203,8 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
         })
         .collect();
     
+    /// TODO: Change to table, with name, seed, leech, downloads in seperate columns
+    /// maybe abbreviate numbers "15029 -> 15k"
     let items = List::new(items)
         .block(Block::default().borders(Borders::ALL).title("List"))
         .highlight_style(
