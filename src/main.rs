@@ -1,19 +1,20 @@
-use std::env;
 use std::process::{Command,Stdio};
-use log::{warn, info};
+use log::warn;
+use throbber_widgets_tui::ThrobberState;
+use std::time::{Duration, Instant};
 
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use std::{error::Error, io};
+use std::io;
 use tui::{
     backend::{Backend, CrosstermBackend},
-    layout::{Constraint, Direction, Layout},
+    layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Span, Spans, Text},
-    widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
+    widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragraph},
     Frame, Terminal,
 };
 use unicode_width::UnicodeWidthStr;
@@ -25,22 +26,24 @@ mod nyaa;
 struct StatefulList<T> {
     state: ListState,
     items: Vec<T>,
-    nyaa_items: Vec<nyaa::Item>
+    // nyaa_items: Vec<nyaa::Item>
 }
 
 impl<T> StatefulList<T> {
-    fn with_items(items: Vec<T>, nyaa_items: Vec<nyaa::Item>) -> StatefulList<T> {
+    fn with_items(items: Vec<T>) -> StatefulList<T> {
         StatefulList {
             state: ListState::default(),
-            items,
-            nyaa_items
+            items
         }
     }
 
     fn next(&mut self, amt: usize) {
+        if self.items.len() == 0 {
+            return;
+        }
         let i = match self.state.selected() {
             Some(i) => {
-                if i >= self.items.len() - amt {
+                if i + amt >= self.items.len() {
                     self.items.len() - 1
                 } else {
                     i + amt
@@ -52,9 +55,12 @@ impl<T> StatefulList<T> {
     }
 
     fn previous(&mut self, amt: usize) {
+        if self.items.len() == 0 {
+            return;
+        }
         let i = match self.state.selected() {
             Some(i) => {
-                if i <= amt - 1 {
+                if i+1 <= amt  {
                     0
                 } else {
                     i - amt
@@ -64,10 +70,14 @@ impl<T> StatefulList<T> {
         };
         self.state.select(Some(i));
     }
-
-    fn unselect(&mut self) {
-        self.state.select(None);
+    
+    fn select(&mut self, idx: usize) {
+        self.state.select(Some(idx));
     }
+
+    // fn unselect(&mut self) {
+    //     self.state.select(None);
+    // }
 }
 
 struct App {
@@ -78,12 +88,14 @@ struct App {
     input_mode: InputMode,
     /// History of recorded messages
     // messages: Vec<String>,
-    items: StatefulList<String>
+    items: StatefulList<nyaa::Item>,
+    throbber_state: throbber_widgets_tui::ThrobberState
 }
 
 enum InputMode {
     Normal,
     Editing,
+    Loading
 }
 
 impl Default for App {
@@ -91,8 +103,15 @@ impl Default for App {
         App {
             input: String::new(),
             input_mode: InputMode::Editing,
-            items: StatefulList::with_items(Vec::new(), Vec::new())
+            items: StatefulList::with_items(Vec::new()),
+            throbber_state: ThrobberState::default()
         }
+    }
+}
+
+impl App {
+    fn on_tick(&mut self) {
+        self.throbber_state.calc_next();
     }
 }
 
@@ -121,17 +140,12 @@ async fn get_feed_list(query: &String) -> Vec<nyaa::Item> {
     }
     return items;
     
-    // let mut feed_list: Vec<String> = Vec::new();
-    // for item in &items {
-    //     feed_list.push(format!(" {:<4} |  {:<4} |  {:<4} | {}", item.downloads, item.seeders, item.leechers, item.title));
-    // }
-    // return feed_list;
 }
 
 fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .margin(0)
+        .margin(1)
         .constraints(
             [
                 Constraint::Length(1),
@@ -143,7 +157,7 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
         .split(f.size());
 
     let (msg, style) = match app.input_mode {
-        InputMode::Normal => (
+        InputMode::Normal | InputMode::Loading => (
             vec![
                 Span::raw("Press "),
                 Span::styled("q", Style::default().add_modifier(Modifier::BOLD)),
@@ -151,7 +165,8 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
                 Span::styled("/", Style::default().add_modifier(Modifier::BOLD)),
                 Span::raw(" to start editing."),
             ],
-            Style::default().add_modifier(Modifier::RAPID_BLINK),
+            Style::default(),
+            // Style::default().add_modifier(Modifier::RAPID_BLINK),
         ),
         InputMode::Editing => (
             vec![
@@ -171,13 +186,13 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
 
     let input = Paragraph::new(app.input.as_ref())
         .style(match app.input_mode {
-            InputMode::Normal => Style::default(),
+            InputMode::Normal | InputMode::Loading=> Style::default(),
             InputMode::Editing => Style::default().fg(Color::Yellow),
         })
         .block(Block::default().borders(Borders::ALL).title("Input"));
     f.render_widget(input, chunks[1]);
     match app.input_mode {
-        InputMode::Normal =>
+        InputMode::Normal | InputMode::Loading =>
             // Hide the cursor. `Frame` does this by default, so we don't need to do anything here
             {}
 
@@ -196,15 +211,15 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
         .items
         .items
         .iter()
-        .enumerate()
-        .map(|(i, m)| {
-            let content = vec![Spans::from(Span::raw(m))];
+        .map(|item| {
+            let title = format!(" {:<4} |  {:<4} |  {:<4} | {}", item.downloads, item.seeders, item.leechers, item.title);
+            let content = vec![Spans::from(Span::raw(title))];
             ListItem::new(content)
         })
         .collect();
     
-    /// TODO: Change to table, with name, seed, leech, downloads in seperate columns
-    /// maybe abbreviate numbers "15029 -> 15k"
+    // TODO: Change to table, with name, seed, leech, downloads in seperate columns
+    // maybe abbreviate numbers "15029 -> 15k"
     let items = List::new(items)
         .block(Block::default().borders(Borders::ALL).title("List"))
         .highlight_style(
@@ -216,39 +231,65 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
     
     
     f.render_stateful_widget(items, chunks[2], &mut app.items.state);
+    
+    // let area = centered_rect(60, 20, f.size());
+    // let area2 = centered_rect(58, 18, f.size());
+    
+    // let full = throbber_widgets_tui::Throbber::default()
+    //     .label("Loading...")
+    //     .style(tui::style::Style::default().fg(tui::style::Color::Cyan))
+    //     .throbber_style(tui::style::Style::default().fg(tui::style::Color::Red).add_modifier(tui::style::Modifier::BOLD))
+    //     .throbber_set(throbber_widgets_tui::CLOCK)
+    //     .use_type(throbber_widgets_tui::WhichUse::Spin);
+    
+    match app.input_mode {
+        InputMode::Loading => {
+            // let block = Block::default().title("Popup").borders(Borders::ALL);
+            // let loading = Block::default().title("Loading...");
+            // f.render_widget(Clear, area); //this clears out the background
+            // f.render_widget(block, area);
+            // f.render_widget(loading, area2);
+            app.input_mode = InputMode::Normal;
+        }
+        _ => {}
+    }
+    // f.render_stateful_widget(full, area2, &mut app.throbber_state);
+    // 
 }
 
-async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<()> {
+async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App, tick_rate: Duration) -> io::Result<()> {
     loop {
         terminal.draw(|f| ui(f, &mut app))?;
-
+        
+        
+        // if last_tick.elapsed() >= tick_rate {
+        //     app.on_tick();
+        //     last_tick = Instant::now();
+        // }
+        
         if let Event::Key(key) = event::read()? {
             match app.input_mode {
-                InputMode::Normal => match key.code {
+                InputMode::Normal | InputMode::Loading => match key.code {
                     KeyCode::Char('h') => {},
                     KeyCode::Char('j') => app.items.next(1),
                     KeyCode::Char('k') => app.items.previous(1),
                     KeyCode::Char('J') => app.items.next(4),
                     KeyCode::Char('K') => app.items.previous(4),
                     KeyCode::Char('g') => {
-                        app.items.state.select(Some(0));
+                        app.items.select(0);
                     }
                     KeyCode::Char('G') => {
-                        app.items.state.select(Some(app.items.items.len() - 1));
+                        app.items.select(app.items.items.len() - 1);
                     }
                     KeyCode::Char('l') | KeyCode::Enter => {
-                        let i = match app.items.state.selected() {
-                            Some(i) => i,
-                            None => 0
-                        };
                         if let Some(i) = app.items.state.selected() {
-                            if let Some(item) = app.items.nyaa_items.get(i) {
+                            if let Some(item) = app.items.items.get(i) {
                                 Command::new("webtorrent-desktop")
                                     .args([item.torrent_link.clone()])
                                     .stdin(Stdio::null())
                                     .stderr(Stdio::null())
                                     .spawn()
-                                    .expect("Failed");
+                                    .expect_err("Ruh roh");
                             }
                         }
                     }
@@ -268,13 +309,13 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
                         
                         let feed = get_feed_list(&app.input).await;
                         
-                        let mut feed_list: Vec<String> = Vec::new();
-                        for item in &feed {
-                            feed_list.push(format!(" {:<4} |  {:<4} |  {:<4} | {}", item.downloads, item.seeders, item.leechers, item.title));
-                        }
-                        app.items.items.extend(feed_list);
-                        app.items.nyaa_items = feed;
-                        app.items.state.select(Some(0));
+                        // let mut feed_list: Vec<String> = Vec::new();
+                        // for item in &feed {
+                        //     feed_list.push(format!(" {:<4} |  {:<4} |  {:<4} | {}", item.downloads, item.seeders, item.leechers, item.title));
+                        // }
+                        // app.items.items.extend(feed_list);
+                        app.items.items = feed;
+                        app.items.select(0);
                     }
                     KeyCode::Char(c) => {
                         app.input.push(c);
@@ -292,16 +333,43 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
     }
 }
 
+fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
+    let popup_layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints(
+            [
+                Constraint::Percentage((100 - percent_y) / 2),
+                Constraint::Percentage(percent_y),
+                Constraint::Percentage((100 - percent_y) / 2),
+            ]
+            .as_ref(),
+        )
+        .split(r);
+
+    Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints(
+            [
+                Constraint::Percentage((100 - percent_x) / 2),
+                Constraint::Percentage(percent_x),
+                Constraint::Percentage((100 - percent_x) / 2),
+            ]
+            .as_ref(),
+        )
+        .split(popup_layout[1])[1]
+}
+
 #[tokio::main()]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    execute!(stdout, EnterAlternateScreen)?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
     let app = App::default();
-    let _ = run_app(&mut terminal, app).await;
+    let tick_rate = Duration::from_millis(250);
+    let _ = run_app(&mut terminal, app, tick_rate).await;
 
     // restore terminal
     disable_raw_mode()?;
