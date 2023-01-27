@@ -1,7 +1,7 @@
 use config::Config;
+use log::error;
 use std::collections::HashMap;
 use std::path::PathBuf;
-use log::error;
 
 fn get_config_path() -> Option<PathBuf> {
     if let Some(mut x) = dirs::config_dir() {
@@ -17,12 +17,23 @@ pub fn create_config() {
         let parent = path.parent().unwrap();
         match std::fs::create_dir_all(parent) {
             Ok(_) => (),
-            Err(_) => error!("Failed to create config folder")
+            Err(_) => error!("Failed to create config folder"),
         }
         // match std::fs::File::create(path)
-        let _ = std::fs::OpenOptions::new().write(true).create(true).open(path.as_path().to_str().unwrap());
-        let settings = Config::builder().add_source(config::File::from(path.as_path())).build().unwrap();
-        println!("{:?}", settings.try_deserialize::<HashMap<String, HashMap<String, String>>>().unwrap())
+        let _ = std::fs::OpenOptions::new()
+            .write(true)
+            .create(true)
+            .open(path.as_path().to_str().unwrap());
+        let settings = Config::builder()
+            .add_source(config::File::from(path.as_path()))
+            .build()
+            .unwrap();
+        println!(
+            "{:?}",
+            settings
+                .try_deserialize::<HashMap<String, HashMap<String, String>>>()
+                .unwrap()
+        )
     } else {
         error!("Failed to get config dir");
     }

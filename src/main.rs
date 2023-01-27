@@ -1,4 +1,4 @@
-use std::process::{Command,Stdio};
+use std::process::{Command, Stdio};
 
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
@@ -11,20 +11,33 @@ use tui::{
     Terminal,
 };
 
-use crate::app::{InputMode, App};
+use crate::app::{App, InputMode};
 
+mod app;
 mod logging;
 mod nyaa;
-mod app;
+mod ui;
+
+async fn search_nyaa(app: &mut App) {
+    app.input_mode = InputMode::Normal;
+    app.items.items.clear();
+
+    let feed = nyaa::get_feed_list(&app.input, &app.category, &app.filter).await;
+    // feed.sort_by(|a, b| b.downloads.cmp(&a.downloads));
+    app.items.items = feed;
+    app.items.select(0);
+}
 
 async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<()> {
+    app.categories.select(0);
+    app.filters.select(0);
     loop {
-        terminal.draw(|f| app::ui(f, &mut app))?;
-        
+        terminal.draw(|f| ui::ui(f, &mut app))?;
+
         if let Event::Key(key) = event::read()? {
             match app.input_mode {
                 InputMode::Normal => match key.code {
-                    KeyCode::Char('h') => {},
+                    KeyCode::Char('h') => {}
                     KeyCode::Char('j') | KeyCode::Down => app.items.next(1),
                     KeyCode::Char('k') | KeyCode::Up => app.items.previous(1),
                     KeyCode::Char('J') => app.items.next(4),
@@ -38,19 +51,24 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
                     KeyCode::Char('l') | KeyCode::Enter => {
                         if let Some(i) = app.items.state.selected() {
                             if let Some(item) = app.items.items.get(i) {
-                                let _ = Command::new("/mnt/c/Users/Brad/AppData/Local/WebTorrent/WebTorrent.exe")
-                                    .args([item.torrent_link.clone()])
-                                    .stdin(Stdio::null())
-                                    .stderr(Stdio::null())
-                                    .spawn();
+                                let _ = Command::new(
+                                    "/mnt/c/Users/Brad/AppData/Local/WebTorrent/WebTorrent.exe",
+                                )
+                                .args([item.torrent_link.clone()])
+                                .stdin(Stdio::null())
+                                .stderr(Stdio::null())
+                                .spawn();
                             }
                         }
                     }
                     KeyCode::Char('c') => {
-                        todo!("Categories")
+                        app.last_input_mode = app.input_mode.to_owned();
+                        app.input_mode = InputMode::SelectCategory;
+                        // app.categories.select(0);
                     }
                     KeyCode::Char('f') => {
-                        todo!("Filter")
+                        app.last_input_mode = app.input_mode.to_owned();
+                        app.input_mode = InputMode::SelectFilter;
                     }
                     KeyCode::Char('/') => {
                         app.input_mode = InputMode::Editing;
@@ -62,24 +80,59 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
                 },
                 InputMode::Editing => match key.code {
                     KeyCode::Enter => {
-                        app.input_mode = InputMode::Normal;
-                        app.items.items.clear();
-                        
-                        let feed = nyaa::get_feed_list(&app.input, &app.category, &app.filter).await;
-                        
-                        app.items.items = feed;
-                        app.items.select(0);
+                        search_nyaa(&mut app).await;
                     }
-                    KeyCode::Char(c) => { app.input.push(c); },
-                    KeyCode::Backspace => { app.input.pop(); },
-                    KeyCode::Esc => { app.input_mode = InputMode::Normal; }
+                    KeyCode::Char(c) => {
+                        app.input.push(c);
+                    }
+                    KeyCode::Backspace => {
+                        app.input.pop();
+                    }
+                    KeyCode::Esc => {
+                        app.input_mode = InputMode::Normal;
+                    }
+                    _ => {}
+                },
+                InputMode::SelectCategory => match key.code {
+                    KeyCode::Char('q') | KeyCode::Esc => {
+                        app.input_mode = app.last_input_mode.to_owned()
+                    }
+                    KeyCode::Char('/') => app.input_mode = InputMode::Editing,
+                    KeyCode::Char('j') | KeyCode::Down => app.categories.next(1),
+                    KeyCode::Char('k') | KeyCode::Up => app.categories.previous(1),
+                    KeyCode::Enter | KeyCode::Char('l') => {
+                        if let Some(i) = app.categories.state.selected() {
+                            if let Some(item) = app.categories.items.get(i) {
+                                app.category = item.to_owned().to_owned();
+                                app.input_mode = app.last_input_mode.to_owned();
+                                search_nyaa(&mut app).await;
+                            }
+                        }
+                    }
+                    _ => {}
+                },
+                InputMode::SelectFilter => match key.code {
+                    KeyCode::Char('q') | KeyCode::Esc => {
+                        app.input_mode = app.last_input_mode.to_owned()
+                    }
+                    KeyCode::Char('/') => app.input_mode = InputMode::Editing,
+                    KeyCode::Char('j') | KeyCode::Down => app.filters.next(1),
+                    KeyCode::Char('k') | KeyCode::Up => app.filters.previous(1),
+                    KeyCode::Enter | KeyCode::Char('l') => {
+                        if let Some(i) = app.filters.state.selected() {
+                            if let Some(item) = app.filters.items.get(i) {
+                                app.filter = item.to_owned().to_owned();
+                                app.input_mode = app.last_input_mode.to_owned();
+                                search_nyaa(&mut app).await;
+                            }
+                        }
+                    }
                     _ => {}
                 },
             }
         }
     }
 }
-
 
 #[tokio::main()]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
