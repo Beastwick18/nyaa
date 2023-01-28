@@ -10,8 +10,10 @@ use tui::{
     backend::{Backend, CrosstermBackend},
     Terminal,
 };
+use queues::IsQueue;
 
 use crate::app::{App, InputMode};
+use crate::nyaa::Sort;
 
 mod app;
 mod logging;
@@ -23,14 +25,33 @@ async fn search_nyaa(app: &mut App) {
     app.items.items.clear();
 
     let feed = nyaa::get_feed_list(&app.input, &app.category, &app.filter).await;
-    // feed.sort_by(|a, b| b.downloads.cmp(&a.downloads));
     app.items.items = feed;
     app.items.select(0);
+    sort_feed(app)
+}
+
+fn sort_feed(app: &mut App) {
+    if let Some(i) = app.sorts.state.selected() {
+        if let Some(item) = app.sorts.items.get(i) {
+            app.sort = item.to_owned().to_owned();
+            app.input_mode = app.last_input_mode.to_owned();
+            app.items.items.sort_by(|a, b| match app.sort {
+                Sort::Date => b.index.cmp(&a.index),
+                Sort::Downloads => b.downloads.cmp(&a.downloads),
+                Sort::Seeders => b.seeders.cmp(&a.seeders),
+                Sort::Leechers => b.leechers.cmp(&a.leechers),
+                Sort::Name => b.title.cmp(&a.title),
+                Sort::Category => (b.category as u32).cmp(&(a.category as u32))
+            });
+        }
+    }
 }
 
 async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<()> {
     app.categories.select(0);
     app.filters.select(0);
+    app.sorts.select(0);
+    app.errors.add(r#"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."#.to_owned());
     loop {
         terminal.draw(|f| ui::ui(f, &mut app))?;
 
@@ -64,11 +85,14 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
                     KeyCode::Char('c') => {
                         app.last_input_mode = app.input_mode.to_owned();
                         app.input_mode = InputMode::SelectCategory;
-                        // app.categories.select(0);
                     }
                     KeyCode::Char('f') => {
                         app.last_input_mode = app.input_mode.to_owned();
                         app.input_mode = InputMode::SelectFilter;
+                    }
+                    KeyCode::Char('s') => {
+                        app.last_input_mode = app.input_mode.to_owned();
+                        app.input_mode = InputMode::SelectSort;
                     }
                     KeyCode::Char('/') => {
                         app.input_mode = InputMode::Editing;
@@ -100,6 +124,10 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
                     KeyCode::Char('/') => app.input_mode = InputMode::Editing,
                     KeyCode::Char('j') | KeyCode::Down => app.categories.next(1),
                     KeyCode::Char('k') | KeyCode::Up => app.categories.previous(1),
+                    KeyCode::Char('J') => app.categories.next(4),
+                    KeyCode::Char('K') => app.categories.previous(4),
+                    KeyCode::Char('g') => app.categories.select(0),
+                    KeyCode::Char('G') => app.categories.select(app.categories.items.len() - 1),
                     KeyCode::Enter | KeyCode::Char('l') => {
                         if let Some(i) = app.categories.state.selected() {
                             if let Some(item) = app.categories.items.get(i) {
@@ -118,6 +146,10 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
                     KeyCode::Char('/') => app.input_mode = InputMode::Editing,
                     KeyCode::Char('j') | KeyCode::Down => app.filters.next(1),
                     KeyCode::Char('k') | KeyCode::Up => app.filters.previous(1),
+                    KeyCode::Char('J') => app.filters.next(4),
+                    KeyCode::Char('K') => app.filters.previous(4),
+                    KeyCode::Char('g') => app.filters.select(0),
+                    KeyCode::Char('G') => app.filters.select(app.filters.items.len() - 1),
                     KeyCode::Enter | KeyCode::Char('l') => {
                         if let Some(i) = app.filters.state.selected() {
                             if let Some(item) = app.filters.items.get(i) {
@@ -129,6 +161,32 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
                     }
                     _ => {}
                 },
+                InputMode::SelectSort => match key.code {
+                    KeyCode::Char('q') | KeyCode::Esc => {
+                        app.input_mode = app.last_input_mode.to_owned()
+                    }
+                    KeyCode::Char('/') => app.input_mode = InputMode::Editing,
+                    KeyCode::Char('j') | KeyCode::Down => app.sorts.next(1),
+                    KeyCode::Char('k') | KeyCode::Up => app.sorts.previous(1),
+                    KeyCode::Char('J') => app.sorts.next(4),
+                    KeyCode::Char('K') => app.sorts.previous(4),
+                    KeyCode::Char('g') => {
+                        app.sorts.select(0);
+                    }
+                    KeyCode::Char('G') => {
+                        app.sorts.select(app.sorts.items.len() - 1);
+                    }
+                    KeyCode::Enter | KeyCode::Char('l') => {
+                        sort_feed(&mut app);
+                    }
+                    _ => {}
+                }
+                InputMode::ShowError => match key.code {
+                    _ => {
+                        app.input_mode = app.last_input_mode.to_owned();
+                        let _ = app.errors.remove();
+                    }
+                }
             }
         }
     }
@@ -142,6 +200,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
+    
     let app = App::default();
     let _ = run_app(&mut terminal, app).await;
 

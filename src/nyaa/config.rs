@@ -7,7 +7,7 @@ fn get_config_path() -> Option<PathBuf> {
     if let Some(mut x) = dirs::config_dir() {
         x.push("nyaa");
         x.push("config.toml");
-        return Some(x.clone());
+        return Some(x.to_owned());
     }
     None
 }

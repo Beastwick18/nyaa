@@ -1,17 +1,18 @@
-use log::{Level, Metadata, Record};
+// use log::{Level, Metadata, Record};
+// use queues::IsQueue;
 
-pub struct SimpleLogger;
+// use crate::app;
 
-impl log::Log for SimpleLogger {
-    fn enabled(&self, metadata: &Metadata) -> bool {
-        metadata.level() <= Level::Info
-    }
+// impl log::Log for app::App {
+//     fn enabled(&self, metadata: &Metadata) -> bool {
+//         metadata.level() <= Level::Info
+//     }
 
-    fn log(&self, record: &Record) {
-        if self.enabled(record.metadata()) {
-            println!("{} - {}", record.level(), record.args());
-        }
-    }
+//     fn log(&self, record: &Record) {
+//         if self.enabled(record.metadata()) {
+//             self.errors.add(format!("{} - {}", record.level(), record.args()));
+//         }
+//     }
 
-    fn flush(&self) {}
-}
+//     fn flush(&self) {}
+// }

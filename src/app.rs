@@ -1,5 +1,6 @@
 use crate::nyaa;
 use tui::widgets::TableState;
+use queues::Queue;
 
 pub struct StatefulTable<T> {
     pub state: TableState,
@@ -69,18 +70,21 @@ pub struct App {
     // pub handle: Option<JoinHandle<Vec<nyaa::Item>>>,
     pub category: nyaa::Category,
     pub filter: nyaa::Filter,
+    pub sort: nyaa::Sort,
     pub categories: StatefulTable<nyaa::Category>,
     pub filters: StatefulTable<nyaa::Filter>,
-    // pub sorts: StatefulTable<nyaa::Sort>
+    pub sorts: StatefulTable<nyaa::Sort>,
+    pub errors: Queue<String>
 }
 
 #[derive(Clone, PartialEq)]
 pub enum InputMode {
     Normal,
     Editing,
+    ShowError,
     SelectCategory,
     SelectFilter,
-    // SelectSort,
+    SelectSort,
 }
 
 impl Default for App {
@@ -90,14 +94,19 @@ impl Default for App {
             input_mode: InputMode::Editing,
             last_input_mode: InputMode::Editing,
             items: StatefulTable::with_items(Vec::new()),
-            category: nyaa::Category::AllAnime,
-            filter: nyaa::Filter::NoFilter,
+            category: nyaa::Category::default(),
+            filter: nyaa::Filter::default(),
+            sort: nyaa::Sort::default(),
             categories: StatefulTable::with_items(
                 nyaa::Category::iter().map(|item| item.to_owned()).collect(),
             ),
             filters: StatefulTable::with_items(
                 nyaa::Filter::iter().map(|item| item.to_owned()).collect(),
             ),
+            sorts: StatefulTable::with_items(
+                nyaa::Sort::iter().map(|item| item.to_owned()).collect()
+            ),
+            errors: Queue::default()
         }
     }
 }

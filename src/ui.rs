@@ -5,10 +5,11 @@ use tui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Span, Spans, Text},
-    widgets::{Block, BorderType, Borders, Cell, Clear, Paragraph, Row, Table},
+    widgets::{Block, BorderType, Borders, Cell, Clear, Paragraph, Row, Table, Wrap},
     Frame,
 };
 use unicode_width::UnicodeWidthStr;
+use queues::IsQueue;
 
 pub fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
     let size = f.size();
@@ -44,7 +45,7 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
 
     let table = create_table(app, &hi_block, &def_block);
     f.render_stateful_widget(table, chunks[2], &mut app.items.state.to_owned());
-
+    
     match app.input_mode {
         InputMode::Editing => {
             f.set_cursor(chunks[1].x + app.input.width() as u16 + 1, chunks[1].y + 1)
@@ -77,7 +78,39 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
             f.render_widget(Clear, area);
             f.render_stateful_widget(popup, area, &mut app.filters.state);
         }
+        InputMode::SelectSort => {
+            let popup = create_popup(
+                app,
+                app.sorts.items.to_owned(),
+                app.sort as usize,
+                &hi_block,
+                &def_block,
+                InputMode::SelectFilter,
+                "Sort".to_owned(),
+            );
+            let area = centered_rect(30, 8, size);
+            f.render_widget(Clear, area);
+            f.render_stateful_widget(popup, area, &mut app.sorts.state);
+        }
         _ => {}
+    }
+
+    // Check for any errors
+    if !app.errors.size() != 0 {
+        if let Ok(err) = app.errors.peek() {
+            app.last_input_mode = app.input_mode.to_owned();
+            app.input_mode = InputMode::ShowError;
+            
+            let block = Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(Color::Red))
+                .border_type(BorderType::Rounded);
+            
+            let popup = create_text_popup(err + "\n\nPress any key to dismiss...", "Error".to_owned(), &block);
+            let area = centered_rect(60, 20, size);
+            f.render_widget(Clear, area);
+            f.render_widget(popup, area);
+        }
     }
 }
 
@@ -109,7 +142,7 @@ fn create_message(app: &App) -> Paragraph {
             ],
             Style::default(),
         ),
-        InputMode::SelectFilter | InputMode::SelectCategory => (
+        InputMode::SelectFilter | InputMode::SelectCategory | InputMode::SelectSort => (
             vec![
                 Span::raw("Press "),
                 Span::styled("q", Style::default().add_modifier(Modifier::BOLD)),
@@ -123,6 +156,14 @@ fn create_message(app: &App) -> Paragraph {
             ],
             Style::default(),
         ),
+        InputMode::ShowError => (
+            vec![
+                Span::raw("Press "),
+                Span::styled("any key", Style::default().add_modifier(Modifier::BOLD)),
+                Span::raw(" to dismiss"),
+            ],
+            Style::default(),
+        )
     };
     let mut text = Text::from(Spans::from(msg));
     text.patch_style(style);
@@ -178,11 +219,22 @@ fn create_table<'a>(app: &'a App, hi_block: &'a Block<'a>, def_block: &'a Block<
         )
         .widths(&[
             Constraint::Percentage(3),
-            Constraint::Percentage(87),
-            Constraint::Percentage(3),
-            Constraint::Percentage(3),
+            Constraint::Percentage(84),
             Constraint::Percentage(4),
+            Constraint::Percentage(4),
+            Constraint::Percentage(5),
         ])
+}
+
+fn create_text_popup<'a>(
+    text: String,
+    title: String,
+    block: &'a Block,
+) -> Paragraph<'a> {
+    
+    Paragraph::new(text)
+        .block(block.to_owned().title(title))
+        .wrap(Wrap { trim: false })
 }
 
 fn create_popup<'a, T: nyaa::Named + num::FromPrimitive + Default + PartialEq>(

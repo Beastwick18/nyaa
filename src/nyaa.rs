@@ -13,6 +13,7 @@ pub mod config;
 type ExtensionMap = BTreeMap<String, Vec<Extension>>;
 
 pub struct Item {
+    pub index: u32,
     pub seeders: u32,
     pub leechers: u32,
     pub downloads: u32,
@@ -51,12 +52,14 @@ pub enum Category {
     AnimeMusicVideo = 1,
 }
 
+#[derive(Copy, Clone, FromPrimitive, PartialEq)]
 pub enum Sort {
-    Downloads,
-    Seeders,
-    Leechers,
-    Name,
-    Category
+    Date = 0,
+    Downloads = 1,
+    Seeders = 2,
+    Leechers = 3,
+    Name = 4,
+    Category = 5
 }
 
 pub trait Named {
@@ -139,6 +142,32 @@ impl Default for Filter {
     }
 }
 
+impl Sort {
+    pub fn iter() -> Iter<'static, Sort> {
+        static SORTS: [Sort; 6] = [Sort::Date, Sort::Downloads, Sort::Seeders, Sort::Leechers, Sort::Name, Sort::Category];
+        SORTS.iter()
+    }
+}
+
+impl Named for Sort {
+    fn get_name(&self) -> String {
+        match self {
+            Sort::Date => "Date".to_owned(),
+            Sort::Downloads => "Downloads".to_owned(),
+            Sort::Seeders => "Seeders".to_owned(),
+            Sort::Leechers => "Leechers".to_owned(),
+            Sort::Name => "Name".to_owned(),
+            Sort::Category => "Category".to_owned()
+        }
+    }
+}
+
+impl Default for Sort {
+    fn default() -> Sort {
+        Sort::Date
+    }
+}
+
 pub async fn get_feed_list(query: &String, cat: &Category, filter: &Filter) -> Vec<Item> {
     let feed = match get_feed(query.to_owned(), cat, filter).await {
         Ok(x) => x,
@@ -146,7 +175,7 @@ pub async fn get_feed_list(query: &String, cat: &Category, filter: &Filter) -> V
     };
     let mut items: Vec<Item> = Vec::new();
 
-    for item in &feed.items {
+    for (i, item) in feed.items.iter().enumerate() {
         if let (Some(ext_map), Some(title), Some(link)) =
             (item.extensions().get("nyaa"), &item.title, &item.link)
         {
@@ -170,6 +199,7 @@ pub async fn get_feed_list(query: &String, cat: &Category, filter: &Filter) -> V
                 .eq("Yes");
 
             items.push(Item {
+                index: i as u32,
                 seeders,
                 leechers,
                 downloads,
