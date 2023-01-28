@@ -25,7 +25,7 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
             ]
             .as_ref(),
         )
-        .split(f.size());
+        .split(f.size()).to_owned();
 
     let def_block = Block::default()
         .borders(Borders::ALL)
@@ -43,7 +43,15 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
     let input = create_search_bar(app, &hi_block, &def_block);
     f.render_widget(input, chunks[1]);
 
-    let table = create_table(app, &hi_block, &def_block);
+    let binding = [
+            Constraint::Length(3),
+            Constraint::Length(chunks[2].width-21),
+            Constraint::Length(4),
+            Constraint::Length(4),
+            Constraint::Length(5),
+        ];
+    let table = create_table(app, &hi_block, &def_block)
+        .widths(&binding);
     f.render_stateful_widget(table, chunks[2], &mut app.items.state.to_owned());
     
     match app.input_mode {
@@ -53,8 +61,8 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
         InputMode::SelectCategory => {
             let popup = create_popup(
                 app,
-                app.categories.items.to_owned(),
-                app.category as usize,
+                app.category.table.items.to_owned(),
+                app.category.selected as usize,
                 &hi_block,
                 &def_block,
                 InputMode::SelectCategory,
@@ -62,13 +70,13 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
             );
             let area = centered_rect(30, 7, size);
             f.render_widget(Clear, area);
-            f.render_stateful_widget(popup, area, &mut app.categories.state);
+            f.render_stateful_widget(popup, area, &mut app.category.table.state);
         }
         InputMode::SelectFilter => {
             let popup = create_popup(
                 app,
-                app.filters.items.to_owned(),
-                app.filter as usize,
+                app.filter.table.items.to_owned(),
+                app.filter.selected as usize,
                 &hi_block,
                 &def_block,
                 InputMode::SelectFilter,
@@ -76,13 +84,13 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
             );
             let area = centered_rect(30, 7, size);
             f.render_widget(Clear, area);
-            f.render_stateful_widget(popup, area, &mut app.filters.state);
+            f.render_stateful_widget(popup, area, &mut app.filter.table.state);
         }
         InputMode::SelectSort => {
             let popup = create_popup(
                 app,
-                app.sorts.items.to_owned(),
-                app.sort as usize,
+                app.sort.table.items.to_owned(),
+                app.sort.selected as usize,
                 &hi_block,
                 &def_block,
                 InputMode::SelectFilter,
@@ -90,7 +98,13 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
             );
             let area = centered_rect(30, 8, size);
             f.render_widget(Clear, area);
-            f.render_stateful_widget(popup, area, &mut app.sorts.state);
+            f.render_stateful_widget(popup, area, &mut app.sort.table.state);
+        }
+        InputMode::ShowHelp => {
+            let popup = create_text_popup(app.help.to_owned(), "Help".to_owned(), &hi_block);
+            let area = centered_rect(41, 10, size);
+            f.render_widget(Clear, area);
+            f.render_widget(popup, area);
         }
         _ => {}
     }
@@ -123,12 +137,14 @@ fn create_message(app: &App) -> Paragraph {
                 Span::raw(" to exit, "),
                 Span::styled("/", Style::default().add_modifier(Modifier::BOLD)),
                 Span::raw(" to search, "),
-                Span::styled("hjkl", Style::default().add_modifier(Modifier::BOLD)),
-                Span::raw(" for movement, "),
-                Span::styled("c", Style::default().add_modifier(Modifier::BOLD)),
-                Span::raw(" for categories, "),
-                Span::styled("f", Style::default().add_modifier(Modifier::BOLD)),
-                Span::raw(" for filters"),
+                Span::styled("F1", Style::default().add_modifier(Modifier::BOLD)),
+                Span::raw(" for keybinds"),
+                // Span::styled("c", Style::default().add_modifier(Modifier::BOLD)),
+                // Span::raw(" for categories, "),
+                // Span::styled("f", Style::default().add_modifier(Modifier::BOLD)),
+                // Span::raw(" for filters, "),
+                // Span::styled("s", Style::default().add_modifier(Modifier::BOLD)),
+                // Span::raw(" for sorting"),
             ],
             Style::default(),
         ),
@@ -156,7 +172,7 @@ fn create_message(app: &App) -> Paragraph {
             ],
             Style::default(),
         ),
-        InputMode::ShowError => (
+        InputMode::ShowError | InputMode::ShowHelp => (
             vec![
                 Span::raw("Press "),
                 Span::styled("any key", Style::default().add_modifier(Modifier::BOLD)),
@@ -215,14 +231,13 @@ fn create_table<'a>(app: &'a App, hi_block: &'a Block<'a>, def_block: &'a Block<
             Style::default()
                 .bg(Color::White)
                 .fg(Color::Black)
-                .add_modifier(Modifier::BOLD),
         )
         .widths(&[
-            Constraint::Percentage(3),
-            Constraint::Percentage(84),
-            Constraint::Percentage(4),
-            Constraint::Percentage(4),
-            Constraint::Percentage(5),
+            Constraint::Length(3),
+            Constraint::Length(4),
+            Constraint::Length(4),
+            Constraint::Length(4),
+            Constraint::Length(5),
         ])
 }
 

@@ -1,6 +1,50 @@
 use crate::nyaa;
-use tui::widgets::TableState;
+use tui::widgets::{TableState, Paragraph};
 use queues::Queue;
+use crossterm::event::KeyCode;
+use crate::nyaa::EnumIter;
+
+pub struct Popup<T: Default> {
+    pub table: StatefulTable<T>,
+    pub selected: T
+}
+
+impl<T: Default + Clone> Popup<T> {
+    fn with_items(items: Vec<T>) -> Popup<T> {
+        Popup {
+            table: StatefulTable::with_items(items),
+            selected: T::default()
+        }
+    }
+    
+    pub fn handle_keybinds<F>(&mut self, last_input_mode: InputMode, key: KeyCode, on_confirm: F) -> Option<InputMode> where F: FnOnce(usize, &T) {
+        match key {
+            KeyCode::Char('q') | KeyCode::Esc => {
+                return Some(last_input_mode.to_owned())
+            }
+            KeyCode::Char('/') => return Some(InputMode::Editing),
+            KeyCode::Char('j') | KeyCode::Down => self.table.next(1),
+            KeyCode::Char('k') | KeyCode::Up => self.table.previous(1),
+            KeyCode::Char('J') => self.table.next(4),
+            KeyCode::Char('K') => self.table.previous(4),
+            KeyCode::Char('g') => self.table.select(0),
+            KeyCode::Char('G') => self.table.select(self.table.items.len() - 1),
+            KeyCode::Enter | KeyCode::Char('l') => {
+                if let Some(i) = self.table.state.selected() {
+                    if let Some(item) = self.table.items.get(i).clone() {
+                        self.selected = item.clone();
+                        on_confirm(i, &item);
+                        // app.category = item.to_owned().to_owned();
+                        // app.input_mode = app.last_input_mode.to_owned();
+                        // search_nyaa(&mut app).await;
+                    }
+                }
+            }
+            _ => {}
+        };
+        None
+    }
+}
 
 pub struct StatefulTable<T> {
     pub state: TableState,
@@ -67,14 +111,11 @@ pub struct App {
     pub last_input_mode: InputMode,
     /// History of recorded messages
     pub items: StatefulTable<nyaa::Item>,
-    // pub handle: Option<JoinHandle<Vec<nyaa::Item>>>,
-    pub category: nyaa::Category,
-    pub filter: nyaa::Filter,
-    pub sort: nyaa::Sort,
-    pub categories: StatefulTable<nyaa::Category>,
-    pub filters: StatefulTable<nyaa::Filter>,
-    pub sorts: StatefulTable<nyaa::Sort>,
-    pub errors: Queue<String>
+    pub category: Popup<nyaa::Category>,
+    pub filter: Popup<nyaa::Filter>,
+    pub sort: Popup<nyaa::Sort>,
+    pub errors: Queue<String>,
+    pub help: String
 }
 
 #[derive(Clone, PartialEq)]
@@ -85,6 +126,7 @@ pub enum InputMode {
     SelectCategory,
     SelectFilter,
     SelectSort,
+    ShowHelp,
 }
 
 impl Default for App {
@@ -94,19 +136,37 @@ impl Default for App {
             input_mode: InputMode::Editing,
             last_input_mode: InputMode::Editing,
             items: StatefulTable::with_items(Vec::new()),
-            category: nyaa::Category::default(),
-            filter: nyaa::Filter::default(),
-            sort: nyaa::Sort::default(),
-            categories: StatefulTable::with_items(
+            category: Popup::<nyaa::Category>::with_items(
                 nyaa::Category::iter().map(|item| item.to_owned()).collect(),
             ),
-            filters: StatefulTable::with_items(
-                nyaa::Filter::iter().map(|item| item.to_owned()).collect(),
+            filter: Popup::<nyaa::Filter>::with_items(
+                nyaa::Filter::iter().map(|item| item.to_owned()).collect()
             ),
-            sorts: StatefulTable::with_items(
+            sort: Popup::<nyaa::Sort>::with_items(
                 nyaa::Sort::iter().map(|item| item.to_owned()).collect()
             ),
-            errors: Queue::default()
+            // category: nyaa::Category::default(),
+            // filter: nyaa::Filter::default(),
+            // sort: nyaa::Sort::default(),
+            // categories: StatefulTable::with_items(
+            //     nyaa::Category::iter().map(|item| item.to_owned()).collect(),
+            // ),
+            // filters: StatefulTable::with_items(
+            //     nyaa::Filter::iter().map(|item| item.to_owned()).collect(),
+            // ),
+            // sorts: StatefulTable::with_items(
+            //     nyaa::Sort::iter().map(|item| item.to_owned()).collect()
+            // ),
+            errors: Queue::default(),
+            help:  
+"Normal mode:      | Editing mode:
+q = Quit          | Esc = Stop editing 
+/ = Search        | Enter = Submit
+hjkl/ = move  +--------------------
+c = Pick category | Popup mode:
+f = Pick filter   | q/Esc = Close
+s = Sort select   | hjlk/ = move
+                  | Enter = Confirm".to_owned()
         }
     }
 }

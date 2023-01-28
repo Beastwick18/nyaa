@@ -35,6 +35,10 @@ impl Item {
     }
 }
 
+pub trait EnumIter<T> {
+    fn iter() -> Iter<'static, T>;
+}
+
 #[derive(Copy, Clone, FromPrimitive, PartialEq)]
 #[allow(clippy::enum_variant_names)]
 pub enum Filter {
@@ -84,8 +88,10 @@ impl Category {
             Category::Raw => Text::styled("Raw", Style::default().fg(Color::Gray)),
         }
     }
+}
 
-    pub fn iter() -> Iter<'static, Category> {
+impl EnumIter<Category> for Category {
+    fn iter() -> Iter<'static, Category> {
         static CATEGORIES: [Category; 5] = [
             Category::AllAnime,
             Category::EnglishTranslated,
@@ -120,7 +126,10 @@ impl Filter {
         (self.to_owned() as i32).to_string()
     }
 
-    pub fn iter() -> Iter<'static, Filter> {
+}
+
+impl EnumIter<Filter> for Filter {
+    fn iter() -> Iter<'static, Filter> {
         static FILTERS: [Filter; 3] = [Filter::NoFilter, Filter::NoRemakes, Filter::TrustedOnly];
         FILTERS.iter()
     }
@@ -142,8 +151,8 @@ impl Default for Filter {
     }
 }
 
-impl Sort {
-    pub fn iter() -> Iter<'static, Sort> {
+impl EnumIter<Sort> for Sort {
+    fn iter() -> Iter<'static, Sort> {
         static SORTS: [Sort; 6] = [Sort::Date, Sort::Downloads, Sort::Seeders, Sort::Leechers, Sort::Name, Sort::Category];
         SORTS.iter()
     }
