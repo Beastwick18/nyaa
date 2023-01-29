@@ -1,12 +1,18 @@
 use core::str::FromStr;
 use num_derive::FromPrimitive;
 use rss::{extension::Extension, Channel};
-use std::collections::BTreeMap;
-use std::error::Error;
-use std::slice::Iter;
-use tui::style::{Color, Style};
-use tui::text::Text;
+use std::{
+    collections::BTreeMap,
+    error::Error,
+    slice::Iter,
+    string::ToString,
+};
+use tui::{
+    style::{Color, Style},
+    text::Text,
+};
 use urlencoding::encode;
+use serde::{Deserialize, Serialize};
 
 pub mod config;
 
@@ -39,7 +45,7 @@ pub trait EnumIter<T> {
     fn iter() -> Iter<'static, T>;
 }
 
-#[derive(Copy, Clone, FromPrimitive, PartialEq)]
+#[derive(Copy, Clone, FromPrimitive, PartialEq, Deserialize, Serialize)]
 #[allow(clippy::enum_variant_names)]
 pub enum Filter {
     NoFilter = 0,
@@ -47,7 +53,7 @@ pub enum Filter {
     TrustedOnly = 2,
 }
 
-#[derive(Copy, Clone, FromPrimitive, PartialEq)]
+#[derive(Copy, Clone, FromPrimitive, PartialEq, Deserialize, Serialize)]
 pub enum Category {
     AllAnime = 0,
     EnglishTranslated = 2,
@@ -56,18 +62,14 @@ pub enum Category {
     AnimeMusicVideo = 1,
 }
 
-#[derive(Copy, Clone, FromPrimitive, PartialEq)]
+#[derive(Copy, Clone, FromPrimitive, PartialEq, Deserialize, Serialize)]
 pub enum Sort {
     Date = 0,
     Downloads = 1,
     Seeders = 2,
     Leechers = 3,
     Name = 4,
-    Category = 5
-}
-
-pub trait Named {
-    fn get_name(&self) -> String;
+    Category = 5,
 }
 
 impl Category {
@@ -78,14 +80,18 @@ impl Category {
     pub fn get_icon(&self) -> Text {
         match self {
             Category::AllAnime => Text::raw(""),
-            Category::AnimeMusicVideo => Text::styled("AMV", Style::default().fg(Color::Magenta)),
+            Category::AnimeMusicVideo => {
+                Text::styled("AMV", Style::default().fg(Color::Magenta))
+            }
             Category::EnglishTranslated => {
                 Text::styled("Subs", Style::default().fg(Color::Magenta))
             }
             Category::NonEnglishTranslated => {
                 Text::styled("Subs", Style::default().fg(Color::Green))
             }
-            Category::Raw => Text::styled("Raw", Style::default().fg(Color::Gray)),
+            Category::Raw => {
+                Text::styled("Raw", Style::default().fg(Color::Gray))
+            }
         }
     }
 }
@@ -103,15 +109,15 @@ impl EnumIter<Category> for Category {
     }
 }
 
-impl Named for Category {
-    fn get_name(&self) -> String {
+impl ToString for Category {
+    fn to_string(&self) -> String {
         match self {
-            Category::AllAnime => "All Anime".to_owned(),
-            Category::AnimeMusicVideo => "Anime Music Video".to_owned(),
-            Category::EnglishTranslated => "English Translated".to_owned(),
-            Category::NonEnglishTranslated => "Non-English Translated".to_owned(),
-            Category::Raw => "Raw".to_owned(),
-        }
+            Category::AllAnime => "All Anime",
+            Category::AnimeMusicVideo => "Anime Music Video",
+            Category::EnglishTranslated => "English Translated",
+            Category::NonEnglishTranslated => "Non-English Translated",
+            Category::Raw => "Raw",
+        }.to_owned()
     }
 }
 
@@ -125,7 +131,6 @@ impl Filter {
     fn get_url_string(&self) -> String {
         (self.to_owned() as i32).to_string()
     }
-
 }
 
 impl EnumIter<Filter> for Filter {
@@ -135,13 +140,13 @@ impl EnumIter<Filter> for Filter {
     }
 }
 
-impl Named for Filter {
-    fn get_name(&self) -> String {
+impl ToString for Filter {
+    fn to_string(&self) -> String {
         match self {
-            Filter::NoFilter => "No Filter".to_owned(),
-            Filter::NoRemakes => "No Remakes".to_owned(),
-            Filter::TrustedOnly => "Trusted Only".to_owned(),
-        }
+            Filter::NoFilter => "No Filter",
+            Filter::NoRemakes => "No Remakes",
+            Filter::TrustedOnly => "Trusted Only",
+        }.to_owned()
     }
 }
 
@@ -153,21 +158,28 @@ impl Default for Filter {
 
 impl EnumIter<Sort> for Sort {
     fn iter() -> Iter<'static, Sort> {
-        static SORTS: [Sort; 6] = [Sort::Date, Sort::Downloads, Sort::Seeders, Sort::Leechers, Sort::Name, Sort::Category];
+        static SORTS: [Sort; 6] = [
+            Sort::Date,
+            Sort::Downloads,
+            Sort::Seeders,
+            Sort::Leechers,
+            Sort::Name,
+            Sort::Category,
+        ];
         SORTS.iter()
     }
 }
 
-impl Named for Sort {
-    fn get_name(&self) -> String {
+impl ToString for Sort {
+    fn to_string(&self) -> String {
         match self {
-            Sort::Date => "Date".to_owned(),
-            Sort::Downloads => "Downloads".to_owned(),
-            Sort::Seeders => "Seeders".to_owned(),
-            Sort::Leechers => "Leechers".to_owned(),
-            Sort::Name => "Name".to_owned(),
-            Sort::Category => "Category".to_owned()
-        }
+            Sort::Date => "Date",
+            Sort::Downloads => "Downloads",
+            Sort::Seeders => "Seeders",
+            Sort::Leechers => "Leechers",
+            Sort::Name => "Name",
+            Sort::Category => "Category",
+        }.to_owned()
     }
 }
 
@@ -177,8 +189,8 @@ impl Default for Sort {
     }
 }
 
-pub async fn get_feed_list(query: &String, cat: &Category, filter: &Filter) -> Vec<Item> {
-    let feed = match get_feed(query.to_owned(), cat, filter).await {
+pub async fn get_feed_list(query: &String, cat: &Category, filter: &Filter, magnet: bool) -> Vec<Item> {
+    let feed = match get_feed(query.to_owned(), cat, filter, magnet).await {
         Ok(x) => x,
         Err(_) => panic!("Failed to connect to nyaa.si..."),
     };
@@ -230,12 +242,15 @@ pub async fn get_feed(
     query: String,
     cat: &Category,
     filter: &Filter,
+    magnet: bool
 ) -> Result<Channel, Box<dyn Error>> {
+    let m = if magnet { "&m" } else { "" };
     let encoded_url = format!(
-        "https://nyaa.si/?page=rss&f={}&c={}&q={}&m",
+        "https://nyaa.si/?page=rss&f={}&c={}&q={}{}",
         filter.get_url_string(),
         cat.get_url_string(),
-        encode(&query)
+        encode(&query),
+        m
     );
     let content = reqwest::get(encoded_url).await?.bytes().await?;
 

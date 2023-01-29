@@ -1,40 +1,47 @@
-use config::Config;
-use log::error;
-use std::collections::HashMap;
+use crate::app::APP_NAME;
+use confy::ConfyError;
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use crate::nyaa::{Filter, Category, Sort};
 
-fn get_config_path() -> Option<PathBuf> {
-    if let Some(mut x) = dirs::config_dir() {
-        x.push("nyaa");
-        x.push("config.toml");
-        return Some(x.to_owned());
-    }
-    None
+pub static CONFIG_FILE: &str = "config";
+
+#[derive(Serialize, Deserialize)]
+pub struct Config {
+    pub torrent_client_cmd: String,
+    pub default_category: Category,
+    pub default_filter: Filter,
+    pub default_sort: Sort,
+    pub magnet_links: bool,
 }
 
-pub fn create_config() {
-    if let Some(path) = get_config_path() {
-        let parent = path.parent().unwrap();
-        match std::fs::create_dir_all(parent) {
-            Ok(_) => (),
-            Err(_) => error!("Failed to create config folder"),
+impl Config {
+    pub fn from_file() -> Result<Config, ConfyError> {
+        confy::load::<Config>(APP_NAME, CONFIG_FILE)
+    }
+
+    pub fn get_path() -> PathBuf {
+        confy::get_configuration_file_path(APP_NAME, CONFIG_FILE).unwrap()
+    }
+}
+
+// fn get_download_dir() -> String {
+//     if let Some(dir) = dirs::download_dir() {
+//         if let Some(dir_s) = dir.to_str() {
+//             return dir_s.to_owned()
+//         }
+//     }
+//     "".to_owned()
+// }
+
+impl std::default::Default for Config {
+    fn default() -> Config {
+        Config {
+            torrent_client_cmd: "/usr/bin/webtorrent-desktop %s".to_owned(),
+            default_category: Category::AllAnime,
+            default_filter: Filter::NoFilter,
+            default_sort: Sort::Date,
+            magnet_links: true,
         }
-        // match std::fs::File::create(path)
-        let _ = std::fs::OpenOptions::new()
-            .write(true)
-            .create(true)
-            .open(path.as_path().to_str().unwrap());
-        let settings = Config::builder()
-            .add_source(config::File::from(path.as_path()))
-            .build()
-            .unwrap();
-        println!(
-            "{:?}",
-            settings
-                .try_deserialize::<HashMap<String, HashMap<String, String>>>()
-                .unwrap()
-        )
-    } else {
-        error!("Failed to get config dir");
     }
 }

@@ -1,5 +1,5 @@
 use crate::app::{App, InputMode};
-use crate::nyaa;
+use queues::IsQueue;
 use tui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout, Rect},
@@ -9,14 +9,15 @@ use tui::{
     Frame,
 };
 use unicode_width::UnicodeWidthStr;
-use queues::IsQueue;
+
+static BORDER: BorderType = BorderType::Plain;
 
 pub fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
     let size = f.size();
 
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .margin(1)
+        .margin(0)
         .constraints(
             [
                 Constraint::Length(1),
@@ -25,17 +26,17 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
             ]
             .as_ref(),
         )
-        .split(f.size()).to_owned();
+        .split(f.size());
 
     let def_block = Block::default()
         .borders(Borders::ALL)
         .border_style(Style::default())
-        .border_type(BorderType::Rounded);
+        .border_type(BORDER);
 
     let hi_block = Block::default()
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::LightCyan))
-        .border_type(BorderType::Rounded);
+        .border_type(BORDER);
 
     let help_message = create_message(app);
     f.render_widget(help_message, chunks[0]);
@@ -44,16 +45,15 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
     f.render_widget(input, chunks[1]);
 
     let binding = [
-            Constraint::Length(3),
-            Constraint::Length(chunks[2].width-21),
-            Constraint::Length(4),
-            Constraint::Length(4),
-            Constraint::Length(5),
-        ];
-    let table = create_table(app, &hi_block, &def_block)
-        .widths(&binding);
+        Constraint::Length(3),
+        Constraint::Length(chunks[2].width - 21),
+        Constraint::Length(4),
+        Constraint::Length(4),
+        Constraint::Length(5),
+    ];
+    let table = create_table(app, &hi_block, &def_block).widths(&binding);
     f.render_stateful_widget(table, chunks[2], &mut app.items.state.to_owned());
-    
+
     match app.input_mode {
         InputMode::Editing => {
             f.set_cursor(chunks[1].x + app.input.width() as u16 + 1, chunks[1].y + 1)
@@ -114,13 +114,17 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
         if let Ok(err) = app.errors.peek() {
             app.last_input_mode = app.input_mode.to_owned();
             app.input_mode = InputMode::ShowError;
-            
+
             let block = Block::default()
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(Color::Red))
-                .border_type(BorderType::Rounded);
-            
-            let popup = create_text_popup(err + "\n\nPress any key to dismiss...", "Error".to_owned(), &block);
+                .border_type(BORDER);
+
+            let popup = create_text_popup(
+                err + "\n\nPress any key to dismiss...",
+                "Error".to_owned(),
+                &block,
+            );
             let area = centered_rect(60, 20, size);
             f.render_widget(Clear, area);
             f.render_widget(popup, area);
@@ -139,12 +143,6 @@ fn create_message(app: &App) -> Paragraph {
                 Span::raw(" to search, "),
                 Span::styled("F1", Style::default().add_modifier(Modifier::BOLD)),
                 Span::raw(" for keybinds"),
-                // Span::styled("c", Style::default().add_modifier(Modifier::BOLD)),
-                // Span::raw(" for categories, "),
-                // Span::styled("f", Style::default().add_modifier(Modifier::BOLD)),
-                // Span::raw(" for filters, "),
-                // Span::styled("s", Style::default().add_modifier(Modifier::BOLD)),
-                // Span::raw(" for sorting"),
             ],
             Style::default(),
         ),
@@ -179,7 +177,7 @@ fn create_message(app: &App) -> Paragraph {
                 Span::raw(" to dismiss"),
             ],
             Style::default(),
-        )
+        ),
     };
     let mut text = Text::from(Spans::from(msg));
     text.patch_style(style);
@@ -197,7 +195,8 @@ fn create_search_bar<'a>(app: &'a App, hi_block: &'a Block, def_block: &'a Block
 }
 
 fn create_table<'a>(app: &'a App, hi_block: &'a Block<'a>, def_block: &'a Block<'a>) -> Table<'a> {
-    let header_cells = ["Cat", "Name", "", "", ""]
+    static HEADER_CELLS: [&str; 5] = ["Cat", "Name", "", "", ""];
+    let header_cells = HEADER_CELLS
         .iter()
         .map(|h| Cell::from(Text::raw(*h)).style(Style::default().add_modifier(Modifier::BOLD)));
     let header = Row::new(header_cells)
@@ -213,8 +212,14 @@ fn create_table<'a>(app: &'a App, hi_block: &'a Block<'a>, def_block: &'a Block<
         Row::new(vec![
             item.category.get_icon(),
             item.get_styled_title(),
-            Text::styled(shorten_number(item.seeders), Style::default().fg(Color::Green)),
-            Text::styled(shorten_number(item.leechers), Style::default().fg(Color::Red)),
+            Text::styled(
+                shorten_number(item.seeders),
+                Style::default().fg(Color::Green),
+            ),
+            Text::styled(
+                shorten_number(item.leechers),
+                Style::default().fg(Color::Red),
+            ),
             Text::from(shorten_number(item.downloads)),
         ])
         .height(1)
@@ -227,32 +232,16 @@ fn create_table<'a>(app: &'a App, hi_block: &'a Block<'a>, def_block: &'a Block<
             InputMode::Normal => hi_block.to_owned(),
             _ => def_block.to_owned(),
         })
-        .highlight_style(
-            Style::default()
-                .bg(Color::White)
-                .fg(Color::Black)
-        )
-        .widths(&[
-            Constraint::Length(3),
-            Constraint::Length(4),
-            Constraint::Length(4),
-            Constraint::Length(4),
-            Constraint::Length(5),
-        ])
+        .highlight_style(Style::default().bg(Color::Rgb(60,60,60)))
 }
 
-fn create_text_popup<'a>(
-    text: String,
-    title: String,
-    block: &'a Block,
-) -> Paragraph<'a> {
-    
+fn create_text_popup<'a>(text: String, title: String, block: &'a Block) -> Paragraph<'a> {
     Paragraph::new(text)
         .block(block.to_owned().title(title))
         .wrap(Wrap { trim: false })
 }
 
-fn create_popup<'a, T: nyaa::Named + num::FromPrimitive + Default + PartialEq>(
+fn create_popup<'a, T: ToString + num::FromPrimitive + Default + PartialEq>(
     app: &App,
     items: Vec<T>,
     sel_idx: usize,
@@ -264,7 +253,7 @@ fn create_popup<'a, T: nyaa::Named + num::FromPrimitive + Default + PartialEq>(
     let n: T = num::FromPrimitive::from_usize(sel_idx).unwrap_or_default();
     let items = items.iter().map(|item| {
         let sel = if &n == item { "[x] " } else { "[ ] " }.to_owned();
-        Row::new(vec![sel + &item.get_name()])
+        Row::new(vec![sel + &item.to_string()])
     });
     Table::new(items)
         .block(
@@ -291,17 +280,14 @@ fn shorten_number(mut n: u32) -> String {
     n.to_string()
 }
 
-fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
+fn centered_rect(x_len: u16, y_len: u16, r: Rect) -> Rect {
     let popup_layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints(
             [
-                // Constraint::Percentage((100 - percent_y) / 2),
-                // Constraint::Percentage(percent_y),
-                // Constraint::Percentage((100 - percent_y) / 2),
-                Constraint::Length((r.height - percent_y) / 2),
-                Constraint::Length(percent_y),
-                Constraint::Length((r.height - percent_y) / 2),
+                Constraint::Length((r.height - y_len) / 2),
+                Constraint::Length(y_len),
+                Constraint::Length((r.height - y_len) / 2),
             ]
             .as_ref(),
         )
@@ -311,12 +297,9 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
         .direction(Direction::Horizontal)
         .constraints(
             [
-                // Constraint::Percentage((100 - percent_x) / 2),
-                // Constraint::Percentage(percent_x),
-                // Constraint::Percentage((100 - percent_x) / 2),
-                Constraint::Length((r.width - percent_x) / 2),
-                Constraint::Length(percent_x),
-                Constraint::Length((r.width - percent_x) / 2),
+                Constraint::Length((r.width - x_len) / 2),
+                Constraint::Length(x_len),
+                Constraint::Length((r.width - x_len) / 2),
             ]
             .as_ref(),
         )
