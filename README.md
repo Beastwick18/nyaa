@@ -1,5 +1,8 @@
 # nyaa
-A simple cli tool foor browsing and downloading Anime torrents from nyaa.si.
+<p align="center">
+ <h3 align="center">A simple cli tool foor browsing and downloading Anime torrents from nyaa.si.</h3>
+  <img src="assets/tty.gif" alt="animated" />
+</p>
 
 ## Installation
 ### With cargo
