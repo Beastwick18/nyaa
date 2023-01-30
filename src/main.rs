@@ -87,6 +87,7 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
                                         let _ = Command::new(exec)
                                             .args(args)
                                             .stdin(Stdio::null())
+                                            .stdout(Stdio::null())
                                             .stderr(Stdio::null())
                                             .spawn();
                                     } else {
