@@ -10,7 +10,7 @@
 cargo install --git https://github.com/Beastwick18/nyaa
 ```
 ### Pre-Built Binaries
-An initial alpha release is currently available. Attached is binaries for Linux, ~~Windows, and Mac~~.
+An initial alpha release is currently available. Attached is binaries for Linux, Windows, ~~and Mac~~.
 ### From Source
 ```
 git clone https://github.com/Beastwick18/nyaa
