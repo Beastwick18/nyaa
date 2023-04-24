@@ -1,1 +1,4 @@
 /target
+assets/*.ttf
+assets/*.ttf:Zone.Identifier
+assets/*.cast
