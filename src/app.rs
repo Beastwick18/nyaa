@@ -51,9 +51,6 @@ impl<T: Default + Clone> Popup<T> {
                     if let Some(item) = self.table.items.get(i) {
                         self.selected = item.clone();
                         on_confirm(i, item);
-                        // app.category = item.to_owned().to_owned();
-                        // app.input_mode = app.last_input_mode.to_owned();
-                        // search_nyaa(&mut app).await;
                     }
                 }
             }
@@ -140,6 +137,8 @@ pub enum InputMode {
     SelectFilter,
     SelectSort,
     ShowHelp,
+    Loading,
+    Searching,
 }
 
 impl Default for App {

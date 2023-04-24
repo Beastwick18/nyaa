@@ -54,6 +54,15 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
     app.sort.table.select(0);
     loop {
         terminal.draw(|f| ui::ui(f, &mut app))?;
+        match app.input_mode {
+            InputMode::Searching => {
+                search_nyaa(&mut app).await;
+                app.last_input_mode = app.input_mode.to_owned();
+                app.input_mode = InputMode::Normal;
+                continue; // Skip reading input so it does not block this thread
+            }
+            _ => {}
+        }
 
         if let Event::Key(key) = event::read()? {
             match app.input_mode {
@@ -82,7 +91,6 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
 
                                 if let Ok(cmd) = shellwords::split(&cmd_str) {
                                     if let [exec, first, other @ ..] = cmd.as_slice() {
-                                        // app.errors.add(link).unwrap();
                                         let args = [&[first.to_owned()], other].concat();
                                         let _ = Command::new(exec)
                                             .args(args)
@@ -125,7 +133,8 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
                         app.input_mode = InputMode::ShowHelp;
                     }
                     KeyCode::Enter => {
-                        search_nyaa(&mut app).await;
+                        app.items.items.clear();
+                        app.input_mode = InputMode::Loading;
                     }
                     KeyCode::Char(c) => {
                         app.input.push(c);
@@ -150,8 +159,8 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
                         app.input_mode = mode;
                     }
                     if should_refresh {
-                        app.input_mode = app.last_input_mode.to_owned();
-                        search_nyaa(&mut app).await;
+                        app.items.items.clear();
+                        app.input_mode = InputMode::Loading;
                     }
                 }
                 InputMode::SelectFilter => {
@@ -166,8 +175,8 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
                         app.input_mode = mode;
                     }
                     if should_refresh {
-                        app.input_mode = app.last_input_mode.to_owned();
-                        search_nyaa(&mut app).await;
+                        app.items.items.clear();
+                        app.input_mode = InputMode::Loading;
                     }
                 }
                 InputMode::SelectSort => {
@@ -193,6 +202,7 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
                 InputMode::ShowHelp => {
                     app.input_mode = app.last_input_mode.to_owned();
                 }
+                InputMode::Loading | InputMode::Searching => {}
             }
         }
     }

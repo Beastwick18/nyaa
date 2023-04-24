@@ -37,6 +37,9 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::LightCyan))
         .border_type(BORDER);
+    
+    let empty_block = Block::default()
+        .borders(Borders::NONE);
 
     let help_message = create_message(app);
     f.render_widget(help_message, chunks[0]);
@@ -103,6 +106,13 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
         InputMode::ShowHelp => {
             let popup = create_text_popup(app.help.to_owned(), "Help".to_owned(), &hi_block);
             let area = centered_rect(41, 10, size);
+            f.render_widget(Clear, area);
+            f.render_widget(popup, area);
+        }
+        InputMode::Loading => {
+            app.input_mode = InputMode::Searching;
+            let popup = create_text_popup("".to_owned(), "Loading...".to_owned(), &empty_block);
+            let area = centered_rect(10, 1, size);
             f.render_widget(Clear, area);
             f.render_widget(popup, area);
         }
@@ -178,6 +188,7 @@ fn create_message(app: &App) -> Paragraph {
             ],
             Style::default(),
         ),
+        InputMode::Loading | InputMode::Searching => (vec![], Style::default())
     };
     let mut text = Text::from(Spans::from(msg));
     text.patch_style(style);
