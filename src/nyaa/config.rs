@@ -12,7 +12,6 @@ pub struct Config {
     pub default_category: Category,
     pub default_filter: Filter,
     pub default_sort: Sort,
-    pub magnet_links: bool,
 }
 
 impl Config {
@@ -37,11 +36,10 @@ impl Config {
 impl std::default::Default for Config {
     fn default() -> Config {
         Config {
-            torrent_client_cmd: "/usr/bin/webtorrent-desktop %s".to_owned(),
+            torrent_client_cmd: "bash -c 'curl {torrent} > \"{title}.torrent\"'".to_owned(),
             default_category: Category::AllAnime,
             default_filter: Filter::NoFilter,
             default_sort: Sort::Date,
-            magnet_links: true,
         }
     }
 }

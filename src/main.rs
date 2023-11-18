@@ -26,7 +26,7 @@ async fn search_nyaa(app: &mut App) {
     app.input_mode = InputMode::Normal;
     app.items.items.clear();
 
-    let feed = nyaa::get_feed_list(&app.input, &app.category.selected, &app.filter.selected, app.config.magnet_links).await;
+    let feed = nyaa::get_feed_list(&app.input, &app.category.selected, &app.filter.selected).await;
     app.items.items = feed;
     app.items.select(0);
     sort_feed(app)
@@ -85,9 +85,15 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
                     KeyCode::Char('l') | KeyCode::Enter => {
                         if let Some(i) = app.items.state.selected() {
                             if let Some(item) = app.items.items.get(i) {
-                                let link = item.torrent_link.clone();
-                                let cmd_str =
-                                    app.config.torrent_client_cmd.clone().replace("%s", &link);
+                                let magnet_link = item.magnet_link.clone();
+                                let torrent_link = item.torrent_link.clone();
+                                let file_name = item.file_name.clone();
+                                let title = item.title.clone();
+                                let cmd_str = app.config.torrent_client_cmd.clone()
+                                    .replace("{magnet}", &magnet_link)
+                                    .replace("{torrent}", &torrent_link)
+                                    .replace("{title}", &title)
+                                    .replace("{file}", &file_name);
 
                                 if let Ok(cmd) = shellwords::split(&cmd_str) {
                                     if let [exec, first, other @ ..] = cmd.as_slice() {

@@ -25,6 +25,10 @@ pub struct Item {
     pub downloads: u32,
     pub title: String,
     pub torrent_link: String,
+    pub magnet_link: String,
+    pub file_name: String,
+    pub id: String,
+    pub hash: String,
     pub category: Category,
     pub trusted: bool,
     pub remake: bool,
@@ -189,16 +193,16 @@ impl Default for Sort {
     }
 }
 
-pub async fn get_feed_list(query: &String, cat: &Category, filter: &Filter, magnet: bool) -> Vec<Item> {
-    let feed = match get_feed(query.to_owned(), cat, filter, magnet).await {
+pub async fn get_feed_list(query: &String, cat: &Category, filter: &Filter) -> Vec<Item> {
+    let feed = match get_feed(query.to_owned(), cat, filter, true).await {
         Ok(x) => x,
         Err(_) => panic!("Failed to connect to nyaa.si..."),
     };
     let mut items: Vec<Item> = Vec::new();
 
     for (i, item) in feed.items.iter().enumerate() {
-        if let (Some(ext_map), Some(title), Some(link)) =
-            (item.extensions().get("nyaa"), &item.title, &item.link)
+        if let (Some(ext_map), Some(title), Some(link), Some(guid)) =
+            (item.extensions().get("nyaa"), &item.title, &item.link, &item.guid)
         {
             let seeders = get_ext_value::<u32>(ext_map, "seeders")
                 .await
@@ -210,6 +214,9 @@ pub async fn get_feed_list(query: &String, cat: &Category, filter: &Filter, magn
             let category_str: String = get_ext_value::<String>(ext_map, "categoryId")
                 .await
                 .unwrap_or_default();
+            let infohash: String = get_ext_value::<String>(ext_map, "infoHash")
+                .await
+                .unwrap_or_default();
             let trusted: bool = get_ext_value::<String>(ext_map, "trusted")
                 .await
                 .unwrap_or_default()
@@ -218,6 +225,15 @@ pub async fn get_feed_list(query: &String, cat: &Category, filter: &Filter, magn
                 .await
                 .unwrap_or_default()
                 .eq("Yes");
+            let id = guid.value.split("/").last().unwrap().to_owned(); // Get nyaa id from guid url in format
+                                                                       // `https://nyaa.si/view/{id}`
+            let torrent_link = format!("https://nyaa.si/download/{}.torrent", id);
+            let file_name = format!("{}.torrent", id);
+            let category = num::FromPrimitive::from_u32(
+                               category_str.split("_").last().unwrap_or_default()
+                               .parse::<u32>().unwrap_or_default() as u32
+                           ).unwrap();
+            // let category = 
 
             items.push(Item {
                 index: i as u32,
@@ -225,11 +241,12 @@ pub async fn get_feed_list(query: &String, cat: &Category, filter: &Filter, magn
                 leechers,
                 downloads,
                 title: title.to_owned(),
-                torrent_link: link.to_owned(),
-                category: num::FromPrimitive::from_u32(
-                    category_str.chars().last().unwrap() as u32 - '0' as u32,
-                )
-                .unwrap(),
+                torrent_link,
+                magnet_link: link.to_owned(),
+                file_name,
+                id,
+                hash: infohash,
+                category: category,
                 trusted,
                 remake,
             });
