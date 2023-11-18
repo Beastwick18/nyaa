@@ -2,6 +2,12 @@
 name = "nyaa"
 version = "0.1.0"
 edition = "2021"
+categories = ["command-line-utilities"]
+keywords = ["tui", "cli", "nyaa", "torrent", "download"]
+description = "A tui tool for browsing and downloading torrents from nyaa.si"
+readme = "README.md"
+repository = "https://github.com/Beastwick18/nyaa/"
+license = "GPL-3.0-or-later"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
