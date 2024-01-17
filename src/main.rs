@@ -1,20 +1,22 @@
-use std::{
-    process::{Command, Stdio},
-    io
-};
-use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
-    execute,
-};
-use queues::IsQueue;
-use tui::{
-    backend::{Backend, CrosstermBackend},
-    Terminal,
-};
 use crate::{
     app::{App, InputMode},
     nyaa::Sort,
+};
+use crossterm::{
+    event::{
+        self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEvent, KeyEventKind,
+    },
+    execute,
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+};
+use queues::IsQueue;
+use ratatui::{
+    backend::{Backend, CrosstermBackend},
+    Terminal,
+};
+use std::{
+    io,
+    process::{Command, Stdio},
 };
 
 mod app;
@@ -53,7 +55,7 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
     app.filter.table.select(0);
     app.sort.table.select(0);
     loop {
-        terminal.draw(|f| ui::ui(f, &mut app))?;
+        terminal.draw(|f| ui::ui::<B>(f, &mut app))?;
         match app.input_mode {
             InputMode::Searching => {
                 search_nyaa(&mut app).await;
@@ -64,9 +66,14 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
             _ => {}
         }
 
-        if let Event::Key(key) = event::read()? {
+        if let Event::Key(KeyEvent {
+            code,
+            kind: KeyEventKind::Press,
+            ..
+        }) = event::read()?
+        {
             match app.input_mode {
-                InputMode::Normal => match key.code {
+                InputMode::Normal => match code {
                     KeyCode::F(1) => {
                         app.last_input_mode = app.input_mode.to_owned();
                         app.input_mode = InputMode::ShowHelp;
@@ -89,7 +96,10 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
                                 let torrent_link = item.torrent_link.clone();
                                 let file_name = item.file_name.clone();
                                 let title = item.title.clone();
-                                let cmd_str = app.config.torrent_client_cmd.clone()
+                                let cmd_str = app
+                                    .config
+                                    .torrent_client_cmd
+                                    .clone()
                                     .replace("{magnet}", &magnet_link)
                                     .replace("{torrent}", &torrent_link)
                                     .replace("{title}", &title)
@@ -133,7 +143,7 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
                     }
                     _ => {}
                 },
-                InputMode::Editing => match key.code {
+                InputMode::Editing => match code {
                     KeyCode::F(1) => {
                         app.last_input_mode = app.input_mode.to_owned();
                         app.input_mode = InputMode::ShowHelp;
@@ -157,7 +167,7 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
                     let mut should_refresh = false;
                     if let Some(mode) = app.category.handle_keybinds(
                         app.last_input_mode.to_owned(),
-                        key.code,
+                        code,
                         |_, _| {
                             should_refresh = true;
                         },
@@ -171,13 +181,12 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
                 }
                 InputMode::SelectFilter => {
                     let mut should_refresh = false;
-                    if let Some(mode) = app.filter.handle_keybinds(
-                        app.last_input_mode.to_owned(),
-                        key.code,
-                        |_, _| {
-                            should_refresh = true;
-                        },
-                    ) {
+                    if let Some(mode) =
+                        app.filter
+                            .handle_keybinds(app.last_input_mode.to_owned(), code, |_, _| {
+                                should_refresh = true;
+                            })
+                    {
                         app.input_mode = mode;
                     }
                     if should_refresh {
@@ -187,14 +196,13 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Re
                 }
                 InputMode::SelectSort => {
                     let mut should_sort = false;
-                    if let Some(mode) = app.sort.handle_keybinds(
-                        app.last_input_mode.to_owned(),
-                        key.code,
-                        |_, _| {
-                            app.input_mode = app.last_input_mode.to_owned();
-                            should_sort = true;
-                        },
-                    ) {
+                    if let Some(mode) =
+                        app.sort
+                            .handle_keybinds(app.last_input_mode.to_owned(), code, |_, _| {
+                                app.input_mode = app.last_input_mode.to_owned();
+                                should_sort = true;
+                            })
+                    {
                         app.input_mode = mode;
                     }
                     if should_sort {
@@ -234,7 +242,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     app.category.selected = app.config.default_category;
     app.filter.selected = app.config.default_filter;
     app.sort.selected = app.config.default_sort;
-    
+
     let _ = run_app(&mut terminal, app).await;
 
     // restore terminal

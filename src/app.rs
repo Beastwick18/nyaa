@@ -3,7 +3,7 @@ use crate::nyaa::config::Config;
 use crate::nyaa::EnumIter;
 use crossterm::event::KeyCode;
 use queues::Queue;
-use tui::widgets::TableState;
+use ratatui::widgets::TableState;
 
 pub static APP_NAME: &str = "nyaa";
 pub static HELP_MSG: &str = "Normal mode:      | Editing mode:

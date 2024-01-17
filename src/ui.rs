@@ -1,10 +1,10 @@
 use crate::app::{App, InputMode};
 use queues::IsQueue;
-use tui::{
+use ratatui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
-    text::{Span, Spans, Text},
+    text::{Line, Span, Text},
     widgets::{Block, BorderType, Borders, Cell, Clear, Paragraph, Row, Table, Wrap},
     Frame,
 };
@@ -12,7 +12,7 @@ use unicode_width::UnicodeWidthStr;
 
 static BORDER: BorderType = BorderType::Plain;
 
-pub fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
+pub fn ui<B: Backend>(f: &mut Frame, app: &mut App) {
     let size = f.size();
 
     let chunks = Layout::default()
@@ -37,9 +37,8 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::LightCyan))
         .border_type(BORDER);
-    
-    let empty_block = Block::default()
-        .borders(Borders::NONE);
+
+    let empty_block = Block::default().borders(Borders::NONE);
 
     let help_message = create_message(app);
     f.render_widget(help_message, chunks[0]);
@@ -190,15 +189,15 @@ fn create_message(app: &App) -> Paragraph {
             ],
             Style::default(),
         ),
-        InputMode::Loading | InputMode::Searching => (vec![], Style::default())
+        InputMode::Loading | InputMode::Searching => (vec![], Style::default()),
     };
-    let mut text = Text::from(Spans::from(msg));
+    let mut text = Line::from(msg);
     text.patch_style(style);
     Paragraph::new(text)
 }
 
 fn create_search_bar<'a>(app: &'a App, hi_block: &'a Block, def_block: &'a Block) -> Paragraph<'a> {
-    Paragraph::new(app.input.as_ref()).block(
+    Paragraph::new(app.input.as_str()).block(
         match app.input_mode {
             InputMode::Editing => hi_block.clone(),
             _ => def_block.clone(),
@@ -239,13 +238,13 @@ fn create_table<'a>(app: &'a App, hi_block: &'a Block<'a>, def_block: &'a Block<
         .bottom_margin(0)
     });
 
-    Table::new(items)
+    Table::new(items, [Constraint::Percentage(100)])
         .header(header)
         .block(match app.input_mode {
             InputMode::Normal => hi_block.to_owned(),
             _ => def_block.to_owned(),
         })
-        .highlight_style(Style::default().bg(Color::Rgb(60,60,60)))
+        .highlight_style(Style::default().bg(Color::Rgb(60, 60, 60)))
 }
 
 fn create_text_popup<'a>(text: String, title: String, block: &'a Block) -> Paragraph<'a> {
@@ -268,7 +267,7 @@ fn create_popup<'a, T: ToString + num::FromPrimitive + Default + PartialEq>(
         let sel = if &n == item { "[x] " } else { "[ ] " }.to_owned();
         Row::new(vec![sel + &item.to_string()])
     });
-    Table::new(items)
+    Table::new(items, &[Constraint::Percentage(100)])
         .block(
             match &app.input_mode {
                 _ if app.input_mode == mode => hi_block.to_owned(),
@@ -282,7 +281,6 @@ fn create_popup<'a, T: ToString + num::FromPrimitive + Default + PartialEq>(
                 .fg(Color::Black)
                 .add_modifier(Modifier::BOLD),
         )
-        .widths(&[Constraint::Percentage(100)])
 }
 
 fn shorten_number(mut n: u32) -> String {
