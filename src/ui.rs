@@ -12,20 +12,31 @@ use unicode_width::UnicodeWidthStr;
 
 static BORDER: BorderType = BorderType::Plain;
 
+#[macro_export]
+macro_rules! bold {
+    ( $x:expr ) => {
+        Span::styled($x, Style::default().add_modifier(Modifier::BOLD))
+    };
+}
+
+#[macro_export]
+macro_rules! raw {
+    ( $x:expr ) => {
+        Span::raw($x)
+    };
+}
+
 pub fn ui<B: Backend>(f: &mut Frame, app: &mut App) {
     let size = f.size();
 
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .margin(0)
-        .constraints(
-            [
-                Constraint::Length(1),
-                Constraint::Length(3),
-                Constraint::Min(1),
-            ]
-            .as_ref(),
-        )
+        .constraints(&[
+            Constraint::Length(1),
+            Constraint::Length(3),
+            Constraint::Min(1),
+        ])
         .split(f.size());
 
     let def_block = Block::default()
@@ -54,7 +65,7 @@ pub fn ui<B: Backend>(f: &mut Frame, app: &mut App) {
         Constraint::Length(5),
     ];
     let table = create_table(app, &hi_block, &def_block).widths(&binding);
-    f.render_stateful_widget(table, chunks[2], &mut app.items.state.to_owned());
+    f.render_stateful_widget(table, chunks[2], &mut app.table.state.to_owned());
 
     match app.input_mode {
         InputMode::Editing => {
@@ -70,7 +81,8 @@ pub fn ui<B: Backend>(f: &mut Frame, app: &mut App) {
                 InputMode::SelectCategory,
                 "Categories".to_owned(),
             );
-            let area = centered_rect(30, 7, size);
+
+            let area = centered_rect(30, app.category.table.items.len() as u16 + 2, size);
             f.render_widget(Clear, area);
             f.render_stateful_widget(popup, area, &mut app.category.table.state);
         }
@@ -84,7 +96,7 @@ pub fn ui<B: Backend>(f: &mut Frame, app: &mut App) {
                 InputMode::SelectFilter,
                 "Filters".to_owned(),
             );
-            let area = centered_rect(30, 7, size);
+            let area = centered_rect(30, app.filter.table.items.len() as u16 + 2, size);
             f.render_widget(Clear, area);
             f.render_stateful_widget(popup, area, &mut app.filter.table.state);
         }
@@ -95,10 +107,10 @@ pub fn ui<B: Backend>(f: &mut Frame, app: &mut App) {
                 app.sort.selected as usize,
                 &hi_block,
                 &def_block,
-                InputMode::SelectFilter,
+                InputMode::SelectSort,
                 "Sort".to_owned(),
             );
-            let area = centered_rect(30, 8, size);
+            let area = centered_rect(30, app.sort.table.items.len() as u16 + 2, size);
             f.render_widget(Clear, area);
             f.render_stateful_widget(popup, area, &mut app.sort.table.state);
         }
@@ -145,48 +157,44 @@ fn create_message(app: &App) -> Paragraph {
     let (msg, style) = match app.input_mode {
         InputMode::Normal => (
             vec![
-                Span::raw("Press "),
-                Span::styled("q", Style::default().add_modifier(Modifier::BOLD)),
-                Span::raw(" to exit, "),
-                Span::styled("/", Style::default().add_modifier(Modifier::BOLD)),
-                Span::raw(" to search, "),
-                Span::styled("F1", Style::default().add_modifier(Modifier::BOLD)),
-                Span::raw(" for keybinds, "),
-                Span::styled("Enter", Style::default().add_modifier(Modifier::BOLD)),
-                Span::raw(" to download"),
+                raw!("Press "),
+                bold!("q"),
+                raw!(" to exit, "),
+                bold!("/"),
+                raw!(" to search, "),
+                bold!("F1"),
+                raw!(" for keybinds, "),
+                bold!("Enter"),
+                raw!(" to download"),
             ],
             Style::default(),
         ),
         InputMode::Editing => (
             vec![
-                Span::raw("Press "),
-                Span::styled("Esc", Style::default().add_modifier(Modifier::BOLD)),
-                Span::raw(" to stop typing, "),
-                Span::styled("Enter", Style::default().add_modifier(Modifier::BOLD)),
-                Span::raw(" to search"),
+                raw!("Press "),
+                bold!("Esc"),
+                raw!(" to stop typing, "),
+                bold!("Enter"),
+                raw!(" to search"),
             ],
             Style::default(),
         ),
         InputMode::SelectFilter | InputMode::SelectCategory | InputMode::SelectSort => (
             vec![
-                Span::raw("Press "),
-                Span::styled("q", Style::default().add_modifier(Modifier::BOLD)),
-                Span::raw(" to exit, "),
-                Span::styled("Esc", Style::default().add_modifier(Modifier::BOLD)),
-                Span::raw(" to leave popup, "),
-                Span::styled("hjkl", Style::default().add_modifier(Modifier::BOLD)),
-                Span::raw(" for movement, "),
-                Span::styled("Enter", Style::default().add_modifier(Modifier::BOLD)),
-                Span::raw(" to confirm selection"),
+                raw!("Press "),
+                bold!("q"),
+                raw!(" to exit, "),
+                bold!("Esc"),
+                raw!(" to leave popup, "),
+                bold!("hjkl"),
+                raw!(" for movement, "),
+                bold!("Enter"),
+                raw!(" to confirm selection"),
             ],
             Style::default(),
         ),
         InputMode::ShowError | InputMode::ShowHelp => (
-            vec![
-                Span::raw("Press "),
-                Span::styled("any key", Style::default().add_modifier(Modifier::BOLD)),
-                Span::raw(" to dismiss"),
-            ],
+            vec![raw!("Press "), bold!("any key"), raw!(" to dismiss")],
             Style::default(),
         ),
         InputMode::Loading | InputMode::Searching => (vec![], Style::default()),
@@ -220,7 +228,7 @@ fn create_table<'a>(app: &'a App, hi_block: &'a Block<'a>, def_block: &'a Block<
         .height(1)
         .bottom_margin(0);
 
-    let items = app.items.items.iter().map(|item| {
+    let items = app.table.items.iter().map(|item| {
         Row::new(vec![
             item.category.get_icon(),
             item.get_styled_title(),
@@ -294,25 +302,19 @@ fn shorten_number(mut n: u32) -> String {
 fn centered_rect(x_len: u16, y_len: u16, r: Rect) -> Rect {
     let popup_layout = Layout::default()
         .direction(Direction::Vertical)
-        .constraints(
-            [
-                Constraint::Length((r.height - y_len) / 2),
-                Constraint::Length(y_len),
-                Constraint::Length((r.height - y_len) / 2),
-            ]
-            .as_ref(),
-        )
+        .constraints(&[
+            Constraint::Length((r.height - y_len) / 2),
+            Constraint::Length(y_len),
+            Constraint::Length((r.height - y_len) / 2),
+        ])
         .split(r);
 
     Layout::default()
         .direction(Direction::Horizontal)
-        .constraints(
-            [
-                Constraint::Length((r.width - x_len) / 2),
-                Constraint::Length(x_len),
-                Constraint::Length((r.width - x_len) / 2),
-            ]
-            .as_ref(),
-        )
+        .constraints(&[
+            Constraint::Length((r.width - x_len) / 2),
+            Constraint::Length(x_len),
+            Constraint::Length((r.width - x_len) / 2),
+        ])
         .split(popup_layout[1])[1]
 }
