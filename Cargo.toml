@@ -1,6 +1,6 @@
 [package]
 name = "nyaa"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2021"
 categories = ["command-line-utilities"]
 keywords = ["tui", "cli", "nyaa", "torrent", "download"]
@@ -14,15 +14,15 @@ license = "GPL-3.0-or-later"
 [dependencies]
 rss = "2.0.1"
 reqwest = { version = "0.11", features = ["json"] }
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "1", features=["rt", "macros", "rt-multi-thread"] }
 urlencoding = "2.1.0"
 ratatui = "0.25.0"
 crossterm = "0.27.0"
 unicode-width = "0.1.5"
 num = "0.4"
-num-derive = "0.3"
+num-derive = "0.4"
 num-traits = "0.2"
-queues = "1.0.2"
-confy = "0.5.1"
+queues = "1.1"
+confy = "0.6.0"
 shellwords = "1.1.0"
 serde = { version = "1.0.152", features = ["derive"] }
