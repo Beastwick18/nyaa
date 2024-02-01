@@ -9,6 +9,10 @@
 ```
 cargo install nyaa
 ```
+### On Arch Linux ([AUR](https://aur.archlinux.org/packages/nyaa))
+```
+yay -S nyaa
+```
 ### Pre-Built Binaries
 Binaries for Linux and Windows are available on the releases page.
 ### From Source
