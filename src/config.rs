@@ -1,8 +1,8 @@
 use crate::app::APP_NAME;
+use crate::nyaa::{Category, Filter, Sort};
 use confy::ConfyError;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use crate::nyaa::{Filter, Category, Sort};
 
 pub static CONFIG_FILE: &str = "config";
 
@@ -19,19 +19,10 @@ impl Config {
         confy::load::<Config>(APP_NAME, CONFIG_FILE)
     }
 
-    pub fn get_path() -> PathBuf {
-        confy::get_configuration_file_path(APP_NAME, CONFIG_FILE).unwrap()
+    pub fn get_path() -> Result<PathBuf, ConfyError> {
+        confy::get_configuration_file_path(APP_NAME, CONFIG_FILE)
     }
 }
-
-// fn get_download_dir() -> String {
-//     if let Some(dir) = dirs::download_dir() {
-//         if let Some(dir_s) = dir.to_str() {
-//             return dir_s.to_owned()
-//         }
-//     }
-//     "".to_owned()
-// }
 
 impl std::default::Default for Config {
     fn default() -> Config {

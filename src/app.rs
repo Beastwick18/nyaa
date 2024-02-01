@@ -1,5 +1,7 @@
+use std::isize;
+
+use crate::config::Config;
 use crate::nyaa;
-use crate::nyaa::config::Config;
 use crate::nyaa::EnumIter;
 use crossterm::event::KeyCode;
 use queues::Queue;
@@ -40,16 +42,16 @@ impl<T: Default + Clone> Popup<T> {
         match key {
             KeyCode::Char('q') | KeyCode::Esc => return Some(last_input_mode),
             KeyCode::Char('/') => return Some(InputMode::Editing),
-            KeyCode::Char('j') | KeyCode::Down => self.table.next(1),
-            KeyCode::Char('k') | KeyCode::Up => self.table.previous(1),
+            KeyCode::Char('j') | KeyCode::Down => self.table.next_wrap(1),
+            KeyCode::Char('k') | KeyCode::Up => self.table.next_wrap(-1),
             KeyCode::Char('J') => self.table.next(4),
-            KeyCode::Char('K') => self.table.previous(4),
+            KeyCode::Char('K') => self.table.next(-4),
             KeyCode::Char('g') => self.table.select(0),
             KeyCode::Char('G') => self.table.select(self.table.items.len() - 1),
             KeyCode::Enter | KeyCode::Char('l') => {
                 if let Some(i) = self.table.state.selected() {
                     if let Some(item) = self.table.items.get(i) {
-                        self.selected = item.clone();
+                        self.selected = item.to_owned();
                         on_confirm(i, item);
                     }
                 }
@@ -73,38 +75,27 @@ impl<T> StatefulTable<T> {
         }
     }
 
-    pub fn next(&mut self, amt: usize) {
+    pub fn next_wrap(&mut self, amt: isize) {
         if self.items.is_empty() {
             return;
         }
         let i = match self.state.selected() {
-            Some(i) => {
-                if i + amt >= self.items.len() {
-                    self.items.len() - 1
-                } else {
-                    i + amt
-                }
-            }
+            Some(i) => (i as isize + amt).rem_euclid(self.items.len() as isize),
             None => 0,
         };
-        self.state.select(Some(i));
+        self.state.select(Some(i as usize));
     }
 
-    pub fn previous(&mut self, amt: usize) {
+    pub fn next(&mut self, amt: isize) {
         if self.items.is_empty() {
             return;
         }
         let i = match self.state.selected() {
-            Some(i) => {
-                if i < amt {
-                    0
-                } else {
-                    i - amt
-                }
-            }
+            Some(i) => i as isize + amt,
             None => 0,
         };
-        self.state.select(Some(i));
+        self.state
+            .select(Some(i.max(0).min(self.items.len() as isize - 1) as usize));
     }
 
     pub fn select(&mut self, idx: usize) {
@@ -119,8 +110,7 @@ pub struct App {
     /// Current input mode
     pub input_mode: InputMode,
     pub last_input_mode: InputMode,
-    /// History of recorded messages
-    pub items: StatefulTable<nyaa::Item>,
+    pub table: StatefulTable<nyaa::Item>,
     pub category: Popup<nyaa::Category>,
     pub filter: Popup<nyaa::Filter>,
     pub sort: Popup<nyaa::Sort>,
@@ -128,7 +118,7 @@ pub struct App {
     pub help: String,
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(PartialEq, Clone)]
 pub enum InputMode {
     Normal,
     Editing,
@@ -146,9 +136,9 @@ impl Default for App {
         App {
             config: Config::default(),
             input: String::new(),
-            input_mode: InputMode::Editing,
+            input_mode: InputMode::Loading,
             last_input_mode: InputMode::Editing,
-            items: StatefulTable::with_items(Vec::new()),
+            table: StatefulTable::with_items(Vec::new()),
             category: Popup::<nyaa::Category>::with_items(
                 nyaa::Category::iter().map(|item| item.to_owned()).collect(),
             ),

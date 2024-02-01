@@ -9,8 +9,6 @@ use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, error::Error, slice::Iter, string::ToString};
 use urlencoding::encode;
 
-pub mod config;
-
 type ExtensionMap = BTreeMap<String, Vec<Extension>>;
 
 pub struct Item {
@@ -53,12 +51,16 @@ pub enum Filter {
 }
 
 #[derive(Copy, Clone, FromPrimitive, PartialEq, Deserialize, Serialize)]
+#[repr(u8)]
 pub enum Category {
-    AllAnime = 0,
-    EnglishTranslated = 2,
-    NonEnglishTranslated = 3,
-    Raw = 4,
-    AnimeMusicVideo = 1,
+    AllAnime = 10,
+    EnglishTranslated = 12,
+    NonEnglishTranslated = 13,
+    Raw = 14,
+    AnimeMusicVideo = 11,
+    AllAudio = 20,
+    AudioLossless = 21,
+    AudioLossy = 22,
 }
 
 #[derive(Copy, Clone, FromPrimitive, PartialEq, Deserialize, Serialize)]
@@ -72,33 +74,37 @@ pub enum Sort {
 }
 
 impl Category {
-    fn get_url_string(&self) -> String {
-        "1_".to_owned() + &(self.to_owned() as i32).to_string()
+    fn get_url_string(self) -> String {
+        let n = self as u32;
+        format!("{}_{}", n / 10, n % 10)
     }
 
     pub fn get_icon(&self) -> Text {
+        let def = Style::default();
         match self {
-            Category::AllAnime => Text::raw(""),
-            Category::AnimeMusicVideo => Text::styled("AMV", Style::default().fg(Color::Magenta)),
-            Category::EnglishTranslated => {
-                Text::styled("Subs", Style::default().fg(Color::Magenta))
-            }
-            Category::NonEnglishTranslated => {
-                Text::styled("Subs", Style::default().fg(Color::Green))
-            }
-            Category::Raw => Text::styled("Raw", Style::default().fg(Color::Gray)),
+            Category::AllAnime => Text::raw("Ani"),
+            Category::AnimeMusicVideo => Text::styled("AMV", def.fg(Color::Magenta)),
+            Category::EnglishTranslated => Text::styled("Sub", def.fg(Color::Magenta)),
+            Category::NonEnglishTranslated => Text::styled("Sub", def.fg(Color::Green)),
+            Category::Raw => Text::styled("Raw", def.fg(Color::Gray)),
+            Category::AllAudio => Text::raw("Aud"),
+            Category::AudioLossless => Text::styled("Aud", def.fg(Color::Yellow)),
+            Category::AudioLossy => Text::styled("Aud", def.fg(Color::Red)),
         }
     }
 }
 
 impl EnumIter<Category> for Category {
     fn iter() -> Iter<'static, Category> {
-        static CATEGORIES: [Category; 5] = [
+        static CATEGORIES: &'static [Category] = &[
             Category::AllAnime,
             Category::EnglishTranslated,
             Category::NonEnglishTranslated,
             Category::Raw,
             Category::AnimeMusicVideo,
+            Category::AllAudio,
+            Category::AudioLossless,
+            Category::AudioLossy,
         ];
         CATEGORIES.iter()
     }
@@ -112,6 +118,9 @@ impl ToString for Category {
             Category::EnglishTranslated => "English Translated",
             Category::NonEnglishTranslated => "Non-English Translated",
             Category::Raw => "Raw",
+            Category::AllAudio => "All Audio",
+            Category::AudioLossless => "Audio Lossless",
+            Category::AudioLossy => "Audio Lossy",
         }
         .to_owned()
     }
@@ -131,7 +140,8 @@ impl Filter {
 
 impl EnumIter<Filter> for Filter {
     fn iter() -> Iter<'static, Filter> {
-        static FILTERS: [Filter; 3] = [Filter::NoFilter, Filter::NoRemakes, Filter::TrustedOnly];
+        static FILTERS: &'static [Filter] =
+            &[Filter::NoFilter, Filter::NoRemakes, Filter::TrustedOnly];
         FILTERS.iter()
     }
 }
@@ -155,7 +165,7 @@ impl Default for Filter {
 
 impl EnumIter<Sort> for Sort {
     fn iter() -> Iter<'static, Sort> {
-        static SORTS: [Sort; 6] = [
+        static SORTS: &'static [Sort] = &[
             Sort::Date,
             Sort::Downloads,
             Sort::Seeders,
@@ -187,11 +197,12 @@ impl Default for Sort {
     }
 }
 
-pub async fn get_feed_list(query: &String, cat: &Category, filter: &Filter) -> Vec<Item> {
-    let feed = match get_feed(query.to_owned(), cat, filter, true).await {
-        Ok(x) => x,
-        Err(_) => panic!("Failed to connect to nyaa.si..."),
-    };
+pub async fn get_feed_list(
+    query: &String,
+    cat: &Category,
+    filter: &Filter,
+) -> Result<Vec<Item>, Box<dyn Error>> {
+    let feed = get_feed(query.to_owned(), cat, filter, true).await?;
     let mut items: Vec<Item> = Vec::new();
 
     for (i, item) in feed.items.iter().enumerate() {
@@ -211,7 +222,7 @@ pub async fn get_feed_list(query: &String, cat: &Category, filter: &Filter) -> V
             let category_str: String = get_ext_value::<String>(ext_map, "categoryId")
                 .await
                 .unwrap_or_default();
-            let infohash: String = get_ext_value::<String>(ext_map, "infoHash")
+            let hash: String = get_ext_value::<String>(ext_map, "infoHash")
                 .await
                 .unwrap_or_default();
             let trusted: bool = get_ext_value::<String>(ext_map, "trusted")
@@ -222,20 +233,31 @@ pub async fn get_feed_list(query: &String, cat: &Category, filter: &Filter) -> V
                 .await
                 .unwrap_or_default()
                 .eq("Yes");
-            let id = guid.value.split("/").last().unwrap().to_owned(); // Get nyaa id from guid url in format
-                                                                       // `https://nyaa.si/view/{id}`
+            let id = guid.value.split("/").last().unwrap_or_default().to_owned(); // Get nyaa id from guid url in format
+                                                                                  // `https://nyaa.si/view/{id}`
             let torrent_link = format!("https://nyaa.si/download/{}.torrent", id);
             let file_name = format!("{}.torrent", id);
-            let category = num::FromPrimitive::from_u32(
-                category_str
-                    .split("_")
-                    .last()
-                    .unwrap_or_default()
-                    .parse::<u32>()
-                    .unwrap_or_default() as u32,
-            )
-            .unwrap();
-            // let category =
+            let split: Vec<&str> = category_str.split("_").collect();
+            let high_str = match split.first() {
+                Some(c) => c,
+                None => "1",
+            };
+            let high = match high_str.parse::<u32>() {
+                Ok(h) => h,
+                Err(_) => 1,
+            };
+            let low_str = match split.last() {
+                Some(c) => c,
+                None => "1",
+            };
+            let low = match low_str.parse::<u32>() {
+                Ok(l) => l,
+                Err(_) => 1,
+            };
+            let category = match num::FromPrimitive::from_u32(high * 10 + low) {
+                Some(c) => c,
+                None => Category::AllAnime,
+            };
 
             items.push(Item {
                 index: i as u32,
@@ -247,14 +269,14 @@ pub async fn get_feed_list(query: &String, cat: &Category, filter: &Filter) -> V
                 magnet_link: link.to_owned(),
                 file_name,
                 id,
-                hash: infohash,
-                category: category,
+                hash,
+                category,
                 trusted,
                 remake,
             });
         }
     }
-    items
+    Ok(items)
 }
 
 pub async fn get_feed(
