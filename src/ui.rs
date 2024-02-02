@@ -215,7 +215,7 @@ fn create_search_bar<'a>(app: &'a App, hi_block: &'a Block, def_block: &'a Block
 }
 
 fn create_table<'a>(app: &'a App, hi_block: &'a Block<'a>, def_block: &'a Block<'a>) -> Table<'a> {
-    static HEADER_CELLS: [&str; 5] = ["Cat", "Name", "", "", ""];
+    static HEADER_CELLS: [&str; 5] = ["Cat", "Name", "", "", "󰇚"];
     let header_cells = HEADER_CELLS
         .iter()
         .map(|h| Cell::from(Text::raw(*h)).style(Style::default().add_modifier(Modifier::BOLD)));
