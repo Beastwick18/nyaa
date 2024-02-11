@@ -1,155 +1,100 @@
-use std::isize;
+use std::io;
 
-use crate::config::Config;
-use crate::nyaa;
-use crate::nyaa::EnumIter;
-use crossterm::event::KeyCode;
-use queues::Queue;
-use ratatui::widgets::TableState;
+use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
+use ratatui::{
+    backend::Backend,
+    layout::{Constraint, Direction, Layout},
+    style::{Color, Style},
+    widgets::{Block, BorderType, Borders, Paragraph},
+    Terminal,
+};
 
-pub static APP_NAME: &str = "nyaa";
-pub static HELP_MSG: &str = "Normal mode:      | Editing mode:
-q = Quit          | Esc = Stop editing 
-/ = Search        | Enter = Submit
-hjkl/ = move  +--------------------
-c = Pick category | Popup mode:
-f = Pick filter   | q/Esc = Close
-s = Sort select   | hjlk/ = move
-                  | Enter = Confirm";
+use crate::widget::{category::CategoryPopup, Popup};
 
-pub struct Popup<T: Default> {
-    pub table: StatefulTable<T>,
-    pub selected: T,
-}
+static BORDER: BorderType = BorderType::Plain;
 
-impl<T: Default + Clone> Popup<T> {
-    fn with_items(items: Vec<T>) -> Popup<T> {
-        Popup {
-            table: StatefulTable::with_items(items),
-            selected: T::default(),
-        }
-    }
-
-    pub fn handle_keybinds<F>(
-        &mut self,
-        last_input_mode: InputMode,
-        key: KeyCode,
-        on_confirm: F,
-    ) -> Option<InputMode>
-    where
-        F: FnOnce(usize, &T),
-    {
-        match key {
-            KeyCode::Char('q') | KeyCode::Esc => return Some(last_input_mode),
-            KeyCode::Char('/') => return Some(InputMode::Editing),
-            KeyCode::Char('j') | KeyCode::Down => self.table.next_wrap(1),
-            KeyCode::Char('k') | KeyCode::Up => self.table.next_wrap(-1),
-            KeyCode::Char('J') => self.table.next(4),
-            KeyCode::Char('K') => self.table.next(-4),
-            KeyCode::Char('g') => self.table.select(0),
-            KeyCode::Char('G') => self.table.select(self.table.items.len() - 1),
-            KeyCode::Enter | KeyCode::Char('l') => {
-                if let Some(i) = self.table.state.selected() {
-                    if let Some(item) = self.table.items.get(i) {
-                        self.selected = item.to_owned();
-                        on_confirm(i, item);
-                    }
-                }
-            }
-            _ => {}
-        };
-        None
-    }
-}
-
-pub struct StatefulTable<T> {
-    pub state: TableState,
-    pub items: Vec<T>,
-}
-
-impl<T> StatefulTable<T> {
-    pub fn with_items(items: Vec<T>) -> StatefulTable<T> {
-        StatefulTable {
-            state: TableState::default(),
-            items,
-        }
-    }
-
-    pub fn next_wrap(&mut self, amt: isize) {
-        if self.items.is_empty() {
-            return;
-        }
-        let i = match self.state.selected() {
-            Some(i) => (i as isize + amt).rem_euclid(self.items.len() as isize),
-            None => 0,
-        };
-        self.state.select(Some(i as usize));
-    }
-
-    pub fn next(&mut self, amt: isize) {
-        if self.items.is_empty() {
-            return;
-        }
-        let i = match self.state.selected() {
-            Some(i) => i as isize + amt,
-            None => 0,
-        };
-        self.state
-            .select(Some(i.max(0).min(self.items.len() as isize - 1) as usize));
-    }
-
-    pub fn select(&mut self, idx: usize) {
-        self.state.select(Some(idx));
-    }
+pub enum Mode {
+    Normal,
+    Category,
 }
 
 pub struct App {
-    /// Current value of the input box
-    pub config: Config,
-    pub input: String,
-    /// Current input mode
-    pub input_mode: InputMode,
-    pub last_input_mode: InputMode,
-    pub table: StatefulTable<nyaa::Item>,
-    pub category: Popup<nyaa::Category>,
-    pub filter: Popup<nyaa::Filter>,
-    pub sort: Popup<nyaa::Sort>,
-    pub errors: Queue<String>,
-    pub help: String,
-}
-
-#[derive(PartialEq, Clone)]
-pub enum InputMode {
-    Normal,
-    Editing,
-    ShowError,
-    SelectCategory,
-    SelectFilter,
-    SelectSort,
-    ShowHelp,
-    Loading,
-    Searching,
+    pub mode: Mode,
 }
 
 impl Default for App {
-    fn default() -> App {
-        App {
-            config: Config::default(),
-            input: String::new(),
-            input_mode: InputMode::Loading,
-            last_input_mode: InputMode::Editing,
-            table: StatefulTable::with_items(Vec::new()),
-            category: Popup::<nyaa::Category>::with_items(
-                nyaa::Category::iter().map(|item| item.to_owned()).collect(),
-            ),
-            filter: Popup::<nyaa::Filter>::with_items(
-                nyaa::Filter::iter().map(|item| item.to_owned()).collect(),
-            ),
-            sort: Popup::<nyaa::Sort>::with_items(
-                nyaa::Sort::iter().map(|item| item.to_owned()).collect(),
-            ),
-            errors: Queue::default(),
-            help: HELP_MSG.to_owned(),
+    fn default() -> Self {
+        App { mode: Mode::Normal }
+    }
+}
+
+fn normal_events(app: &mut App, e: &Event) {
+    if let Event::Key(KeyEvent {
+        code,
+        kind: KeyEventKind::Press,
+        ..
+    }) = e
+    {
+        match code {
+            KeyCode::Char('c') => {
+                app.mode = Mode::Category;
+            }
+            _ => {}
+        }
+    }
+}
+
+pub async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<()> {
+    let mut cat = CategoryPopup::default();
+    loop {
+        terminal.draw(|f| {
+            let chunks = Layout::new(
+                Direction::Vertical,
+                &[
+                    Constraint::Length(1),
+                    Constraint::Length(3),
+                    Constraint::Min(1),
+                ],
+            )
+            .split(f.size());
+
+            let def_block = Block::new().borders(Borders::ALL).border_type(BORDER);
+
+            let hi_block = Block::new()
+                .borders(Borders::ALL)
+                .border_style(Style::new().fg(Color::LightCyan))
+                .border_type(BORDER);
+
+            match app.mode {
+                Mode::Normal => {
+                    f.render_widget(Paragraph::new(format!("{}", cat.category)), chunks[0]);
+                }
+                Mode::Category => {
+                    cat.draw(f);
+                }
+            }
+        })?;
+
+        let evt = event::read()?;
+        match app.mode {
+            Mode::Category => {
+                cat.handle_event(&mut app, &evt);
+            }
+            Mode::Normal => {
+                normal_events(&mut app, &evt);
+            }
+        }
+
+        if let Event::Key(KeyEvent {
+            code,
+            kind: KeyEventKind::Press,
+            ..
+        }) = evt
+        {
+            match code {
+                KeyCode::Char('q') => return Ok(()),
+                _ => {}
+            }
         }
     }
 }
