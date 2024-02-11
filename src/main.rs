@@ -13,6 +13,7 @@ mod widget;
 
 #[tokio::main()]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // TODO: Use real command line package
     let args: Vec<String> = env::args().collect();
     for arg in args {
         if arg == "--version" || arg == "-V" || arg == "-v" {

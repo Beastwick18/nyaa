@@ -23,6 +23,7 @@ pub struct Widgets {
     pub category: CategoryPopup,
     pub sort: SortPopup,
     pub search: SearchWidget,
+    // TODO: Add query struct containing category, filter, etc. updated by popups
 }
 
 impl Default for App {

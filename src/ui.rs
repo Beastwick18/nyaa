@@ -18,10 +18,10 @@ pub static HI_BLOCK: Block = Block::new()
     .border_type(BORDER);
 
 pub fn draw(widgets: &Widgets, app: &App, f: &mut Frame) {
-    let chunks = Layout::new(
+    let layout = Layout::new(
         Direction::Vertical,
         &[
-            Constraint::Length(1),
+            Constraint::Length(1), // TODO: Maybe remove this, keys are obvious. Or make hiding it a config option
             Constraint::Length(3),
             Constraint::Min(1),
         ],
@@ -42,9 +42,9 @@ pub fn draw(widgets: &Widgets, app: &App, f: &mut Frame) {
             widgets.sort.draw(f);
         }
         Mode::Search => {
-            mode = "Editing";
+            mode = "Search";
         }
     }
-    widgets.search.draw(f, app, chunks[1]);
-    f.render_widget(Paragraph::new(format!("{}", mode)), chunks[0]);
+    widgets.search.draw(f, app, layout[1]);
+    f.render_widget(Paragraph::new(format!("Mode: {}", mode)), layout[0]); // TODO: Debug only
 }
