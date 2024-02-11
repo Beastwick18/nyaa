@@ -3,11 +3,14 @@ use ratatui::{
     layout::Constraint,
     style::{Color, Stylize as _},
     text::Text,
-    widgets::{Block, Borders, Clear, Row, Table},
+    widgets::{Clear, Row, Table},
     Frame,
 };
 
-use crate::app::{App, Mode};
+use crate::{
+    app::{App, Mode},
+    ui,
+};
 
 pub struct CatStruct<'a> {
     name: &'a str,
@@ -128,8 +131,8 @@ impl super::Popup for CategoryPopup {
                     }),
             );
             before.extend(after);
-            let table = Table::new(before, &[Constraint::Percentage(100)])
-                .block(Block::new().borders(Borders::ALL).title("Category"));
+            let table =
+                Table::new(before, &[Constraint::Percentage(100)]).block(ui::HI_BLOCK.clone());
             f.render_widget(Clear, area);
             f.render_widget(table, area);
         }
@@ -151,7 +154,7 @@ impl super::Popup for CategoryPopup {
                     }
                     app.mode = Mode::Normal;
                 }
-                KeyCode::Esc => {
+                KeyCode::Esc | KeyCode::Char('c') => {
                     app.mode = Mode::Normal;
                 }
                 KeyCode::Char('j') => {
