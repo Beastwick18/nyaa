@@ -24,6 +24,7 @@ pub fn draw(widgets: &Widgets, app: &App, f: &mut Frame) {
             Constraint::Length(1), // TODO: Maybe remove this, keys are obvious. Or make hiding it a config option
             Constraint::Length(3),
             Constraint::Min(1),
+            // Constraint::Length(1),
         ],
     )
     .split(f.size());
@@ -44,7 +45,12 @@ pub fn draw(widgets: &Widgets, app: &App, f: &mut Frame) {
         Mode::Search => {
             mode = "Search";
         }
+        Mode::Filter => {
+            mode = "Filter";
+            widgets.filter.draw(f);
+        }
     }
     widgets.search.draw(f, app, layout[1]);
-    f.render_widget(Paragraph::new(format!("Mode: {}", mode)), layout[0]); // TODO: Debug only
+    widgets.results.draw(f, app, layout[2]);
+    f.render_widget(Paragraph::new(format!("{}", mode)), layout[0]); // TODO: Debug only
 }

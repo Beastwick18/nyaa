@@ -10,59 +10,47 @@ use crate::{app::Mode, ui};
 use super::{EnumIter, Popup, StatefulTable};
 
 #[derive(Clone)]
-pub enum Sort {
-    Date,
-    Downloads,
-    Seeders,
-    Leechers,
-    Name,
-    Category,
+pub enum Filter {
+    NoFilter,
+    NoRemakes,
+    TrustedOnly,
 }
 
-impl EnumIter<Sort> for Sort {
-    fn iter() -> std::slice::Iter<'static, Sort> {
-        static SORTS: &'static [Sort] = &[
-            Sort::Date,
-            Sort::Downloads,
-            Sort::Seeders,
-            Sort::Leechers,
-            Sort::Name,
-            Sort::Category,
-        ];
-        SORTS.iter()
+impl EnumIter<Filter> for Filter {
+    fn iter() -> std::slice::Iter<'static, Filter> {
+        static FILTERS: &'static [Filter] =
+            &[Filter::NoFilter, Filter::NoRemakes, Filter::TrustedOnly];
+        FILTERS.iter()
     }
 }
 
-impl ToString for Sort {
+impl ToString for Filter {
     fn to_string(&self) -> String {
         match self {
-            Sort::Date => "Date".to_owned(),
-            Sort::Downloads => "Downloads".to_owned(),
-            Sort::Seeders => "Seeders".to_owned(),
-            Sort::Leechers => "Leechers".to_owned(),
-            Sort::Name => "Name".to_owned(),
-            Sort::Category => "Category".to_owned(),
+            Filter::NoFilter => "No Filter".to_owned(),
+            Filter::NoRemakes => "No Remakes".to_owned(),
+            Filter::TrustedOnly => "Trusted Only".to_owned(),
         }
     }
 }
 
-pub struct SortPopup {
+pub struct FilterPopup {
     pub table: StatefulTable<String>,
-    pub selected: Sort,
+    pub selected: Filter,
 }
 
-impl Default for SortPopup {
+impl Default for FilterPopup {
     fn default() -> Self {
-        SortPopup {
-            table: StatefulTable::with_items(Sort::iter().map(|item| item.to_string()).collect()),
-            selected: Sort::Date,
+        FilterPopup {
+            table: StatefulTable::with_items(Filter::iter().map(|item| item.to_string()).collect()),
+            selected: Filter::NoFilter,
         }
     }
 }
 
-impl Popup for SortPopup {
+impl Popup for FilterPopup {
     fn draw(&self, f: &mut ratatui::prelude::Frame) {
-        let area = super::centered_rect(30, 8, f.size());
+        let area = super::centered_rect(30, 5, f.size());
         let items = self.table.items.iter().enumerate().map(|(i, item)| {
             match i == (self.selected.to_owned() as usize) {
                 true => Row::new(vec![format!("  {}", item.to_owned())]),
@@ -70,7 +58,7 @@ impl Popup for SortPopup {
             }
         });
         let table = Table::new(items, [Constraint::Percentage(100)])
-            .block(ui::HI_BLOCK.to_owned().title("Sort"))
+            .block(ui::HI_BLOCK.to_owned().title("Filter"))
             .highlight_style(Style::default().bg(Color::Rgb(60, 60, 60)));
         f.render_stateful_widget(table, area, &mut self.table.state.to_owned());
     }
@@ -100,7 +88,7 @@ impl Popup for SortPopup {
                 }
                 KeyCode::Enter => {
                     if let Some(i) =
-                        Sort::iter().nth(self.table.state.selected().unwrap_or_default())
+                        Filter::iter().nth(self.table.state.selected().unwrap_or_default())
                     {
                         self.selected = i.to_owned();
                         app.mode = Mode::Normal;

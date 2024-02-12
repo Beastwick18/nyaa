@@ -5,7 +5,10 @@ use ratatui::{backend::Backend, Terminal};
 
 use crate::{
     ui,
-    widget::{category::CategoryPopup, search::SearchWidget, sort::SortPopup, Popup, Widget},
+    widget::{
+        category::CategoryPopup, filter::FilterPopup, results::ResultsWidget, search::SearchWidget,
+        sort::SortPopup, Popup, Widget,
+    },
 };
 
 pub enum Mode {
@@ -13,17 +16,20 @@ pub enum Mode {
     Search,
     Category,
     Sort,
+    Filter,
 }
 
 pub struct App {
     pub mode: Mode,
+    // TODO: Add query struct containing category, filter, etc. updated by popups
 }
 
 pub struct Widgets {
     pub category: CategoryPopup,
     pub sort: SortPopup,
+    pub filter: FilterPopup,
     pub search: SearchWidget,
-    // TODO: Add query struct containing category, filter, etc. updated by popups
+    pub results: ResultsWidget,
 }
 
 impl Default for App {
@@ -37,12 +43,14 @@ impl Default for Widgets {
         Widgets {
             category: CategoryPopup::default(),
             sort: SortPopup::default(),
+            filter: FilterPopup::default(),
             search: SearchWidget::default(),
+            results: ResultsWidget::default(),
         }
     }
 }
 
-fn normal_event(app: &mut App, e: &Event) {
+fn normal_event(app: &mut App, e: &Event) -> bool {
     if let Event::Key(KeyEvent {
         code,
         kind: KeyEventKind::Press,
@@ -56,12 +64,19 @@ fn normal_event(app: &mut App, e: &Event) {
             KeyCode::Char('s') => {
                 app.mode = Mode::Sort;
             }
+            KeyCode::Char('f') => {
+                app.mode = Mode::Filter;
+            }
             KeyCode::Char('/') => {
                 app.mode = Mode::Search;
+            }
+            KeyCode::Char('q') => {
+                return true;
             }
             _ => {}
         }
     }
+    return false;
 }
 
 pub async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<()> {
@@ -78,23 +93,16 @@ pub async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io
                 w.sort.handle_event(&mut app, &evt);
             }
             Mode::Normal => {
-                normal_event(&mut app, &evt);
+                if normal_event(&mut app, &evt) {
+                    return Ok(());
+                }
+                w.results.handle_event(&mut app, &evt);
             }
             Mode::Search => {
                 w.search.handle_event(&mut app, &evt);
             }
-        }
-
-        // Global key bindings that will always be checked, regardless of the current mode
-        if let Event::Key(KeyEvent {
-            code,
-            kind: KeyEventKind::Press,
-            ..
-        }) = evt
-        {
-            match code {
-                KeyCode::Char('q') => return Ok(()),
-                _ => {}
+            Mode::Filter => {
+                w.filter.handle_event(&mut app, &evt);
             }
         }
     }
