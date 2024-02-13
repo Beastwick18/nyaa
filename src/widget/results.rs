@@ -9,40 +9,31 @@ use ratatui::{
     Frame,
 };
 
-use crate::app::{App, Mode};
+use crate::{
+    app::{App, Mode},
+    nyaa,
+};
 
 use super::StatefulTable;
 
 pub struct ResultsWidget {
-    table: StatefulTable<Vec<String>>,
+    table: StatefulTable<nyaa::Item>,
+}
+
+impl ResultsWidget {
+    pub fn with_items(&mut self, items: Vec<nyaa::Item>) {
+        self.table.items = items;
+        self.table.select(0);
+    }
+    pub fn clear(&mut self) {
+        self.table.items = vec![];
+    }
 }
 
 impl Default for ResultsWidget {
     fn default() -> Self {
         ResultsWidget {
-            table: StatefulTable::with_items(vec![
-                vec![
-                    "Cat".to_owned(),
-                    "Title 1".to_owned(),
-                    "1".to_owned(),
-                    "2".to_owned(),
-                    "3".to_owned(),
-                ],
-                vec![
-                    "Cat".to_owned(),
-                    "Title 2".to_owned(),
-                    "1".to_owned(),
-                    "2".to_owned(),
-                    "3".to_owned(),
-                ],
-                vec![
-                    "Cat".to_owned(),
-                    "Title 3".to_owned(),
-                    "1".to_owned(),
-                    "2".to_owned(),
-                    "3".to_owned(),
-                ],
-            ]),
+            table: StatefulTable::with_items(vec![]),
         }
     }
 }
@@ -74,29 +65,24 @@ impl super::Widget for ResultsWidget {
             .height(1)
             .bottom_margin(0);
 
-        let items = (0..100).map(|n| {
+        let items = self.table.items.iter().map(|item| {
             Row::new(vec![
-                Text::raw("Cat"),
+                Text::styled(item.icon.icon, Style::new().fg(item.icon.color)),
                 Text::styled(
-                    "[Yameii] The Foolish Angel Dances with the Devil - S01E04 [English Dub] [CR WEB-DL 720p] [B422AF83] (Oroka na Tenshi wa Akuma to Odoru)",
-                    Style::new().fg(if n % 4 == 0 {
+                    item.title.to_owned(),
+                    Style::new().fg(if item.trusted {
                         app.theme.green
-                    } else if n % 7 == 0 {
+                    } else if item.remake {
                         app.theme.red
                     } else {
                         app.theme.fg
                     }),
                 ),
-                Text::styled(
-                    ((n + 11) % 21 + (n + 32) % 60).to_string(),
-                    Style::new().fg(app.theme.green),
-                ),
-                Text::styled(
-                    ((n + 4) % 21 + (n + 10) % 50).to_string(),
-                    Style::new().fg(app.theme.red),
-                ),
-                Text::raw(((n + 9) % 21 + (n + 49) % 120).to_string()),
+                Text::styled(item.seeders.to_string(), Style::new().fg(app.theme.green)),
+                Text::styled(item.leechers.to_string(), Style::new().fg(app.theme.red)),
+                Text::raw(item.downloads.to_string()),
             ])
+            .fg(app.theme.fg)
             .height(1)
             .bottom_margin(0)
         });
@@ -120,7 +106,6 @@ impl super::Widget for ResultsWidget {
                     .border_type(app.theme.border)
                     .border_style(Style::new().fg(focus_color)),
             )
-            .fg(app.theme.fg)
             .bg(app.theme.bg)
             .highlight_style(Style::default().bg(app.theme.hl_bg))
             .widths(&binding);

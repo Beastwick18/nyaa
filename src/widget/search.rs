@@ -89,6 +89,9 @@ impl super::Widget for SearchWidget {
                 KeyCode::Backspace => {
                     self.input.pop();
                 }
+                KeyCode::Enter => {
+                    app.mode = Mode::Loading;
+                }
                 _ => {}
             };
         }

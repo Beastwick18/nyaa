@@ -1,8 +1,8 @@
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     layout::Constraint,
-    style::{Style, Stylize as _},
-    text::Text,
+    style::{Color, Style, Stylize as _},
+    text::{Line, Span, Text},
     widgets::{Block, Borders, Clear, Row, Table},
     Frame,
 };
@@ -15,75 +15,154 @@ pub struct CatEntry<'a> {
     name: &'a str,
     cfg: &'a str,
     id: usize,
+    pub icon: CatIcon,
+}
+
+#[derive(Clone)]
+pub struct CatIcon {
+    pub icon: &'static str,
+    pub color: Color,
 }
 
 impl<'a> CatEntry<'a> {
-    const fn new(name: &'a str, cfg: &'a str, id: usize) -> Self {
-        CatEntry { name, cfg, id }
+    const fn new(
+        name: &'a str,
+        cfg: &'a str,
+        id: usize,
+        icon_str: &'static str,
+        color: Color,
+    ) -> Self {
+        let icon = CatIcon {
+            icon: icon_str,
+            color,
+        };
+        CatEntry {
+            name,
+            cfg,
+            id,
+            icon,
+        }
     }
 }
 
 pub struct CatStruct<'a> {
     name: &'a str,
-    entries: &'a [CatEntry<'a>],
+    pub entries: &'a [CatEntry<'a>],
+}
+
+impl<'a> CatStruct<'a> {
+    pub fn find(&'a self, category: u32) -> Option<CatIcon> {
+        if let Some(e) = self.entries.iter().find(|e| e.id == category as usize) {
+            return Some(e.icon.clone());
+        }
+        None
+    }
 }
 
 pub static ANIME: CatStruct = CatStruct {
     name: "Anime",
     entries: &[
-        CatEntry::new("All Anime", "AllAnime", 10),
-        CatEntry::new("English Translated", "AnimeEnglishTranslated", 12),
-        CatEntry::new("Non-English Translated", "AnimeNonEnglishTranslated", 13),
-        CatEntry::new("Raw", "AnimeRaw", 14),
-        CatEntry::new("Anime Music Video", "AnimeMusicVideo", 11),
+        CatEntry::new("All Anime", "AllAnime", 10, "Ani", Color::White),
+        CatEntry::new(
+            "English Translated",
+            "AnimeEnglishTranslated",
+            12,
+            "Sub",
+            Color::Magenta,
+        ),
+        CatEntry::new(
+            "Non-English Translated",
+            "AnimeNonEnglishTranslated",
+            13,
+            "Sub",
+            Color::Green,
+        ),
+        CatEntry::new("Raw", "AnimeRaw", 14, "Raw", Color::White),
+        CatEntry::new(
+            "Anime Music Video",
+            "AnimeMusicVideo",
+            11,
+            "AMV",
+            Color::Magenta,
+        ),
     ],
 };
 
 pub static AUDIO: CatStruct = CatStruct {
     name: "Audio",
     entries: &[
-        CatEntry::new("All Audio", "AllAudio", 20),
-        CatEntry::new("Lossless", "AudioLossless", 21),
-        CatEntry::new("Lossy", "AudioLossy", 22),
+        CatEntry::new("All Audio", "AllAudio", 20, "Aud", Color::White),
+        CatEntry::new("Lossless", "AudioLossless", 21, "Aud", Color::Red),
+        CatEntry::new("Lossy", "AudioLossy", 22, "Aud", Color::Yellow),
     ],
 };
 
 pub static LITERATURE: CatStruct = CatStruct {
     name: "Literature",
     entries: &[
-        CatEntry::new("All Literature", "AllLiterature", 30),
-        CatEntry::new("English-Translated", "LitEnglishTranslated", 31),
-        CatEntry::new("Non-English Translated", "LitEnglishTranslated", 32),
-        CatEntry::new("Raw", "LitRaw", 33),
+        CatEntry::new("All Literature", "AllLiterature", 30, "Lit", Color::Gray),
+        CatEntry::new(
+            "English-Translated",
+            "LitEnglishTranslated",
+            31,
+            "Lit",
+            Color::Rgb(0, 232, 178),
+        ),
+        CatEntry::new(
+            "Non-English Translated",
+            "LitEnglishTranslated",
+            32,
+            "Lit",
+            Color::Rgb(237, 123, 0),
+        ),
+        CatEntry::new("Raw", "LitRaw", 33, "Lit", Color::Rgb(29, 126, 72)),
     ],
 };
 
 pub static LIVE_ACTION: CatStruct = CatStruct {
     name: "Live Action",
     entries: &[
-        CatEntry::new("All Live Action", "AllLiveAction", 40),
-        CatEntry::new("English-Translated", "LiveEnglishTranslated", 41),
-        CatEntry::new("Non-English Translated", "LiveNonEnglishTranslated", 43),
-        CatEntry::new("Idol/Promo Video", "LiveIdolPromoVideo", 42),
-        CatEntry::new("Raw", "LiveRaw", 44),
+        CatEntry::new("All Live Action", "AllLiveAction", 40, "???", Color::Gray),
+        CatEntry::new(
+            "English-Translated",
+            "LiveEnglishTranslated",
+            41,
+            "???",
+            Color::Gray,
+        ),
+        CatEntry::new(
+            "Non-English Translated",
+            "LiveNonEnglishTranslated",
+            43,
+            "???",
+            Color::Gray,
+        ),
+        CatEntry::new(
+            "Idol/Promo Video",
+            "LiveIdolPromoVideo",
+            42,
+            "???",
+            Color::Gray,
+        ),
+        CatEntry::new("Raw", "LiveRaw", 44, "???", Color::Gray),
     ],
 };
 
 pub static PICTURES: CatStruct = CatStruct {
     name: "Pictures",
     entries: &[
-        CatEntry::new("All Pictures", "AllPictures", 50),
-        CatEntry::new("Graphics", "PicGraphics", 51),
-        CatEntry::new("Photos", "PicPhotos", 52),
+        CatEntry::new("All Pictures", "AllPictures", 50, "???", Color::Gray),
+        CatEntry::new("Graphics", "PicGraphics", 51, "???", Color::Gray),
+        CatEntry::new("Photos", "PicPhotos", 52, "???", Color::Gray),
     ],
 };
 
 pub static SOFTWARE: CatStruct = CatStruct {
     name: "Software",
     entries: &[
-        CatEntry::new("All Software", "AllSoftware", 60),
-        CatEntry::new("Applications", "SoftApplications", 61),
-        CatEntry::new("Games", "SoftGames", 62),
+        CatEntry::new("All Software", "AllSoftware", 60, "???", Color::Gray),
+        CatEntry::new("Applications", "SoftApplications", 61, "???", Color::Gray),
+        CatEntry::new("Games", "SoftGames", 62, "???", Color::Gray),
     ],
 };
 
@@ -115,7 +194,6 @@ impl Default for CategoryPopup {
 impl super::Popup for CategoryPopup {
     fn draw(&self, f: &mut Frame, theme: &Theme) {
         if let Some(cat) = ALL_CATEGORIES.get(self.major) {
-            let area = super::centered_rect(30, 13, f.size());
             let mut tbl: Vec<Row> = ALL_CATEGORIES
                 .iter()
                 .enumerate()
@@ -128,10 +206,15 @@ impl super::Popup for CategoryPopup {
                 .collect();
 
             let cat_rows = cat.entries.iter().enumerate().map(|(i, e)| {
-                let row = Row::new(Text::raw(match e.id == self.category {
-                    true => format!("   {}", e.name),
-                    false => format!("    {}", e.name),
-                }));
+                let row = Row::new(vec![Line::from(vec![
+                    Span::raw(match e.id == self.category {
+                        true => "  ",
+                        false => "   ",
+                    }),
+                    Span::styled(e.icon.icon, Style::new().fg(e.icon.color)),
+                    Span::raw(" "),
+                    Span::raw(e.name),
+                ])]);
                 match i == self.minor {
                     true => row.bg(theme.hl_bg),
                     false => row,
@@ -139,7 +222,11 @@ impl super::Popup for CategoryPopup {
             });
 
             tbl.splice(self.major + 1..self.major + 1, cat_rows);
-            f.render_widget(Clear, area);
+
+            let area = super::centered_rect(33, 13, f.size());
+            let clear = super::centered_rect(area.width + 2, area.height, f.size());
+            f.render_widget(Clear, clear);
+            f.render_widget(Block::new().bg(theme.bg), clear);
             f.render_widget(
                 Table::new(tbl, &[Constraint::Percentage(100)])
                     .block(
@@ -170,12 +257,12 @@ impl super::Popup for CategoryPopup {
                             self.category = item.id;
                         }
                     }
-                    app.mode = Mode::Normal;
+                    app.mode = Mode::Loading;
                 }
                 KeyCode::Esc | KeyCode::Char('c') | KeyCode::Char('q') => {
                     app.mode = Mode::Normal;
                 }
-                KeyCode::Char('j') => {
+                KeyCode::Char('j') | KeyCode::Down => {
                     if let Some(cat) = ALL_CATEGORIES.get(self.major) {
                         self.minor = match self.minor + 1 >= cat.entries.len() {
                             true => 0,
@@ -183,7 +270,7 @@ impl super::Popup for CategoryPopup {
                         };
                     }
                 }
-                KeyCode::Char('k') => {
+                KeyCode::Char('k') | KeyCode::Up => {
                     if let Some(cat) = ALL_CATEGORIES.get(self.major) {
                         self.minor = match self.minor < 1 {
                             true => cat.entries.len() - 1,

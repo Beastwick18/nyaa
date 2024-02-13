@@ -58,9 +58,9 @@ pub static THEMES: &'static [&'static Theme] = &[
         bg: Color::Rgb(40, 40, 40),
         fg: Color::Rgb(235, 219, 178),
         border: BorderType::Plain,
-        border_color: Color::Rgb(80, 73, 69),
+        border_color: Color::Rgb(102, 92, 84),
         border_focused_color: Color::Rgb(214, 93, 14),
-        hl_bg: Color::Rgb(124, 111, 100),
+        hl_bg: Color::Rgb(80, 73, 69),
         // hl_fg: Color::Rgb(29, 32, 33),
         solid_bg: Color::Rgb(69, 133, 136),
         solid_fg: Color::Rgb(235, 219, 178),
@@ -68,7 +68,7 @@ pub static THEMES: &'static [&'static Theme] = &[
         red: Color::Rgb(204, 36, 29),
     },
     &Theme {
-        name: "Catppuccin",
+        name: "Catppuccin Macchiato",
         bg: Color::Rgb(24, 25, 38),
         fg: Color::Rgb(202, 211, 245),
         border: BorderType::Rounded,
@@ -77,7 +77,7 @@ pub static THEMES: &'static [&'static Theme] = &[
         hl_bg: Color::Rgb(110, 115, 141),
         // hl_fg: Color::Rgb(202, 211, 245),
         solid_bg: Color::Rgb(166, 218, 149),
-        solid_fg: Color::Rgb(202, 211, 245),
+        solid_fg: Color::Rgb(24, 25, 38),
         green: Color::Rgb(166, 218, 149),
         red: Color::Rgb(237, 135, 150),
     },
@@ -102,6 +102,7 @@ impl Default for ThemePopup {
 impl Popup for ThemePopup {
     fn draw(&self, f: &mut ratatui::prelude::Frame, theme: &Theme) {
         let area = super::centered_rect(30, 10, f.size());
+        let clear = super::centered_rect(area.width + 2, area.height, f.size());
         let items = self.table.items.iter().enumerate().map(|(i, item)| {
             match i == (self.selected.to_owned() as usize) {
                 true => Row::new(vec![format!("  {}", item.to_owned())]),
@@ -119,7 +120,8 @@ impl Popup for ThemePopup {
             .fg(theme.fg)
             .bg(theme.bg)
             .highlight_style(Style::default().bg(theme.hl_bg));
-        f.render_widget(Clear, area);
+        f.render_widget(Clear, clear);
+        f.render_widget(Block::new().bg(theme.bg), clear);
         f.render_stateful_widget(table, area, &mut self.table.state.to_owned());
     }
 

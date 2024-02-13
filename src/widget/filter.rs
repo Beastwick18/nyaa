@@ -51,6 +51,7 @@ impl Default for FilterPopup {
 impl Popup for FilterPopup {
     fn draw(&self, f: &mut ratatui::prelude::Frame, theme: &Theme) {
         let area = super::centered_rect(30, 5, f.size());
+        let clear = super::centered_rect(area.width + 2, area.height, f.size());
         let items = self.table.items.iter().enumerate().map(|(i, item)| {
             match i == (self.selected.to_owned() as usize) {
                 true => Row::new(vec![format!("  {}", item.to_owned())]),
@@ -68,7 +69,8 @@ impl Popup for FilterPopup {
             .fg(theme.fg)
             .bg(theme.bg)
             .highlight_style(Style::default().bg(theme.hl_bg));
-        f.render_widget(Clear, area);
+        f.render_widget(Clear, clear);
+        f.render_widget(Block::new().bg(theme.bg), clear);
         f.render_stateful_widget(table, area, &mut self.table.state.to_owned());
     }
 
@@ -83,10 +85,10 @@ impl Popup for FilterPopup {
                 KeyCode::Esc | KeyCode::Char('s') | KeyCode::Char('q') => {
                     app.mode = Mode::Normal;
                 }
-                KeyCode::Char('j') => {
+                KeyCode::Char('j') | KeyCode::Down => {
                     self.table.next_wrap(1);
                 }
-                KeyCode::Char('k') => {
+                KeyCode::Char('k') | KeyCode::Up => {
                     self.table.next_wrap(-1);
                 }
                 KeyCode::Char('G') => {

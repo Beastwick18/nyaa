@@ -4,7 +4,7 @@ use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{backend::Backend, Terminal};
 
 use crate::{
-    ui,
+    nyaa, ui,
     widget::{
         self,
         category::CategoryPopup,
@@ -24,6 +24,7 @@ pub enum Mode {
     Sort,
     Filter,
     Theme,
+    Loading,
 }
 
 pub struct App {
@@ -51,7 +52,7 @@ pub struct Widgets {
 impl Default for App {
     fn default() -> Self {
         App {
-            mode: Mode::Normal,
+            mode: Mode::Loading,
             theme: widget::theme::THEMES[0],
             should_quit: false,
         }
@@ -106,7 +107,23 @@ fn normal_event(app: &mut App, e: &Event) -> bool {
 pub async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<()> {
     let mut w = Widgets::default();
     loop {
-        terminal.draw(|f| ui::draw(&w, &app, f))?;
+        terminal.draw(|f| ui::draw(&mut w, &app, f))?;
+        match app.mode {
+            Mode::Loading => {
+                if let Ok(items) = nyaa::get_feed_list(
+                    &(w.search.input).to_owned(),
+                    &(w.category.category as u32),
+                    &(w.filter.selected.to_owned() as u32),
+                )
+                .await
+                {
+                    w.results.with_items(items);
+                }
+                app.mode = Mode::Normal;
+                continue;
+            }
+            _ => {}
+        }
 
         let evt = event::read()?;
         match app.mode {
@@ -129,6 +146,7 @@ pub async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io
             Mode::Theme => {
                 w.theme.handle_event(&mut app, &evt);
             }
+            Mode::Loading => {}
         }
 
         if app.should_quit {

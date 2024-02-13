@@ -7,10 +7,10 @@ use ratatui::{
 
 use crate::{
     app::{App, Mode, Widgets},
-    widget::{Popup, Widget},
+    widget::{centered_rect, Popup, Widget},
 };
 
-pub fn draw(widgets: &Widgets, app: &App, f: &mut Frame) {
+pub fn draw(widgets: &mut Widgets, app: &App, f: &mut Frame) {
     let layout = Layout::new(
         Direction::Vertical,
         &[
@@ -46,6 +46,13 @@ pub fn draw(widgets: &Widgets, app: &App, f: &mut Frame) {
         Mode::Theme => {
             mode = "Theme";
             widgets.theme.draw(f, &app.theme);
+        }
+        Mode::Loading => {
+            mode = "Loading";
+            let area = centered_rect(10, 1, f.size());
+            widgets.results.clear();
+            widgets.results.draw(f, app, layout[2]);
+            f.render_widget(Paragraph::new("Loading..."), area);
         }
     }
     f.render_widget(

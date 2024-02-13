@@ -63,6 +63,7 @@ impl Default for SortPopup {
 impl Popup for SortPopup {
     fn draw(&self, f: &mut ratatui::prelude::Frame, theme: &Theme) {
         let area = super::centered_rect(30, 8, f.size());
+        let clear = super::centered_rect(area.width + 2, area.height, f.size());
         let items = self.table.items.iter().enumerate().map(|(i, item)| {
             match i == (self.selected.to_owned() as usize) {
                 true => Row::new(vec![format!("  {}", item.to_owned())]),
@@ -80,7 +81,8 @@ impl Popup for SortPopup {
             .fg(theme.fg)
             .bg(theme.bg)
             .highlight_style(Style::default().bg(theme.hl_bg));
-        f.render_widget(Clear, area);
+        f.render_widget(Clear, clear);
+        f.render_widget(Block::new().bg(theme.bg), clear);
         f.render_stateful_widget(table, area, &mut self.table.state.to_owned());
     }
 
