@@ -20,13 +20,15 @@ pub struct Theme {
     pub hl_fg: Color,
     pub solid_bg: Color,
     pub solid_fg: Color,
+    pub green: Color,
+    pub red: Color,
 }
 
 pub static THEMES: &'static [&'static Theme] = &[
     &Theme {
         name: "Default",
         bg: Color::Black,
-        fg: Color::Green,
+        fg: Color::White,
         border: BorderType::Plain,
         border_color: Color::White,
         border_focused_color: Color::LightCyan,
@@ -34,6 +36,8 @@ pub static THEMES: &'static [&'static Theme] = &[
         hl_fg: Color::White,
         solid_bg: Color::White,
         solid_fg: Color::Black,
+        green: Color::Green,
+        red: Color::Red,
     },
     &Theme {
         name: "Dracula",
@@ -46,18 +50,22 @@ pub static THEMES: &'static [&'static Theme] = &[
         hl_fg: Color::Rgb(248, 248, 242),
         solid_fg: Color::Rgb(40, 42, 54),
         solid_bg: Color::Rgb(139, 233, 253),
+        green: Color::Rgb(80, 250, 123),
+        red: Color::Rgb(255, 85, 85),
     },
     &Theme {
         name: "Gruvbox",
         bg: Color::Rgb(40, 40, 40),
         fg: Color::Rgb(235, 219, 178),
-        border: BorderType::Double,
+        border: BorderType::Thick,
         border_color: Color::Rgb(80, 73, 69),
         border_focused_color: Color::Rgb(214, 93, 14),
         hl_bg: Color::Rgb(146, 131, 116),
         hl_fg: Color::Rgb(29, 32, 33),
         solid_bg: Color::Rgb(69, 133, 136),
         solid_fg: Color::Rgb(235, 219, 178),
+        green: Color::Rgb(152, 151, 26),
+        red: Color::Rgb(204, 36, 29),
     },
 ];
 
@@ -124,13 +132,12 @@ impl Popup for ThemePopup {
                     self.table.select(0);
                 }
                 KeyCode::Enter => {
-                    if let Some(i) = THEMES
+                    if let Some(theme) = THEMES
                         .iter()
                         .nth(self.table.state.selected().unwrap_or_default())
                     {
                         self.selected = self.table.state.selected().unwrap_or_default();
-                        app.theme = i;
-                        app.mode = Mode::Normal;
+                        app.theme = theme;
                     }
                 }
                 _ => {}

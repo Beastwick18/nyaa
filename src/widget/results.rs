@@ -64,16 +64,46 @@ impl super::Widget for ResultsWidget {
             .style(
                 Style::default()
                     .add_modifier(Modifier::UNDERLINED)
-                    .fg(app.theme.border_focused_color),
+                    .add_modifier(Modifier::BOLD)
+                    .fg(match app.mode {
+                        Mode::Normal => app.theme.border_focused_color,
+                        _ => app.theme.fg,
+                    }),
             )
             .height(1)
             .bottom_margin(0);
 
-        let items = self
-            .table
-            .items
-            .iter()
-            .map(|item| Row::new(item.to_owned()).height(1).bottom_margin(0));
+        let items = (0..100).map(|n| {
+            Row::new(vec![
+                Text::raw("Cat"),
+                Text::styled(
+                    format!("Name {}", n),
+                    Style::new().fg(if n % 4 == 0 {
+                        app.theme.green
+                    } else if n % 7 == 0 {
+                        app.theme.red
+                    } else {
+                        app.theme.fg
+                    }),
+                ),
+                Text::raw("1"),
+                Text::raw("2"),
+                Text::raw("3"),
+            ])
+            .height(1)
+            .bottom_margin(0)
+        });
+        // let items = self.table.items.iter().map(|item| {
+        //     Row::new(vec![
+        //         item[0].to_owned(),
+        //         item[1].to_owned(),
+        //         item[2].to_owned(),
+        //         item[3].to_owned(),
+        //         item[4].to_owned(),
+        //     ])
+        //     .height(1)
+        //     .bottom_margin(0)
+        // });
 
         let table = Table::new(items, [Constraint::Percentage(100)])
             .header(header)
