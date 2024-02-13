@@ -3,16 +3,13 @@ use std::cmp;
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     layout::{Constraint, Rect},
-    style::{Color, Modifier, Style},
+    style::{Modifier, Style, Stylize},
     text::Text,
-    widgets::{Cell, Row, Table},
+    widgets::{Block, Borders, Cell, Row, Table},
     Frame,
 };
 
-use crate::{
-    app::{App, Mode},
-    ui,
-};
+use crate::app::{App, Mode};
 
 use super::StatefulTable;
 
@@ -59,7 +56,7 @@ impl super::Widget for ResultsWidget {
             Constraint::Length(4),
             Constraint::Length(5),
         ];
-        static HEADER_CELLS: [&str; 5] = ["Cat", "Name", "", "", "󰇚"];
+        static HEADER_CELLS: &'static [&str] = &["Cat", "Name", "", "", "󰇚"];
         let header_cells = HEADER_CELLS.iter().map(|h| {
             Cell::from(Text::raw(*h)).style(Style::default().add_modifier(Modifier::BOLD))
         });
@@ -67,12 +64,11 @@ impl super::Widget for ResultsWidget {
             .style(
                 Style::default()
                     .add_modifier(Modifier::UNDERLINED)
-                    .fg(Color::White),
+                    .fg(app.theme.border_focused_color),
             )
             .height(1)
             .bottom_margin(0);
 
-        // let items = app.table.items.iter().map(|item| {
         let items = self
             .table
             .items
@@ -82,10 +78,18 @@ impl super::Widget for ResultsWidget {
         let table = Table::new(items, [Constraint::Percentage(100)])
             .header(header)
             .block(match app.mode {
-                Mode::Normal => ui::HI_BLOCK.to_owned(),
-                _ => ui::DEFAULT_BLOCK.to_owned(),
+                Mode::Normal => Block::new()
+                    .borders(Borders::ALL)
+                    .border_type(app.theme.border)
+                    .border_style(Style::new().fg(app.theme.border_focused_color)),
+                _ => Block::new()
+                    .borders(Borders::ALL)
+                    .border_type(app.theme.border)
+                    .border_style(Style::new().fg(app.theme.border_color)),
             })
-            .highlight_style(Style::default().bg(Color::Rgb(60, 60, 60)))
+            .fg(app.theme.fg)
+            .bg(app.theme.bg)
+            .highlight_style(Style::default().bg(app.theme.hl_bg).fg(app.theme.hl_fg))
             .widths(&binding);
         f.render_stateful_widget(table, area, &mut self.table.state.to_owned());
     }

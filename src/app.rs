@@ -6,8 +6,14 @@ use ratatui::{backend::Backend, Terminal};
 use crate::{
     ui,
     widget::{
-        category::CategoryPopup, filter::FilterPopup, results::ResultsWidget, search::SearchWidget,
-        sort::SortPopup, Popup, Widget,
+        self,
+        category::CategoryPopup,
+        filter::FilterPopup,
+        results::ResultsWidget,
+        search::SearchWidget,
+        sort::SortPopup,
+        theme::{Theme, ThemePopup},
+        Popup, Widget,
     },
 };
 
@@ -17,24 +23,38 @@ pub enum Mode {
     Category,
     Sort,
     Filter,
+    Theme,
 }
 
 pub struct App {
     pub mode: Mode,
+    pub theme: &'static Theme,
+    should_quit: bool,
     // TODO: Add query struct containing category, filter, etc. updated by popups
+}
+
+impl App {
+    fn quit(&mut self) {
+        self.should_quit = true;
+    }
 }
 
 pub struct Widgets {
     pub category: CategoryPopup,
     pub sort: SortPopup,
     pub filter: FilterPopup,
+    pub theme: ThemePopup,
     pub search: SearchWidget,
     pub results: ResultsWidget,
 }
 
 impl Default for App {
     fn default() -> Self {
-        App { mode: Mode::Normal }
+        App {
+            mode: Mode::Normal,
+            theme: widget::theme::THEMES[0],
+            should_quit: false,
+        }
     }
 }
 
@@ -44,6 +64,7 @@ impl Default for Widgets {
             category: CategoryPopup::default(),
             sort: SortPopup::default(),
             filter: FilterPopup::default(),
+            theme: ThemePopup::default(),
             search: SearchWidget::default(),
             results: ResultsWidget::default(),
         }
@@ -67,11 +88,14 @@ fn normal_event(app: &mut App, e: &Event) -> bool {
             KeyCode::Char('f') => {
                 app.mode = Mode::Filter;
             }
-            KeyCode::Char('/') => {
+            KeyCode::Char('t') => {
+                app.mode = Mode::Theme;
+            }
+            KeyCode::Char('/') | KeyCode::Char('i') => {
                 app.mode = Mode::Search;
             }
             KeyCode::Char('q') => {
-                return true;
+                app.quit();
             }
             _ => {}
         }
@@ -93,9 +117,7 @@ pub async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io
                 w.sort.handle_event(&mut app, &evt);
             }
             Mode::Normal => {
-                if normal_event(&mut app, &evt) {
-                    return Ok(());
-                }
+                normal_event(&mut app, &evt);
                 w.results.handle_event(&mut app, &evt);
             }
             Mode::Search => {
@@ -104,6 +126,13 @@ pub async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io
             Mode::Filter => {
                 w.filter.handle_event(&mut app, &evt);
             }
+            Mode::Theme => {
+                w.theme.handle_event(&mut app, &evt);
+            }
+        }
+
+        if app.should_quit {
+            return Ok(());
         }
     }
 }

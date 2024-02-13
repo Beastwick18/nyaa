@@ -1,13 +1,13 @@
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     layout::Constraint,
-    style::{Color, Style},
-    widgets::{Row, Table},
+    style::{Style, Stylize},
+    widgets::{Block, Borders, Row, Table},
 };
 
-use crate::{app::Mode, ui};
+use crate::app::Mode;
 
-use super::{EnumIter, Popup, StatefulTable};
+use super::{theme::Theme, EnumIter, Popup, StatefulTable};
 
 #[derive(Clone)]
 pub enum Filter {
@@ -49,7 +49,7 @@ impl Default for FilterPopup {
 }
 
 impl Popup for FilterPopup {
-    fn draw(&self, f: &mut ratatui::prelude::Frame) {
+    fn draw(&self, f: &mut ratatui::prelude::Frame, theme: &Theme) {
         let area = super::centered_rect(30, 5, f.size());
         let items = self.table.items.iter().enumerate().map(|(i, item)| {
             match i == (self.selected.to_owned() as usize) {
@@ -58,8 +58,16 @@ impl Popup for FilterPopup {
             }
         });
         let table = Table::new(items, [Constraint::Percentage(100)])
-            .block(ui::HI_BLOCK.to_owned().title("Filter"))
-            .highlight_style(Style::default().bg(Color::Rgb(60, 60, 60)));
+            .block(
+                Block::new()
+                    .border_style(Style::new().fg(theme.border_focused_color))
+                    .borders(Borders::ALL)
+                    .border_type(theme.border)
+                    .title("Filter"),
+            )
+            .fg(theme.fg)
+            .bg(theme.bg)
+            .highlight_style(Style::default().bg(theme.hl_bg).fg(theme.hl_fg));
         f.render_stateful_widget(table, area, &mut self.table.state.to_owned());
     }
 

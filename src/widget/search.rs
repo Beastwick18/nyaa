@@ -1,13 +1,15 @@
 use std::cmp::min;
 
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
-use ratatui::{layout::Rect, widgets::Paragraph, Frame};
+use ratatui::{
+    layout::Rect,
+    style::{Style, Stylize},
+    widgets::{Block, Borders, Paragraph},
+    Frame,
+};
 use unicode_width::UnicodeWidthStr;
 
-use crate::{
-    app::{App, Mode},
-    ui,
-};
+use crate::app::{App, Mode};
 
 pub struct SearchWidget {
     pub input: String,
@@ -27,23 +29,30 @@ impl super::Widget for SearchWidget {
     fn draw(&self, f: &mut Frame, app: &App, area: Rect) {
         let width = self.input.width();
         let fwidth = f.size().width as usize - 2;
-        let visible: String;
+        // let visible: String;
         // Try to insert ellipsis if input is too long (visual only)
-        if width >= fwidth {
+        let visible = if width >= fwidth {
             let idx = width - fwidth + 2;
-            if let Some(sub) = self.input.get(idx..) {
-                visible = format!("…{}", sub);
-            } else {
-                visible = self.input.to_owned();
+            match self.input.get(idx..) {
+                Some(sub) => format!("…{}", sub),
+                None => self.input.to_owned(),
             }
         } else {
-            visible = self.input.to_owned();
-        }
+            self.input.to_owned()
+        };
         let p = Paragraph::new(visible).block(
             match app.mode {
-                Mode::Search => ui::HI_BLOCK.clone(),
-                _ => ui::DEFAULT_BLOCK.clone(),
+                Mode::Search => Block::new()
+                    .borders(Borders::ALL)
+                    .border_type(app.theme.border)
+                    .border_style(Style::new().fg(app.theme.border_focused_color)),
+                _ => Block::new()
+                    .borders(Borders::ALL)
+                    .border_type(app.theme.border)
+                    .border_style(Style::new().fg(app.theme.border_color)),
             }
+            .fg(app.theme.fg)
+            .bg(app.theme.bg)
             .title("Search"),
         );
         f.render_widget(p, area);

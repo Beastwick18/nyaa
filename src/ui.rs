@@ -1,7 +1,7 @@
 use ratatui::{
     layout::{Constraint, Direction, Layout},
-    style::{Color, Style},
-    widgets::{Block, BorderType, Borders, Paragraph},
+    style::Stylize,
+    widgets::Paragraph,
     Frame,
 };
 
@@ -10,13 +10,6 @@ use crate::{
     widget::{Popup, Widget},
 };
 
-pub static BORDER: BorderType = BorderType::Plain;
-pub static DEFAULT_BLOCK: Block = Block::new().borders(Borders::ALL).border_type(BORDER);
-pub static HI_BLOCK: Block = Block::new()
-    .borders(Borders::ALL)
-    .border_style(Style::new().fg(Color::LightCyan))
-    .border_type(BORDER);
-
 pub fn draw(widgets: &Widgets, app: &App, f: &mut Frame) {
     let layout = Layout::new(
         Direction::Vertical,
@@ -24,11 +17,12 @@ pub fn draw(widgets: &Widgets, app: &App, f: &mut Frame) {
             Constraint::Length(1), // TODO: Maybe remove this, keys are obvious. Or make hiding it a config option
             Constraint::Length(3),
             Constraint::Min(1),
-            // Constraint::Length(1),
         ],
     )
     .split(f.size());
 
+    widgets.search.draw(f, app, layout[1]);
+    widgets.results.draw(f, app, layout[2]);
     let mode;
     match app.mode {
         Mode::Normal => {
@@ -36,21 +30,26 @@ pub fn draw(widgets: &Widgets, app: &App, f: &mut Frame) {
         }
         Mode::Category => {
             mode = "Category";
-            widgets.category.draw(f);
+            widgets.category.draw(f, &app.theme);
         }
         Mode::Sort => {
             mode = "Sort";
-            widgets.sort.draw(f);
+            widgets.sort.draw(f, &app.theme);
         }
         Mode::Search => {
             mode = "Search";
         }
         Mode::Filter => {
             mode = "Filter";
-            widgets.filter.draw(f);
+            widgets.filter.draw(f, &app.theme);
+        }
+        Mode::Theme => {
+            mode = "Theme";
+            widgets.theme.draw(f, &app.theme);
         }
     }
-    widgets.search.draw(f, app, layout[1]);
-    widgets.results.draw(f, app, layout[2]);
-    f.render_widget(Paragraph::new(format!("{}", mode)), layout[0]); // TODO: Debug only
+    f.render_widget(
+        Paragraph::new(format!("{}", mode)).bg(app.theme.bg),
+        layout[0],
+    ); // TODO: Debug only
 }

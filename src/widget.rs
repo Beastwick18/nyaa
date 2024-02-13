@@ -9,14 +9,17 @@ use ratatui::{
 
 use crate::app::App;
 
+use self::theme::Theme;
+
 pub mod category;
 pub mod filter;
 pub mod results;
 pub mod search;
 pub mod sort;
+pub mod theme;
 
 pub trait Popup {
-    fn draw(&self, f: &mut Frame);
+    fn draw(&self, f: &mut Frame, theme: &Theme);
     fn handle_event(&mut self, app: &mut App, e: &Event);
 }
 
