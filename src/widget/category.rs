@@ -3,7 +3,7 @@ use ratatui::{
     layout::Constraint,
     style::{Style, Stylize as _},
     text::Text,
-    widgets::{Block, Borders, Row, Table},
+    widgets::{Block, Borders, Clear, Row, Table},
     Frame,
 };
 
@@ -133,12 +133,13 @@ impl super::Popup for CategoryPopup {
                     false => format!("    {}", e.name),
                 }));
                 match i == self.minor {
-                    true => row.bg(theme.hl_bg).fg(theme.hl_fg),
+                    true => row.bg(theme.hl_bg),
                     false => row,
                 }
             });
 
             tbl.splice(self.major + 1..self.major + 1, cat_rows);
+            f.render_widget(Clear, area);
             f.render_widget(
                 Table::new(tbl, &[Constraint::Percentage(100)])
                     .block(

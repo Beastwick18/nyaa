@@ -5,7 +5,7 @@ use ratatui::{
     layout::{Constraint, Rect},
     style::{Modifier, Style, Stylize},
     text::Text,
-    widgets::{Block, Borders, Cell, Row, Table},
+    widgets::{Block, Borders, Cell, Clear, Row, Table},
     Frame,
 };
 
@@ -49,6 +49,10 @@ impl Default for ResultsWidget {
 
 impl super::Widget for ResultsWidget {
     fn draw(&self, f: &mut Frame, app: &App, area: Rect) {
+        let focus_color = match app.mode {
+            Mode::Normal => app.theme.border_focused_color,
+            _ => app.theme.border_color,
+        };
         let binding = [
             Constraint::Length(3),
             Constraint::Length(area.width - 21),
@@ -65,10 +69,7 @@ impl super::Widget for ResultsWidget {
                 Style::default()
                     .add_modifier(Modifier::UNDERLINED)
                     .add_modifier(Modifier::BOLD)
-                    .fg(match app.mode {
-                        Mode::Normal => app.theme.border_focused_color,
-                        _ => app.theme.fg,
-                    }),
+                    .fg(focus_color),
             )
             .height(1)
             .bottom_margin(0);
@@ -77,7 +78,7 @@ impl super::Widget for ResultsWidget {
             Row::new(vec![
                 Text::raw("Cat"),
                 Text::styled(
-                    format!("Name {}", n),
+                    "[Yameii] The Foolish Angel Dances with the Devil - S01E04 [English Dub] [CR WEB-DL 720p] [B422AF83] (Oroka na Tenshi wa Akuma to Odoru)",
                     Style::new().fg(if n % 4 == 0 {
                         app.theme.green
                     } else if n % 7 == 0 {
@@ -86,9 +87,15 @@ impl super::Widget for ResultsWidget {
                         app.theme.fg
                     }),
                 ),
-                Text::raw("1"),
-                Text::raw("2"),
-                Text::raw("3"),
+                Text::styled(
+                    ((n + 11) % 21 + (n + 32) % 60).to_string(),
+                    Style::new().fg(app.theme.green),
+                ),
+                Text::styled(
+                    ((n + 4) % 21 + (n + 10) % 50).to_string(),
+                    Style::new().fg(app.theme.red),
+                ),
+                Text::raw(((n + 9) % 21 + (n + 49) % 120).to_string()),
             ])
             .height(1)
             .bottom_margin(0)
@@ -107,20 +114,17 @@ impl super::Widget for ResultsWidget {
 
         let table = Table::new(items, [Constraint::Percentage(100)])
             .header(header)
-            .block(match app.mode {
-                Mode::Normal => Block::new()
+            .block(
+                Block::new()
                     .borders(Borders::ALL)
                     .border_type(app.theme.border)
-                    .border_style(Style::new().fg(app.theme.border_focused_color)),
-                _ => Block::new()
-                    .borders(Borders::ALL)
-                    .border_type(app.theme.border)
-                    .border_style(Style::new().fg(app.theme.border_color)),
-            })
+                    .border_style(Style::new().fg(focus_color)),
+            )
             .fg(app.theme.fg)
             .bg(app.theme.bg)
-            .highlight_style(Style::default().bg(app.theme.hl_bg).fg(app.theme.hl_fg))
+            .highlight_style(Style::default().bg(app.theme.hl_bg))
             .widths(&binding);
+        f.render_widget(Clear, area);
         f.render_stateful_widget(table, area, &mut self.table.state.to_owned());
     }
 

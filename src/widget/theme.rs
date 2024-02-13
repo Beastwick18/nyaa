@@ -2,7 +2,7 @@ use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     layout::Constraint,
     style::{Color, Style, Stylize},
-    widgets::{Block, BorderType, Borders, Row, Table},
+    widgets::{Block, BorderType, Borders, Clear, Row, Table},
 };
 
 use crate::app::Mode;
@@ -17,7 +17,7 @@ pub struct Theme {
     pub border_color: Color,
     pub border_focused_color: Color,
     pub hl_bg: Color,
-    pub hl_fg: Color,
+    // pub hl_fg: Color,
     pub solid_bg: Color,
     pub solid_fg: Color,
     pub green: Color,
@@ -27,13 +27,13 @@ pub struct Theme {
 pub static THEMES: &'static [&'static Theme] = &[
     &Theme {
         name: "Default",
-        bg: Color::Black,
+        bg: Color::Reset,
         fg: Color::White,
         border: BorderType::Plain,
         border_color: Color::White,
         border_focused_color: Color::LightCyan,
-        hl_bg: Color::Rgb(60, 60, 60),
-        hl_fg: Color::White,
+        hl_bg: Color::DarkGray,
+        // hl_fg: Color::White,
         solid_bg: Color::White,
         solid_fg: Color::Black,
         green: Color::Green,
@@ -46,8 +46,8 @@ pub static THEMES: &'static [&'static Theme] = &[
         border: BorderType::Rounded,
         border_color: Color::Rgb(98, 114, 164),
         border_focused_color: Color::Rgb(189, 147, 249),
-        hl_bg: Color::Rgb(68, 71, 90),
-        hl_fg: Color::Rgb(248, 248, 242),
+        hl_bg: Color::Rgb(98, 114, 164),
+        // hl_fg: Color::Rgb(248, 248, 242),
         solid_fg: Color::Rgb(40, 42, 54),
         solid_bg: Color::Rgb(139, 233, 253),
         green: Color::Rgb(80, 250, 123),
@@ -57,15 +57,29 @@ pub static THEMES: &'static [&'static Theme] = &[
         name: "Gruvbox",
         bg: Color::Rgb(40, 40, 40),
         fg: Color::Rgb(235, 219, 178),
-        border: BorderType::Thick,
+        border: BorderType::Plain,
         border_color: Color::Rgb(80, 73, 69),
         border_focused_color: Color::Rgb(214, 93, 14),
-        hl_bg: Color::Rgb(146, 131, 116),
-        hl_fg: Color::Rgb(29, 32, 33),
+        hl_bg: Color::Rgb(124, 111, 100),
+        // hl_fg: Color::Rgb(29, 32, 33),
         solid_bg: Color::Rgb(69, 133, 136),
         solid_fg: Color::Rgb(235, 219, 178),
         green: Color::Rgb(152, 151, 26),
         red: Color::Rgb(204, 36, 29),
+    },
+    &Theme {
+        name: "Catppuccin",
+        bg: Color::Rgb(24, 25, 38),
+        fg: Color::Rgb(202, 211, 245),
+        border: BorderType::Rounded,
+        border_color: Color::Rgb(110, 115, 141),
+        border_focused_color: Color::Rgb(125, 196, 228),
+        hl_bg: Color::Rgb(110, 115, 141),
+        // hl_fg: Color::Rgb(202, 211, 245),
+        solid_bg: Color::Rgb(166, 218, 149),
+        solid_fg: Color::Rgb(202, 211, 245),
+        green: Color::Rgb(166, 218, 149),
+        red: Color::Rgb(237, 135, 150),
     },
 ];
 
@@ -87,7 +101,7 @@ impl Default for ThemePopup {
 
 impl Popup for ThemePopup {
     fn draw(&self, f: &mut ratatui::prelude::Frame, theme: &Theme) {
-        let area = super::centered_rect(30, 5, f.size());
+        let area = super::centered_rect(30, 10, f.size());
         let items = self.table.items.iter().enumerate().map(|(i, item)| {
             match i == (self.selected.to_owned() as usize) {
                 true => Row::new(vec![format!("  {}", item.to_owned())]),
@@ -104,7 +118,8 @@ impl Popup for ThemePopup {
             )
             .fg(theme.fg)
             .bg(theme.bg)
-            .highlight_style(Style::default().bg(theme.hl_bg).fg(theme.hl_fg));
+            .highlight_style(Style::default().bg(theme.hl_bg));
+        f.render_widget(Clear, area);
         f.render_stateful_widget(table, area, &mut self.table.state.to_owned());
     }
 

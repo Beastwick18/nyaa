@@ -2,7 +2,7 @@ use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     layout::Constraint,
     style::{Style, Stylize},
-    widgets::{Block, Borders, Row, Table},
+    widgets::{Block, Borders, Clear, Row, Table},
 };
 
 use crate::app::Mode;
@@ -79,7 +79,8 @@ impl Popup for SortPopup {
             )
             .fg(theme.fg)
             .bg(theme.bg)
-            .highlight_style(Style::default().bg(theme.hl_bg).fg(theme.hl_fg));
+            .highlight_style(Style::default().bg(theme.hl_bg));
+        f.render_widget(Clear, area);
         f.render_stateful_widget(table, area, &mut self.table.state.to_owned());
     }
 

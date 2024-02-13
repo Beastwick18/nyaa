@@ -4,7 +4,7 @@ use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     layout::Rect,
     style::{Style, Stylize},
-    widgets::{Block, Borders, Paragraph},
+    widgets::{Block, Borders, Clear, Paragraph},
     Frame,
 };
 use unicode_width::UnicodeWidthStr;
@@ -55,6 +55,7 @@ impl super::Widget for SearchWidget {
             .bg(app.theme.bg)
             .title("Search"),
         );
+        f.render_widget(Clear, area);
         f.render_widget(p, area);
         match app.mode {
             Mode::Search => {
