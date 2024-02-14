@@ -68,16 +68,16 @@ pub static ANIME: CatStruct = CatStruct {
             "AnimeEnglishTranslated",
             12,
             "Sub",
-            Color::Magenta,
+            Color::LightMagenta,
         ),
         CatEntry::new(
             "Non-English Translated",
             "AnimeNonEnglishTranslated",
             13,
             "Sub",
-            Color::Green,
+            Color::LightGreen,
         ),
-        CatEntry::new("Raw", "AnimeRaw", 14, "Raw", Color::White),
+        CatEntry::new("Raw", "AnimeRaw", 14, "Raw", Color::Gray),
         CatEntry::new(
             "Anime Music Video",
             "AnimeMusicVideo",
@@ -106,63 +106,63 @@ pub static LITERATURE: CatStruct = CatStruct {
             "LitEnglishTranslated",
             31,
             "Lit",
-            Color::Rgb(0, 232, 178),
+            Color::LightGreen,
         ),
         CatEntry::new(
             "Non-English Translated",
             "LitEnglishTranslated",
             32,
             "Lit",
-            Color::Rgb(237, 123, 0),
+            Color::Yellow,
         ),
-        CatEntry::new("Raw", "LitRaw", 33, "Lit", Color::Rgb(29, 126, 72)),
+        CatEntry::new("Raw", "LitRaw", 33, "Lit", Color::Green),
     ],
 };
 
 pub static LIVE_ACTION: CatStruct = CatStruct {
     name: "Live Action",
     entries: &[
-        CatEntry::new("All Live Action", "AllLiveAction", 40, "???", Color::Gray),
+        CatEntry::new("All Live Action", "AllLiveAction", 40, "Liv", Color::Gray),
         CatEntry::new(
             "English-Translated",
             "LiveEnglishTranslated",
             41,
-            "???",
-            Color::Gray,
+            "Liv",
+            Color::Yellow,
         ),
         CatEntry::new(
             "Non-English Translated",
             "LiveNonEnglishTranslated",
             43,
-            "???",
-            Color::Gray,
+            "Liv",
+            Color::LightCyan,
         ),
         CatEntry::new(
             "Idol/Promo Video",
             "LiveIdolPromoVideo",
             42,
-            "???",
-            Color::Gray,
+            "Liv",
+            Color::LightYellow,
         ),
-        CatEntry::new("Raw", "LiveRaw", 44, "???", Color::Gray),
+        CatEntry::new("Raw", "LiveRaw", 44, "Liv", Color::Gray),
     ],
 };
 
 pub static PICTURES: CatStruct = CatStruct {
     name: "Pictures",
     entries: &[
-        CatEntry::new("All Pictures", "AllPictures", 50, "???", Color::Gray),
-        CatEntry::new("Graphics", "PicGraphics", 51, "???", Color::Gray),
-        CatEntry::new("Photos", "PicPhotos", 52, "???", Color::Gray),
+        CatEntry::new("All Pictures", "AllPictures", 50, "Pic", Color::Gray),
+        CatEntry::new("Graphics", "PicGraphics", 51, "Pic", Color::LightMagenta),
+        CatEntry::new("Photos", "PicPhotos", 52, "Pic", Color::Magenta),
     ],
 };
 
 pub static SOFTWARE: CatStruct = CatStruct {
     name: "Software",
     entries: &[
-        CatEntry::new("All Software", "AllSoftware", 60, "???", Color::Gray),
-        CatEntry::new("Applications", "SoftApplications", 61, "???", Color::Gray),
-        CatEntry::new("Games", "SoftGames", 62, "???", Color::Gray),
+        CatEntry::new("All Software", "AllSoftware", 60, "Sof", Color::Gray),
+        CatEntry::new("Applications", "SoftApplications", 61, "Sof", Color::Blue),
+        CatEntry::new("Games", "SoftGames", 62, "Sof", Color::LightBlue),
     ],
 };
 

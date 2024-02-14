@@ -102,7 +102,7 @@ impl Popup for FilterPopup {
                         Filter::iter().nth(self.table.state.selected().unwrap_or_default())
                     {
                         self.selected = i.to_owned();
-                        app.mode = Mode::Normal;
+                        app.mode = Mode::Loading;
                     }
                 }
                 _ => {}

@@ -26,8 +26,8 @@ pub struct Item {
 
 pub async fn get_feed_list(
     query: &String,
-    cat: &u32,
-    filter: &u32,
+    cat: usize,
+    filter: usize,
 ) -> Result<Vec<Item>, Box<dyn Error>> {
     let feed = get_feed(query.to_owned(), cat, filter, true).await?;
     let mut items: Vec<Item> = Vec::new();
@@ -112,8 +112,8 @@ pub async fn get_feed_list(
 
 pub async fn get_feed(
     query: String,
-    cat: &u32,
-    filter: &u32,
+    cat: usize,
+    filter: usize,
     magnet: bool,
 ) -> Result<Channel, Box<dyn Error>> {
     let m = if magnet { "&m" } else { "" };

@@ -115,6 +115,7 @@ impl Popup for SortPopup {
                     {
                         self.selected = i.to_owned();
                         app.mode = Mode::Normal;
+                        app.should_sort = true;
                     }
                 }
                 _ => {}

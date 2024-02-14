@@ -1,4 +1,4 @@
-use std::cmp;
+use std::cmp::{self, Ordering};
 
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
@@ -11,20 +11,34 @@ use ratatui::{
 
 use crate::{
     app::{App, Mode},
-    nyaa,
+    nyaa::{self, Item},
 };
 
-use super::StatefulTable;
+use super::{sort::Sort, StatefulTable};
 
 pub struct ResultsWidget {
     table: StatefulTable<nyaa::Item>,
 }
 
 impl ResultsWidget {
-    pub fn with_items(&mut self, items: Vec<nyaa::Item>) {
+    pub fn with_items(&mut self, items: Vec<nyaa::Item>, sort: &Sort) {
         self.table.items = items;
+        self.sort(sort);
         self.table.select(0);
     }
+
+    pub fn sort(&mut self, sort: &Sort) {
+        let f: fn(&Item, &Item) -> Ordering = match sort {
+            Sort::Date => |a, b| a.index.cmp(&b.index),
+            Sort::Downloads => |a, b| b.downloads.cmp(&a.downloads),
+            Sort::Seeders => |a, b| b.seeders.cmp(&a.seeders),
+            Sort::Leechers => |a, b| b.leechers.cmp(&a.leechers),
+            Sort::Name => |a, b| b.title.cmp(&a.title),
+            Sort::Category => |a, b| b.category.cmp(&a.category),
+        };
+        self.table.items.sort_by(f);
+    }
+
     pub fn clear(&mut self) {
         self.table.items = vec![];
     }

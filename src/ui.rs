@@ -14,7 +14,10 @@ pub fn draw(widgets: &mut Widgets, app: &App, f: &mut Frame) {
     let layout = Layout::new(
         Direction::Vertical,
         &[
-            Constraint::Length(1), // TODO: Maybe remove this, keys are obvious. Or make hiding it a config option
+            Constraint::Length(match app.show_hints {
+                true => 1,
+                false => 0,
+            }), // TODO: Maybe remove this, keys are obvious. Or make hiding it a config option
             Constraint::Length(3),
             Constraint::Min(1),
         ],
@@ -56,7 +59,9 @@ pub fn draw(widgets: &mut Widgets, app: &App, f: &mut Frame) {
         }
     }
     f.render_widget(
-        Paragraph::new(format!("{}", mode)).bg(app.theme.bg),
+        Paragraph::new(mode)
+            .bg(app.theme.bg)
+            .fg(app.theme.border_focused_color),
         layout[0],
     ); // TODO: Debug only
 }

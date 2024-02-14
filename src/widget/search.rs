@@ -1,6 +1,6 @@
-use std::cmp::min;
+use std::cmp::{max, min};
 
-use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
+use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, ModifierKeyCode};
 use ratatui::{
     layout::Rect,
     style::{Style, Stylize},
@@ -14,6 +14,7 @@ use crate::app::{App, Mode};
 pub struct SearchWidget {
     pub input: String,
     pub focused: bool,
+    pub cursor: usize,
 }
 
 impl Default for SearchWidget {
@@ -21,6 +22,7 @@ impl Default for SearchWidget {
         SearchWidget {
             input: "".to_owned(),
             focused: false,
+            cursor: 0,
         }
     }
 }
@@ -41,19 +43,16 @@ impl super::Widget for SearchWidget {
             self.input.to_owned()
         };
         let p = Paragraph::new(visible).block(
-            match app.mode {
-                Mode::Search => Block::new()
-                    .borders(Borders::ALL)
-                    .border_type(app.theme.border)
-                    .border_style(Style::new().fg(app.theme.border_focused_color)),
-                _ => Block::new()
-                    .borders(Borders::ALL)
-                    .border_type(app.theme.border)
-                    .border_style(Style::new().fg(app.theme.border_color)),
-            }
-            .fg(app.theme.fg)
-            .bg(app.theme.bg)
-            .title("Search"),
+            Block::new()
+                .borders(Borders::ALL)
+                .border_type(app.theme.border)
+                .border_style(Style::new().fg(match app.mode {
+                    Mode::Search => app.theme.border_focused_color,
+                    _ => app.theme.border_color,
+                }))
+                .fg(app.theme.fg)
+                .bg(app.theme.bg)
+                .title("Search"),
         );
         f.render_widget(Clear, area);
         f.render_widget(p, area);
@@ -61,10 +60,7 @@ impl super::Widget for SearchWidget {
             Mode::Search => {
                 // Render cursor if in editing mode
                 f.set_cursor(
-                    min(
-                        area.x + self.input.width() as u16 + 1,
-                        area.x + area.width - 2,
-                    ),
+                    min(area.x + self.cursor as u16 + 1, area.x + area.width - 2),
                     area.y + 1,
                 );
             }
@@ -72,24 +68,44 @@ impl super::Widget for SearchWidget {
         }
     }
 
-    fn handle_event(&mut self, app: &mut crate::app::App, e: &Event) {
+    fn handle_event(&mut self, app: &mut crate::app::App, evt: &Event) {
         if let Event::Key(KeyEvent {
             code,
             kind: KeyEventKind::Press,
+            modifiers,
             ..
-        }) = e
+        }) = evt
         {
-            match code {
-                KeyCode::Esc => {
+            use KeyCode::*;
+            match (code, modifiers) {
+                (Esc, &KeyModifiers::NONE) => {
                     app.mode = Mode::Normal;
                 }
-                KeyCode::Char(c) => {
-                    self.input.push(*c);
+                (Char(c), &KeyModifiers::NONE | &KeyModifiers::SHIFT) => {
+                    self.input.insert(self.cursor, *c);
+                    self.cursor += 1;
                 }
-                KeyCode::Backspace => {
-                    self.input.pop();
+                (Backspace, &KeyModifiers::NONE) => {
+                    if self.input.len() > 0 && self.cursor > 0 {
+                        self.input.remove(self.cursor - 1);
+                        self.cursor -= 1;
+                    }
                 }
-                KeyCode::Enter => {
+                (Left, &KeyModifiers::NONE)
+                | (KeyCode::Char('h'), &KeyModifiers::CONTROL | &KeyModifiers::ALT) => {
+                    self.cursor = max(self.cursor, 1) - 1;
+                }
+                (Right, &KeyModifiers::NONE)
+                | (KeyCode::Char('l'), &KeyModifiers::CONTROL | &KeyModifiers::ALT) => {
+                    self.cursor = min(self.cursor + 1, self.input.len());
+                }
+                (End, &KeyModifiers::NONE) => {
+                    self.cursor = self.input.len();
+                }
+                (Home, &KeyModifiers::NONE) => {
+                    self.cursor = 0;
+                }
+                (Enter, &KeyModifiers::NONE) => {
                     app.mode = Mode::Loading;
                 }
                 _ => {}

@@ -30,6 +30,8 @@ pub enum Mode {
 pub struct App {
     pub mode: Mode,
     pub theme: &'static Theme,
+    pub show_hints: bool,
+    pub should_sort: bool,
     should_quit: bool,
     // TODO: Add query struct containing category, filter, etc. updated by popups
 }
@@ -54,6 +56,8 @@ impl Default for App {
         App {
             mode: Mode::Loading,
             theme: widget::theme::THEMES[0],
+            show_hints: false,
+            should_sort: false,
             should_quit: false,
         }
     }
@@ -98,6 +102,9 @@ fn normal_event(app: &mut App, e: &Event) -> bool {
             KeyCode::Char('q') => {
                 app.quit();
             }
+            KeyCode::Char('h') => {
+                app.show_hints = !app.show_hints;
+            }
             _ => {}
         }
     }
@@ -107,23 +114,26 @@ fn normal_event(app: &mut App, e: &Event) -> bool {
 pub async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<()> {
     let mut w = Widgets::default();
     loop {
-        terminal.draw(|f| ui::draw(&mut w, &app, f))?;
+        if app.should_sort {
+            w.results.sort(&w.sort.selected);
+        }
         match app.mode {
             Mode::Loading => {
                 if let Ok(items) = nyaa::get_feed_list(
-                    &(w.search.input).to_owned(),
-                    &(w.category.category as u32),
-                    &(w.filter.selected.to_owned() as u32),
+                    &w.search.input,
+                    w.category.category,
+                    w.filter.selected.to_owned() as usize,
                 )
                 .await
                 {
-                    w.results.with_items(items);
+                    w.results.with_items(items, &w.sort.selected);
                 }
                 app.mode = Mode::Normal;
                 continue;
             }
             _ => {}
         }
+        terminal.draw(|f| ui::draw(&mut w, &app, f))?;
 
         let evt = event::read()?;
         match app.mode {
