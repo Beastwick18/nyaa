@@ -12,6 +12,7 @@ pub struct Item {
     pub seeders: u32,
     pub leechers: u32,
     pub downloads: u32,
+    pub size: String,
     pub title: String,
     pub torrent_link: String,
     pub magnet_link: String,
@@ -46,6 +47,10 @@ pub async fn get_feed_list(
             let downloads = get_ext_value(ext_map, "downloads")
                 .await
                 .unwrap_or_default();
+            let size: String = get_ext_value::<String>(ext_map, "size")
+                .await
+                .unwrap_or_default()
+                .replace("i", "");
             let category_str: String = get_ext_value::<String>(ext_map, "categoryId")
                 .await
                 .unwrap_or_default();
@@ -94,6 +99,7 @@ pub async fn get_feed_list(
                 seeders,
                 leechers,
                 downloads,
+                size,
                 title: title.to_owned(),
                 torrent_link,
                 magnet_link: link.to_owned(),

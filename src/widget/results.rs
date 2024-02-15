@@ -2,10 +2,10 @@ use std::cmp::{self, Ordering};
 
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
-    layout::{Constraint, Rect},
+    layout::{Constraint, Margin, Rect},
     style::{Modifier, Style, Stylize},
     text::Text,
-    widgets::{Block, Borders, Cell, Clear, Row, Table},
+    widgets::{Block, Borders, Cell, Clear, Row, Scrollbar, ScrollbarOrientation, Table},
     Frame,
 };
 
@@ -22,9 +22,11 @@ pub struct ResultsWidget {
 
 impl ResultsWidget {
     pub fn with_items(&mut self, items: Vec<nyaa::Item>, sort: &Sort) {
+        let len = items.len();
         self.table.items = items;
         self.sort(sort);
         self.table.select(0);
+        self.table.scrollbar_state = self.table.scrollbar_state.content_length(len);
     }
 
     pub fn sort(&mut self, sort: &Sort) {
@@ -60,12 +62,13 @@ impl super::Widget for ResultsWidget {
         };
         let binding = [
             Constraint::Length(3),
-            Constraint::Length(area.width - 21),
+            Constraint::Length(area.width - 32 as u16),
+            Constraint::Length(9),
             Constraint::Length(4),
             Constraint::Length(4),
             Constraint::Length(5),
         ];
-        static HEADER_CELLS: &'static [&str] = &["Cat", "Name", "", "", "󰇚"];
+        static HEADER_CELLS: &'static [&str] = &["Cat", "Name", "Size", "", "", "󰇚"];
         let header_cells = HEADER_CELLS.iter().map(|h| {
             Cell::from(Text::raw(*h)).style(Style::default().add_modifier(Modifier::BOLD))
         });
@@ -92,25 +95,31 @@ impl super::Widget for ResultsWidget {
                         app.theme.fg
                     }),
                 ),
-                Text::styled(item.seeders.to_string(), Style::new().fg(app.theme.green)),
-                Text::styled(item.leechers.to_string(), Style::new().fg(app.theme.red)),
-                Text::raw(item.downloads.to_string()),
+                Text::raw(format!("{:>9}", item.size.to_string())),
+                Text::styled(
+                    format!("{:>4}", item.seeders.to_string()),
+                    Style::new().fg(app.theme.green),
+                ),
+                Text::styled(
+                    format!("{:>4}", item.leechers.to_string()),
+                    Style::new().fg(app.theme.red),
+                ),
+                Text::raw(format!("{:<5}", item.downloads.to_string())),
             ])
             .fg(app.theme.fg)
             .height(1)
             .bottom_margin(0)
         });
-        // let items = self.table.items.iter().map(|item| {
-        //     Row::new(vec![
-        //         item[0].to_owned(),
-        //         item[1].to_owned(),
-        //         item[2].to_owned(),
-        //         item[3].to_owned(),
-        //         item[4].to_owned(),
-        //     ])
-        //     .height(1)
-        //     .bottom_margin(0)
-        // });
+
+        let sb = Scrollbar::default()
+            .orientation(ScrollbarOrientation::VerticalRight)
+            .track_symbol(Some("│"))
+            .begin_symbol(Some(""))
+            .end_symbol(None);
+        let sb_area = area.inner(&Margin {
+            vertical: 1,
+            horizontal: 0,
+        });
 
         let table = Table::new(items, [Constraint::Percentage(100)])
             .header(header)
@@ -123,8 +132,10 @@ impl super::Widget for ResultsWidget {
             .bg(app.theme.bg)
             .highlight_style(Style::default().bg(app.theme.hl_bg))
             .widths(&binding);
+
         f.render_widget(Clear, area);
         f.render_stateful_widget(table, area, &mut self.table.state.to_owned());
+        f.render_stateful_widget(sb, sb_area, &mut self.table.scrollbar_state.to_owned());
     }
 
     fn handle_event(&mut self, _app: &mut crate::app::App, e: &crossterm::event::Event) {
@@ -140,6 +151,12 @@ impl super::Widget for ResultsWidget {
                 }
                 KeyCode::Char('k') | KeyCode::Up => {
                     self.table.next(-1);
+                }
+                KeyCode::Char('J') => {
+                    self.table.next(4);
+                }
+                KeyCode::Char('K') => {
+                    self.table.next(-4);
                 }
                 KeyCode::Char('G') => {
                     self.table.select(cmp::max(self.table.items.len(), 1) - 1);

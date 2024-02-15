@@ -1,25 +1,31 @@
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
-    layout::Constraint,
+    layout::{Constraint, Rect},
     style::{Style, Stylize},
     widgets::{Block, Borders, Clear, Row, Table},
+    Frame,
 };
 
-use crate::app::Mode;
+use crate::app::{App, Mode};
 
-use super::{theme::Theme, EnumIter, Popup, StatefulTable};
+use super::{EnumIter, StatefulTable, Widget};
 
 #[derive(Clone)]
 pub enum Filter {
-    NoFilter,
-    NoRemakes,
-    TrustedOnly,
+    NoFilter = 0,
+    NoRemakes = 1,
+    TrustedOnly = 2,
+    Batches = 3,
 }
 
 impl EnumIter<Filter> for Filter {
     fn iter() -> std::slice::Iter<'static, Filter> {
-        static FILTERS: &'static [Filter] =
-            &[Filter::NoFilter, Filter::NoRemakes, Filter::TrustedOnly];
+        static FILTERS: &'static [Filter] = &[
+            Filter::NoFilter,
+            Filter::NoRemakes,
+            Filter::TrustedOnly,
+            Filter::Batches,
+        ];
         FILTERS.iter()
     }
 }
@@ -30,6 +36,7 @@ impl ToString for Filter {
             Filter::NoFilter => "No Filter".to_owned(),
             Filter::NoRemakes => "No Remakes".to_owned(),
             Filter::TrustedOnly => "Trusted Only".to_owned(),
+            Filter::Batches => "Batches".to_owned(),
         }
     }
 }
@@ -48,10 +55,10 @@ impl Default for FilterPopup {
     }
 }
 
-impl Popup for FilterPopup {
-    fn draw(&self, f: &mut ratatui::prelude::Frame, theme: &Theme) {
-        let area = super::centered_rect(30, 5, f.size());
-        let clear = super::centered_rect(area.width + 2, area.height, f.size());
+impl Widget for FilterPopup {
+    fn draw(&self, f: &mut Frame, app: &App, area: Rect) {
+        let center = super::centered_rect(30, 6, area);
+        let clear = super::centered_rect(center.width + 2, center.height, area);
         let items = self.table.items.iter().enumerate().map(|(i, item)| {
             match i == (self.selected.to_owned() as usize) {
                 true => Row::new(vec![format!("  {}", item.to_owned())]),
@@ -61,17 +68,17 @@ impl Popup for FilterPopup {
         let table = Table::new(items, [Constraint::Percentage(100)])
             .block(
                 Block::new()
-                    .border_style(Style::new().fg(theme.border_focused_color))
+                    .border_style(Style::new().fg(app.theme.border_focused_color))
                     .borders(Borders::ALL)
-                    .border_type(theme.border)
+                    .border_type(app.theme.border)
                     .title("Filter"),
             )
-            .fg(theme.fg)
-            .bg(theme.bg)
-            .highlight_style(Style::default().bg(theme.hl_bg));
+            .fg(app.theme.fg)
+            .bg(app.theme.bg)
+            .highlight_style(Style::default().bg(app.theme.hl_bg));
         f.render_widget(Clear, clear);
-        f.render_widget(Block::new().bg(theme.bg), clear);
-        f.render_stateful_widget(table, area, &mut self.table.state.to_owned());
+        f.render_widget(Block::new().bg(app.theme.bg), clear);
+        f.render_stateful_widget(table, center, &mut self.table.state.to_owned());
     }
 
     fn handle_event(&mut self, app: &mut crate::app::App, e: &crossterm::event::Event) {

@@ -1,13 +1,14 @@
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
-    layout::Constraint,
+    layout::{Constraint, Rect},
     style::{Style, Stylize},
     widgets::{Block, Borders, Clear, Row, Table},
+    Frame,
 };
 
-use crate::app::Mode;
+use crate::app::{App, Mode};
 
-use super::{theme::Theme, EnumIter, Popup, StatefulTable};
+use super::{EnumIter, StatefulTable, Widget};
 
 #[derive(Clone)]
 pub enum Sort {
@@ -60,10 +61,10 @@ impl Default for SortPopup {
     }
 }
 
-impl Popup for SortPopup {
-    fn draw(&self, f: &mut ratatui::prelude::Frame, theme: &Theme) {
-        let area = super::centered_rect(30, 8, f.size());
-        let clear = super::centered_rect(area.width + 2, area.height, f.size());
+impl Widget for SortPopup {
+    fn draw(&self, f: &mut Frame, app: &App, area: Rect) {
+        let center = super::centered_rect(30, 8, area);
+        let clear = super::centered_rect(center.width + 2, center.height, area);
         let items = self.table.items.iter().enumerate().map(|(i, item)| {
             match i == (self.selected.to_owned() as usize) {
                 true => Row::new(vec![format!("  {}", item.to_owned())]),
@@ -73,17 +74,17 @@ impl Popup for SortPopup {
         let table = Table::new(items, [Constraint::Percentage(100)])
             .block(
                 Block::new()
-                    .border_style(Style::new().fg(theme.border_focused_color))
+                    .border_style(Style::new().fg(app.theme.border_focused_color))
                     .borders(Borders::ALL)
-                    .border_type(theme.border)
+                    .border_type(app.theme.border)
                     .title("Sort"),
             )
-            .fg(theme.fg)
-            .bg(theme.bg)
-            .highlight_style(Style::default().bg(theme.hl_bg));
+            .fg(app.theme.fg)
+            .bg(app.theme.bg)
+            .highlight_style(Style::default().bg(app.theme.hl_bg));
         f.render_widget(Clear, clear);
-        f.render_widget(Block::new().bg(theme.bg), clear);
-        f.render_stateful_widget(table, area, &mut self.table.state.to_owned());
+        f.render_widget(Block::new().bg(app.theme.bg), clear);
+        f.render_stateful_widget(table, center, &mut self.table.state.to_owned());
     }
 
     fn handle_event(&mut self, app: &mut crate::app::App, e: &crossterm::event::Event) {
@@ -97,10 +98,10 @@ impl Popup for SortPopup {
                 KeyCode::Esc | KeyCode::Char('s') | KeyCode::Char('q') => {
                     app.mode = Mode::Normal;
                 }
-                KeyCode::Char('j') => {
+                KeyCode::Char('j') | KeyCode::Down => {
                     self.table.next_wrap(1);
                 }
-                KeyCode::Char('k') => {
+                KeyCode::Char('k') | KeyCode::Up => {
                     self.table.next_wrap(-1);
                 }
                 KeyCode::Char('G') => {

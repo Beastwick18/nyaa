@@ -1,19 +1,26 @@
 use std::io;
 
-use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
-use ratatui::{backend::Backend, Terminal};
+use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+use ratatui::{
+    backend::Backend,
+    layout::{Constraint, Direction, Layout},
+    style::Stylize as _,
+    widgets::Paragraph,
+    Frame, Terminal,
+};
 
 use crate::{
-    nyaa, ui,
+    nyaa,
     widget::{
         self,
         category::CategoryPopup,
+        centered_rect,
         filter::FilterPopup,
         results::ResultsWidget,
         search::SearchWidget,
         sort::SortPopup,
         theme::{Theme, ThemePopup},
-        Popup, Widget,
+        Widget,
     },
 };
 
@@ -80,29 +87,31 @@ fn normal_event(app: &mut App, e: &Event) -> bool {
     if let Event::Key(KeyEvent {
         code,
         kind: KeyEventKind::Press,
+        modifiers,
         ..
     }) = e
     {
-        match code {
-            KeyCode::Char('c') => {
+        use KeyCode::*;
+        match (code, modifiers) {
+            (Char('c'), &KeyModifiers::NONE) => {
                 app.mode = Mode::Category;
             }
-            KeyCode::Char('s') => {
+            (Char('s'), &KeyModifiers::NONE) => {
                 app.mode = Mode::Sort;
             }
-            KeyCode::Char('f') => {
+            (Char('f'), &KeyModifiers::NONE) => {
                 app.mode = Mode::Filter;
             }
-            KeyCode::Char('t') => {
+            (Char('t'), &KeyModifiers::NONE) => {
                 app.mode = Mode::Theme;
             }
-            KeyCode::Char('/') | KeyCode::Char('i') => {
+            (Char('/') | KeyCode::Char('i'), &KeyModifiers::NONE) => {
                 app.mode = Mode::Search;
             }
-            KeyCode::Char('q') => {
+            (Char('q'), &KeyModifiers::NONE) => {
                 app.quit();
             }
-            KeyCode::Char('h') => {
+            (Char('h'), &KeyModifiers::NONE) => {
                 app.show_hints = !app.show_hints;
             }
             _ => {}
@@ -111,29 +120,88 @@ fn normal_event(app: &mut App, e: &Event) -> bool {
     return false;
 }
 
+pub fn draw(widgets: &mut Widgets, app: &App, f: &mut Frame) {
+    let layout = Layout::new(
+        Direction::Vertical,
+        &[
+            Constraint::Length(app.show_hints as u16), // TODO: Maybe remove this, keys are obvious. Or make hiding it a config option
+            Constraint::Length(3),
+            Constraint::Min(1),
+        ],
+    )
+    .split(f.size());
+
+    widgets.search.draw(f, app, layout[1]);
+    widgets.results.draw(f, app, layout[2]);
+    let mode;
+    match app.mode {
+        Mode::Normal => {
+            mode = "Normal";
+        }
+        Mode::Category => {
+            mode = "Category";
+            widgets.category.draw(f, &app, f.size());
+        }
+        Mode::Sort => {
+            mode = "Sort";
+            widgets.sort.draw(f, &app, f.size());
+        }
+        Mode::Search => {
+            mode = "Search";
+        }
+        Mode::Filter => {
+            mode = "Filter";
+            widgets.filter.draw(f, &app, f.size());
+        }
+        Mode::Theme => {
+            mode = "Theme";
+            widgets.theme.draw(f, &app, f.size());
+        }
+        Mode::Loading => {
+            mode = "Loading";
+            let area = centered_rect(10, 1, f.size());
+            widgets.results.clear();
+            widgets.results.draw(f, app, layout[2]);
+            f.render_widget(Paragraph::new("Loading..."), area);
+        }
+    }
+    f.render_widget(
+        Paragraph::new(mode)
+            .bg(app.theme.bg)
+            .fg(app.theme.border_focused_color),
+        layout[0],
+    ); // TODO: Debug only
+}
+
 pub async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<()> {
     let mut w = Widgets::default();
     loop {
         if app.should_sort {
             w.results.sort(&w.sort.selected);
         }
+        terminal.draw(|f| draw(&mut w, &app, f))?;
         match app.mode {
             Mode::Loading => {
-                if let Ok(items) = nyaa::get_feed_list(
+                match nyaa::get_feed_list(
                     &w.search.input,
                     w.category.category,
                     w.filter.selected.to_owned() as usize,
                 )
                 .await
                 {
-                    w.results.with_items(items, &w.sort.selected);
+                    Ok(items) => {
+                        w.results.with_items(items, &w.sort.selected);
+                    }
+                    Err(_e) => { /* TODO: error */ }
                 }
                 app.mode = Mode::Normal;
+                if let Err(_e) = terminal.clear() {
+                    // TODO: handle
+                }
                 continue;
             }
             _ => {}
         }
-        terminal.draw(|f| ui::draw(&mut w, &app, f))?;
 
         let evt = event::read()?;
         match app.mode {

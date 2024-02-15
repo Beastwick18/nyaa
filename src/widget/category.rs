@@ -1,6 +1,6 @@
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
-    layout::Constraint,
+    layout::{Constraint, Rect},
     style::{Color, Style, Stylize as _},
     text::{Line, Span, Text},
     widgets::{Block, Borders, Clear, Row, Table},
@@ -9,7 +9,7 @@ use ratatui::{
 
 use crate::app::{App, Mode};
 
-use super::theme::Theme;
+use super::Widget;
 
 pub struct CatEntry<'a> {
     name: &'a str,
@@ -191,8 +191,8 @@ impl Default for CategoryPopup {
     }
 }
 
-impl super::Popup for CategoryPopup {
-    fn draw(&self, f: &mut Frame, theme: &Theme) {
+impl Widget for CategoryPopup {
+    fn draw(&self, f: &mut Frame, app: &App, area: Rect) {
         if let Some(cat) = ALL_CATEGORIES.get(self.major) {
             let mut tbl: Vec<Row> = ALL_CATEGORIES
                 .iter()
@@ -200,8 +200,8 @@ impl super::Popup for CategoryPopup {
                 .map(|(i, e)| match i == self.major {
                     false => Row::new(Text::raw(format!(" ▶ {}", e.name))),
                     true => Row::new(Text::raw(format!(" ▼ {}", e.name)))
-                        .bg(theme.solid_bg)
-                        .fg(theme.solid_fg),
+                        .bg(app.theme.solid_bg)
+                        .fg(app.theme.solid_fg),
                 })
                 .collect();
 
@@ -216,29 +216,29 @@ impl super::Popup for CategoryPopup {
                     Span::raw(e.name),
                 ])]);
                 match i == self.minor {
-                    true => row.bg(theme.hl_bg),
+                    true => row.bg(app.theme.hl_bg),
                     false => row,
                 }
             });
 
             tbl.splice(self.major + 1..self.major + 1, cat_rows);
 
-            let area = super::centered_rect(33, 13, f.size());
-            let clear = super::centered_rect(area.width + 2, area.height, f.size());
+            let center = super::centered_rect(33, 13, area);
+            let clear = super::centered_rect(center.width + 2, center.height, area);
             f.render_widget(Clear, clear);
-            f.render_widget(Block::new().bg(theme.bg), clear);
+            f.render_widget(Block::new().bg(app.theme.bg), clear);
             f.render_widget(
                 Table::new(tbl, &[Constraint::Percentage(100)])
                     .block(
                         Block::new()
-                            .border_style(Style::new().fg(theme.border_focused_color))
-                            .border_type(theme.border)
+                            .border_style(Style::new().fg(app.theme.border_focused_color))
+                            .border_type(app.theme.border)
                             .borders(Borders::ALL)
                             .title("Category"),
                     )
-                    .fg(theme.fg)
-                    .bg(theme.bg),
-                area,
+                    .fg(app.theme.fg)
+                    .bg(app.theme.bg),
+                center,
             );
         }
     }

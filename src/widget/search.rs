@@ -1,13 +1,12 @@
 use std::cmp::{max, min};
 
-use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, ModifierKeyCode};
+use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::{
     layout::Rect,
     style::{Style, Stylize},
     widgets::{Block, Borders, Clear, Paragraph},
     Frame,
 };
-use unicode_width::UnicodeWidthStr;
 
 use crate::app::{App, Mode};
 
@@ -29,20 +28,19 @@ impl Default for SearchWidget {
 
 impl super::Widget for SearchWidget {
     fn draw(&self, f: &mut Frame, app: &App, area: Rect) {
-        let width = self.input.width();
-        let fwidth = f.size().width as usize - 2;
-        // let visible: String;
-        // Try to insert ellipsis if input is too long (visual only)
-        let visible = if width >= fwidth {
-            let idx = width - fwidth + 2;
-            match self.input.get(idx..) {
-                Some(sub) => format!("…{}", sub),
-                None => self.input.to_owned(),
-            }
-        } else {
-            self.input.to_owned()
-        };
-        let p = Paragraph::new(visible).block(
+        // let width = self.input.width_cjk();
+        // let fwidth = f.size().width as usize - 2;
+        // // Try to insert ellipsis if input is too long (visual only)
+        // let visible = if width >= fwidth {
+        //     let idx = width - fwidth + 2;
+        //     match self.input.get(idx..) {
+        //         Some(sub) => format!("…{}", sub),
+        //         None => self.input.to_owned(),
+        //     }
+        // } else {
+        //     self.input.to_owned()
+        // };
+        let p = Paragraph::new(self.input.to_owned()).block(
             Block::new()
                 .borders(Borders::ALL)
                 .border_type(app.theme.border)
@@ -85,6 +83,44 @@ impl super::Widget for SearchWidget {
                     self.input.insert(self.cursor, *c);
                     self.cursor += 1;
                 }
+                (Char('b') | Left, &KeyModifiers::CONTROL) => {
+                    // self.cursor = self.input[..self.cursor]
+                    //     .rfind(|item| item == ' ')
+                    //     .unwrap_or(0);
+                    let non_space = self.input[..min(self.cursor, self.input.len())]
+                        .rfind(|item| item != ' ')
+                        .unwrap_or(0);
+                    self.cursor = match self.input[..non_space].rfind(|item| item == ' ') {
+                        Some(pos) => pos + 1,
+                        None => 0,
+                    };
+                }
+                (Char('w') | Right, &KeyModifiers::CONTROL) => {
+                    let idx = min(self.cursor + 1, self.input.len());
+                    self.cursor = match self.input[idx..].find(|item| item == ' ') {
+                        Some(pos) => self.cursor + pos + 2,
+                        None => self.input.len(),
+                    };
+                }
+                (Delete, &KeyModifiers::CONTROL | &KeyModifiers::ALT) => {
+                    let idx = min(self.cursor + 1, self.input.len());
+                    let new_cursor = match self.input[idx..].find(|item| item == ' ') {
+                        Some(pos) => self.cursor + pos + 2,
+                        None => self.input.len(),
+                    };
+                    self.input.replace_range(self.cursor..new_cursor, "");
+                }
+                (Backspace, &KeyModifiers::ALT | &KeyModifiers::CONTROL) => {
+                    let non_space = self.input[..min(self.cursor, self.input.len())]
+                        .rfind(|item| item != ' ')
+                        .unwrap_or(0);
+                    let prev_cursor = self.cursor;
+                    self.cursor = match self.input[..non_space].rfind(|item| item == ' ') {
+                        Some(pos) => pos + 1,
+                        None => 0,
+                    };
+                    self.input.replace_range(self.cursor..prev_cursor, "");
+                }
                 (Backspace, &KeyModifiers::NONE) => {
                     if self.input.len() > 0 && self.cursor > 0 {
                         self.input.remove(self.cursor - 1);
@@ -92,17 +128,17 @@ impl super::Widget for SearchWidget {
                     }
                 }
                 (Left, &KeyModifiers::NONE)
-                | (KeyCode::Char('h'), &KeyModifiers::CONTROL | &KeyModifiers::ALT) => {
+                | (Char('h'), &KeyModifiers::CONTROL | &KeyModifiers::ALT) => {
                     self.cursor = max(self.cursor, 1) - 1;
                 }
                 (Right, &KeyModifiers::NONE)
-                | (KeyCode::Char('l'), &KeyModifiers::CONTROL | &KeyModifiers::ALT) => {
+                | (Char('l'), &KeyModifiers::CONTROL | &KeyModifiers::ALT) => {
                     self.cursor = min(self.cursor + 1, self.input.len());
                 }
-                (End, &KeyModifiers::NONE) => {
+                (End, &KeyModifiers::NONE) | (Char('e'), &KeyModifiers::CONTROL) => {
                     self.cursor = self.input.len();
                 }
-                (Home, &KeyModifiers::NONE) => {
+                (Home, &KeyModifiers::NONE) | (Char('a'), &KeyModifiers::CONTROL) => {
                     self.cursor = 0;
                 }
                 (Enter, &KeyModifiers::NONE) => {

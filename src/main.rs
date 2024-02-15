@@ -9,7 +9,6 @@ use ratatui::{backend::CrosstermBackend, Terminal};
 
 mod app;
 mod nyaa;
-mod ui;
 mod widget;
 
 #[tokio::main()]

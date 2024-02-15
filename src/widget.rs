@@ -3,13 +3,11 @@ use std::slice::Iter;
 use crossterm::event::Event;
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
-    widgets::TableState,
+    widgets::{ScrollbarState, TableState},
     Frame,
 };
 
 use crate::app::App;
-
-use self::theme::Theme;
 
 pub mod category;
 pub mod filter;
@@ -18,11 +16,11 @@ pub mod search;
 pub mod sort;
 pub mod theme;
 
-pub trait Popup {
-    fn draw(&self, f: &mut Frame, theme: &Theme);
-    fn handle_event(&mut self, app: &mut App, e: &Event);
-}
-
+// pub trait Popup {
+//     fn draw(&self, f: &mut Frame, theme: &Theme);
+//     fn handle_event(&mut self, app: &mut App, e: &Event);
+// }
+//
 pub trait Widget {
     fn draw(&self, f: &mut Frame, app: &App, area: Rect);
     fn handle_event(&mut self, app: &mut App, e: &Event);
@@ -56,6 +54,7 @@ pub fn centered_rect(x_len: u16, y_len: u16, r: Rect) -> Rect {
 
 pub struct StatefulTable<T> {
     pub state: TableState,
+    pub scrollbar_state: ScrollbarState,
     pub items: Vec<T>,
 }
 
@@ -63,6 +62,7 @@ impl<T> StatefulTable<T> {
     pub fn with_items(items: Vec<T>) -> StatefulTable<T> {
         StatefulTable {
             state: TableState::new().with_selected(Some(0)),
+            scrollbar_state: ScrollbarState::new(items.len()),
             items,
         }
     }
@@ -76,6 +76,7 @@ impl<T> StatefulTable<T> {
             None => 0,
         };
         self.state.select(Some(i as usize));
+        self.scrollbar_state = self.scrollbar_state.position(i as usize);
     }
 
     pub fn next(&mut self, amt: isize) {
@@ -86,11 +87,13 @@ impl<T> StatefulTable<T> {
             Some(i) => i as isize + amt,
             None => 0,
         };
-        self.state
-            .select(Some(i.max(0).min(self.items.len() as isize - 1) as usize));
+        let idx = i.max(0).min(self.items.len() as isize - 1) as usize;
+        self.state.select(Some(idx));
+        self.scrollbar_state = self.scrollbar_state.position(idx as usize);
     }
 
     pub fn select(&mut self, idx: usize) {
         self.state.select(Some(idx));
+        self.scrollbar_state = self.scrollbar_state.position(idx);
     }
 }
