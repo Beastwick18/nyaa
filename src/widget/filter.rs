@@ -5,12 +5,13 @@ use ratatui::{
     widgets::{Block, Borders, Clear, Row, Table},
     Frame,
 };
+use serde::{Deserialize, Serialize};
 
 use crate::app::{App, Mode};
 
 use super::{EnumIter, StatefulTable, Widget};
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub enum Filter {
     NoFilter = 0,
     NoRemakes = 1,

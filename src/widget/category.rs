@@ -13,8 +13,8 @@ use super::Widget;
 
 pub struct CatEntry<'a> {
     name: &'a str,
-    cfg: &'a str,
-    id: usize,
+    pub cfg: &'a str,
+    pub id: usize,
     pub icon: CatIcon,
 }
 

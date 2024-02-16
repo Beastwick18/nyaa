@@ -8,6 +8,7 @@ use crossterm::{
 use ratatui::{backend::CrosstermBackend, Terminal};
 
 mod app;
+mod config;
 mod nyaa;
 mod widget;
 

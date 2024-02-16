@@ -10,6 +10,7 @@ use ratatui::{
 use crate::app::App;
 
 pub mod category;
+pub mod error;
 pub mod filter;
 pub mod results;
 pub mod search;

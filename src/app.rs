@@ -10,19 +10,23 @@ use ratatui::{
 };
 
 use crate::{
+    config::Config,
     nyaa,
     widget::{
         self,
-        category::CategoryPopup,
+        category::{CategoryPopup, ALL_CATEGORIES},
         centered_rect,
+        error::ErrorPopup,
         filter::FilterPopup,
         results::ResultsWidget,
         search::SearchWidget,
         sort::SortPopup,
-        theme::{Theme, ThemePopup},
+        theme::{Theme, ThemePopup, THEMES},
         Widget,
     },
 };
+
+pub static APP_NAME: &str = "nyaa";
 
 pub enum Mode {
     Normal,
@@ -32,6 +36,7 @@ pub enum Mode {
     Filter,
     Theme,
     Loading,
+    Error,
 }
 
 pub struct App {
@@ -39,8 +44,9 @@ pub struct App {
     pub theme: &'static Theme,
     pub show_hints: bool,
     pub should_sort: bool,
+    pub config: Config,
+    pub errors: Vec<String>,
     should_quit: bool,
-    // TODO: Add query struct containing category, filter, etc. updated by popups
 }
 
 impl App {
@@ -56,6 +62,7 @@ pub struct Widgets {
     pub theme: ThemePopup,
     pub search: SearchWidget,
     pub results: ResultsWidget,
+    pub error: ErrorPopup,
 }
 
 impl Default for App {
@@ -65,6 +72,8 @@ impl Default for App {
             theme: widget::theme::THEMES[0],
             show_hints: false,
             should_sort: false,
+            config: Config::default(),
+            errors: vec![],
             should_quit: false,
         }
     }
@@ -79,6 +88,7 @@ impl Default for Widgets {
             theme: ThemePopup::default(),
             search: SearchWidget::default(),
             results: ResultsWidget::default(),
+            error: ErrorPopup::default(),
         }
     }
 }
@@ -120,11 +130,11 @@ fn normal_event(app: &mut App, e: &Event) -> bool {
     return false;
 }
 
-pub fn draw(widgets: &mut Widgets, app: &App, f: &mut Frame) {
+pub fn draw(widgets: &mut Widgets, app: &mut App, f: &mut Frame) {
     let layout = Layout::new(
         Direction::Vertical,
         &[
-            Constraint::Length(app.show_hints as u16), // TODO: Maybe remove this, keys are obvious. Or make hiding it a config option
+            Constraint::Length(app.show_hints as u16),
             Constraint::Length(3),
             Constraint::Min(1),
         ],
@@ -133,55 +143,80 @@ pub fn draw(widgets: &mut Widgets, app: &App, f: &mut Frame) {
 
     widgets.search.draw(f, app, layout[1]);
     widgets.results.draw(f, app, layout[2]);
-    let mode;
     match app.mode {
-        Mode::Normal => {
-            mode = "Normal";
-        }
         Mode::Category => {
-            mode = "Category";
-            widgets.category.draw(f, &app, f.size());
+            widgets.category.draw(f, app, f.size());
         }
         Mode::Sort => {
-            mode = "Sort";
-            widgets.sort.draw(f, &app, f.size());
-        }
-        Mode::Search => {
-            mode = "Search";
+            widgets.sort.draw(f, app, f.size());
         }
         Mode::Filter => {
-            mode = "Filter";
-            widgets.filter.draw(f, &app, f.size());
+            widgets.filter.draw(f, app, f.size());
         }
         Mode::Theme => {
-            mode = "Theme";
-            widgets.theme.draw(f, &app, f.size());
+            widgets.theme.draw(f, app, f.size());
         }
         Mode::Loading => {
-            mode = "Loading";
             let area = centered_rect(10, 1, f.size());
             widgets.results.clear();
             widgets.results.draw(f, app, layout[2]);
             f.render_widget(Paragraph::new("Loading..."), area);
         }
+        Mode::Error => {
+            widgets
+                .error
+                .with_error(app.errors.pop().unwrap_or_default());
+            widgets.error.draw(f, app, f.size());
+            // Show error
+        }
+        Mode::Normal | Mode::Search => {}
     }
     f.render_widget(
-        Paragraph::new(mode)
+        Paragraph::new(app.config.torrent_client_cmd.to_owned())
             .bg(app.theme.bg)
             .fg(app.theme.border_focused_color),
         layout[0],
-    ); // TODO: Debug only
+    );
 }
 
 pub async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<()> {
     let mut w = Widgets::default();
+    app.config = match Config::from_file() {
+        Ok(config) => config,
+        Err(e) => {
+            app.errors.push(e.to_string());
+            app.config
+        }
+    };
+    w.search.input = app.config.default_search.to_owned();
+    w.search.cursor = w.search.input.len();
+    w.sort.selected = app.config.default_sort.to_owned();
+    w.filter.selected = app.config.default_filter.to_owned();
+    for (i, theme) in THEMES.iter().enumerate() {
+        if theme.name == app.config.default_theme {
+            w.theme.selected = i;
+            app.theme = theme;
+            break;
+        }
+    }
+    for cat in ALL_CATEGORIES {
+        if let Some(ent) = cat
+            .entries
+            .iter()
+            .find(|ent| ent.cfg == app.config.default_category)
+        {
+            w.category.category = ent.id;
+            break;
+        }
+    }
     loop {
         if app.should_sort {
             w.results.sort(&w.sort.selected);
         }
-        terminal.draw(|f| draw(&mut w, &app, f))?;
+        terminal.draw(|f| draw(&mut w, &mut app, f))?;
         match app.mode {
             Mode::Loading => {
+                app.mode = Mode::Normal;
                 match nyaa::get_feed_list(
                     &w.search.input,
                     w.category.category,
@@ -192,11 +227,12 @@ pub async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io
                     Ok(items) => {
                         w.results.with_items(items, &w.sort.selected);
                     }
-                    Err(_e) => { /* TODO: error */ }
+                    Err(e) => {
+                        app.errors.push(e.to_string());
+                    }
                 }
-                app.mode = Mode::Normal;
-                if let Err(_e) = terminal.clear() {
-                    // TODO: handle
+                if let Err(e) = terminal.clear() {
+                    app.errors.push(e.to_string());
                 }
                 continue;
             }
@@ -224,11 +260,17 @@ pub async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io
             Mode::Theme => {
                 w.theme.handle_event(&mut app, &evt);
             }
+            Mode::Error => {
+                w.error.handle_event(&mut app, &evt);
+            }
             Mode::Loading => {}
         }
 
         if app.should_quit {
             return Ok(());
+        }
+        if app.errors.len() > 0 {
+            app.mode = Mode::Error;
         }
     }
 }

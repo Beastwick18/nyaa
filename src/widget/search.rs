@@ -4,9 +4,11 @@ use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::{
     layout::Rect,
     style::{Style, Stylize},
+    text::{Line, Span},
     widgets::{Block, Borders, Clear, Paragraph},
     Frame,
 };
+use unicode_width::UnicodeWidthChar;
 
 use crate::app::{App, Mode};
 
@@ -28,19 +30,19 @@ impl Default for SearchWidget {
 
 impl super::Widget for SearchWidget {
     fn draw(&self, f: &mut Frame, app: &App, area: Rect) {
-        // let width = self.input.width_cjk();
-        // let fwidth = f.size().width as usize - 2;
-        // // Try to insert ellipsis if input is too long (visual only)
-        // let visible = if width >= fwidth {
-        //     let idx = width - fwidth + 2;
-        //     match self.input.get(idx..) {
-        //         Some(sub) => format!("…{}", sub),
-        //         None => self.input.to_owned(),
-        //     }
-        // } else {
-        //     self.input.to_owned()
-        // };
-        let p = Paragraph::new(self.input.to_owned()).block(
+        let width = self.input.len();
+        let fwidth = f.size().width as usize - 2;
+        // Try to insert ellipsis if input is too long (visual only)
+        let visible = if width >= fwidth {
+            let idx = width - fwidth + 2;
+            match self.input.get(idx..) {
+                Some(sub) => format!("…{}", sub),
+                None => self.input.to_owned(),
+            }
+        } else {
+            self.input.to_owned()
+        };
+        let p = Paragraph::new(visible).block(
             Block::new()
                 .borders(Borders::ALL)
                 .border_type(app.theme.border)
@@ -54,6 +56,16 @@ impl super::Widget for SearchWidget {
         );
         f.render_widget(Clear, area);
         f.render_widget(p, area);
+
+        let text = Paragraph::new(Line::from(vec![
+            Span::raw("Press "),
+            Span::styled("F1", Style::new().bold()),
+            Span::raw(" or "),
+            Span::styled("?", Style::new().bold()),
+            Span::raw(" for help"),
+        ]));
+        let right = Rect::new(area.right() - 23, area.top(), 23, 1);
+        f.render_widget(text, right);
         match app.mode {
             Mode::Search => {
                 // Render cursor if in editing mode
@@ -81,7 +93,7 @@ impl super::Widget for SearchWidget {
                 }
                 (Char(c), &KeyModifiers::NONE | &KeyModifiers::SHIFT) => {
                     self.input.insert(self.cursor, *c);
-                    self.cursor += 1;
+                    self.cursor += c.width_cjk().unwrap_or(0);
                 }
                 (Char('b') | Left, &KeyModifiers::CONTROL) => {
                     // self.cursor = self.input[..self.cursor]
@@ -130,6 +142,16 @@ impl super::Widget for SearchWidget {
                 (Left, &KeyModifiers::NONE)
                 | (Char('h'), &KeyModifiers::CONTROL | &KeyModifiers::ALT) => {
                     self.cursor = max(self.cursor, 1) - 1;
+                    // let actual_cursor = self.input.chars()
+                    //
+                    // let prev_boundry = self.input[..self.cursor]
+                    //     .char_indices()
+                    //     .rfind(|item| self.input.is_char_boundary(item.0));
+                    // if let Some(p) = prev_boundry {
+                    //     self.cursor = (p.0 + 1) - p.1.width().unwrap_or(0);
+                    // } else {
+                    //     self.cursor = 0;
+                    // }
                 }
                 (Right, &KeyModifiers::NONE)
                 | (Char('l'), &KeyModifiers::CONTROL | &KeyModifiers::ALT) => {

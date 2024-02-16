@@ -4,8 +4,10 @@ use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     layout::{Constraint, Margin, Rect},
     style::{Modifier, Style, Stylize},
-    text::Text,
-    widgets::{Block, Borders, Cell, Clear, Row, Scrollbar, ScrollbarOrientation, Table},
+    text::{Line, Span, Text},
+    widgets::{
+        Block, Borders, Cell, Clear, Paragraph, Row, Scrollbar, ScrollbarOrientation, Table,
+    },
     Frame,
 };
 
@@ -54,6 +56,14 @@ impl Default for ResultsWidget {
     }
 }
 
+fn shorten_number(mut n: u32) -> String {
+    if n >= 10000 {
+        n /= 1000;
+        return n.to_string() + "K";
+    }
+    n.to_string()
+}
+
 impl super::Widget for ResultsWidget {
     fn draw(&self, f: &mut Frame, app: &App, area: Rect) {
         let focus_color = match app.mode {
@@ -68,8 +78,15 @@ impl super::Widget for ResultsWidget {
             Constraint::Length(4),
             Constraint::Length(5),
         ];
-        static HEADER_CELLS: &'static [&str] = &["Cat", "Name", "Size", "", "", "󰇚"];
-        let header_cells = HEADER_CELLS.iter().map(|h| {
+        let header: &[&String] = &[
+            &"Cat".to_owned(),
+            &"Name".to_owned(),
+            &format!("{:^9}", " Size"),
+            &format!("{:^4}", ""),
+            &format!("{:^4}", ""),
+            &format!("{:^4}", ""),
+        ];
+        let header_cells = header.iter().map(|h| {
             Cell::from(Text::raw(*h)).style(Style::default().add_modifier(Modifier::BOLD))
         });
         let header = Row::new(header_cells)
@@ -88,9 +105,9 @@ impl super::Widget for ResultsWidget {
                 Text::styled(
                     item.title.to_owned(),
                     Style::new().fg(if item.trusted {
-                        app.theme.green
+                        app.theme.trusted
                     } else if item.remake {
-                        app.theme.red
+                        app.theme.remake
                     } else {
                         app.theme.fg
                     }),
@@ -98,13 +115,13 @@ impl super::Widget for ResultsWidget {
                 Text::raw(format!("{:>9}", item.size.to_string())),
                 Text::styled(
                     format!("{:>4}", item.seeders.to_string()),
-                    Style::new().fg(app.theme.green),
+                    Style::new().fg(app.theme.trusted),
                 ),
                 Text::styled(
                     format!("{:>4}", item.leechers.to_string()),
-                    Style::new().fg(app.theme.red),
+                    Style::new().fg(app.theme.remake),
                 ),
-                Text::raw(format!("{:<5}", item.downloads.to_string())),
+                Text::raw(format!("{:<5}", shorten_number(item.downloads))),
             ])
             .fg(app.theme.fg)
             .height(1)
@@ -132,7 +149,6 @@ impl super::Widget for ResultsWidget {
             .bg(app.theme.bg)
             .highlight_style(Style::default().bg(app.theme.hl_bg))
             .widths(&binding);
-
         f.render_widget(Clear, area);
         f.render_stateful_widget(table, area, &mut self.table.state.to_owned());
         f.render_stateful_widget(sb, sb_area, &mut self.table.scrollbar_state.to_owned());

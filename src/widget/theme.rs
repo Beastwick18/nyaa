@@ -21,8 +21,8 @@ pub struct Theme {
     // pub hl_fg: Color,
     pub solid_bg: Color,
     pub solid_fg: Color,
-    pub green: Color,
-    pub red: Color,
+    pub trusted: Color,
+    pub remake: Color,
 }
 
 pub static THEMES: &'static [&'static Theme] = &[
@@ -37,8 +37,8 @@ pub static THEMES: &'static [&'static Theme] = &[
         // hl_fg: Color::White,
         solid_bg: Color::White,
         solid_fg: Color::Black,
-        green: Color::Green,
-        red: Color::Red,
+        trusted: Color::Green,
+        remake: Color::Red,
     },
     &Theme {
         name: "Dracula",
@@ -51,8 +51,8 @@ pub static THEMES: &'static [&'static Theme] = &[
         // hl_fg: Color::Rgb(248, 248, 242),
         solid_fg: Color::Rgb(40, 42, 54),
         solid_bg: Color::Rgb(139, 233, 253),
-        green: Color::Rgb(80, 250, 123),
-        red: Color::Rgb(255, 85, 85),
+        trusted: Color::Rgb(80, 250, 123),
+        remake: Color::Rgb(255, 85, 85),
     },
     &Theme {
         name: "Gruvbox",
@@ -65,8 +65,8 @@ pub static THEMES: &'static [&'static Theme] = &[
         // hl_fg: Color::Rgb(29, 32, 33),
         solid_bg: Color::Rgb(69, 133, 136),
         solid_fg: Color::Rgb(235, 219, 178),
-        green: Color::Rgb(152, 151, 26),
-        red: Color::Rgb(204, 36, 29),
+        trusted: Color::Rgb(152, 151, 26),
+        remake: Color::Rgb(204, 36, 29),
     },
     &Theme {
         name: "Catppuccin Macchiato",
@@ -79,8 +79,8 @@ pub static THEMES: &'static [&'static Theme] = &[
         // hl_fg: Color::Rgb(202, 211, 245),
         solid_bg: Color::Rgb(166, 218, 149),
         solid_fg: Color::Rgb(24, 25, 38),
-        green: Color::Rgb(166, 218, 149),
-        red: Color::Rgb(237, 135, 150),
+        trusted: Color::Rgb(166, 218, 149),
+        remake: Color::Rgb(237, 135, 150),
     },
 ];
 
