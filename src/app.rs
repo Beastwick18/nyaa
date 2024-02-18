@@ -18,6 +18,7 @@ use crate::{
         centered_rect,
         error::ErrorPopup,
         filter::FilterPopup,
+        help::HelpPopup,
         results::ResultsWidget,
         search::SearchWidget,
         sort::SortPopup,
@@ -28,6 +29,7 @@ use crate::{
 
 pub static APP_NAME: &str = "nyaa";
 
+#[derive(PartialEq, Clone)]
 pub enum Mode {
     Normal,
     Search,
@@ -37,6 +39,23 @@ pub enum Mode {
     Theme,
     Loading,
     Error,
+    Help,
+}
+
+impl ToString for Mode {
+    fn to_string(&self) -> String {
+        match self {
+            Mode::Normal => "Normal".to_string(),
+            Mode::Search => "Search".to_string(),
+            Mode::Category => "Category".to_string(),
+            Mode::Sort => "Sort".to_string(),
+            Mode::Filter => "Filter".to_string(),
+            Mode::Theme => "Theme".to_string(),
+            Mode::Loading => "Loading".to_string(),
+            Mode::Error => "Error".to_string(),
+            Mode::Help => "Help".to_string(),
+        }
+    }
 }
 
 pub struct App {
@@ -63,6 +82,7 @@ pub struct Widgets {
     pub search: SearchWidget,
     pub results: ResultsWidget,
     pub error: ErrorPopup,
+    pub help: HelpPopup,
 }
 
 impl Default for App {
@@ -89,10 +109,29 @@ impl Default for Widgets {
             search: SearchWidget::default(),
             results: ResultsWidget::default(),
             error: ErrorPopup::default(),
+            help: HelpPopup::default(),
         }
     }
 }
 
+fn help_event(app: &mut App, e: &Event) {
+    if let Event::Key(KeyEvent {
+        code,
+        kind: KeyEventKind::Press,
+        ..
+    }) = e
+    {
+        match code {
+            KeyCode::Char('?') if app.mode != Mode::Search => {
+                app.mode = Mode::Help;
+            }
+            KeyCode::F(1) => {
+                app.mode = Mode::Help;
+            }
+            _ => {}
+        }
+    }
+}
 fn normal_event(app: &mut App, e: &Event) -> bool {
     if let Event::Key(KeyEvent {
         code,
@@ -167,7 +206,9 @@ pub fn draw(widgets: &mut Widgets, app: &mut App, f: &mut Frame) {
                 .error
                 .with_error(app.errors.pop().unwrap_or_default());
             widgets.error.draw(f, app, f.size());
-            // Show error
+        }
+        Mode::Help => {
+            widgets.help.draw(f, app, f.size());
         }
         Mode::Normal | Mode::Search => {}
     }
@@ -177,6 +218,24 @@ pub fn draw(widgets: &mut Widgets, app: &mut App, f: &mut Frame) {
             .fg(app.theme.border_focused_color),
         layout[0],
     );
+}
+
+fn get_help(app: &mut App, w: &mut Widgets) {
+    let help = match app.mode {
+        Mode::Category => CategoryPopup::get_help(),
+        Mode::Sort => SortPopup::get_help(),
+        Mode::Normal => ResultsWidget::get_help(),
+        Mode::Search => SearchWidget::get_help(),
+        Mode::Filter => FilterPopup::get_help(),
+        Mode::Theme => ThemePopup::get_help(),
+        Mode::Error => None,
+        Mode::Help => None,
+        Mode::Loading => None,
+    };
+    if let Some(msg) = help {
+        w.help.with_items(msg, app.mode.clone());
+        w.help.table.select(0);
+    }
 }
 
 pub async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<()> {
@@ -213,6 +272,14 @@ pub async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io
         if app.should_sort {
             w.results.sort(&w.sort.selected);
         }
+        if app.should_quit {
+            return Ok(());
+        }
+        if app.errors.len() > 0 {
+            app.mode = Mode::Error;
+        }
+
+        get_help(&mut app, &mut w);
         terminal.draw(|f| draw(&mut w, &mut app, f))?;
         match app.mode {
             Mode::Loading => {
@@ -263,14 +330,13 @@ pub async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io
             Mode::Error => {
                 w.error.handle_event(&mut app, &evt);
             }
+            Mode::Help => {
+                w.help.handle_event(&mut app, &evt);
+            }
             Mode::Loading => {}
         }
-
-        if app.should_quit {
-            return Ok(());
-        }
-        if app.errors.len() > 0 {
-            app.mode = Mode::Error;
+        if app.mode != Mode::Help {
+            help_event(&mut app, &evt);
         }
     }
 }

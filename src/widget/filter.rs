@@ -2,14 +2,14 @@ use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     layout::{Constraint, Rect},
     style::{Style, Stylize},
-    widgets::{Block, Borders, Clear, Row, Table},
+    widgets::{Block, Clear, Row, Table},
     Frame,
 };
 use serde::{Deserialize, Serialize};
 
 use crate::app::{App, Mode};
 
-use super::{EnumIter, StatefulTable, Widget};
+use super::{create_block, EnumIter, StatefulTable, Widget};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub enum Filter {
@@ -67,15 +67,7 @@ impl Widget for FilterPopup {
             }
         });
         let table = Table::new(items, [Constraint::Percentage(100)])
-            .block(
-                Block::new()
-                    .border_style(Style::new().fg(app.theme.border_focused_color))
-                    .borders(Borders::ALL)
-                    .border_type(app.theme.border)
-                    .title("Filter"),
-            )
-            .fg(app.theme.fg)
-            .bg(app.theme.bg)
+            .block(create_block(app.theme, true).title("Filter"))
             .highlight_style(Style::default().bg(app.theme.hl_bg));
         f.render_widget(Clear, clear);
         f.render_widget(Block::new().bg(app.theme.bg), clear);
@@ -90,7 +82,7 @@ impl Widget for FilterPopup {
         }) = e
         {
             match code {
-                KeyCode::Esc | KeyCode::Char('s') | KeyCode::Char('q') => {
+                KeyCode::Esc | KeyCode::Char('f') | KeyCode::Char('q') => {
                     app.mode = Mode::Normal;
                 }
                 KeyCode::Char('j') | KeyCode::Down => {
@@ -116,5 +108,16 @@ impl Widget for FilterPopup {
                 _ => {}
             }
         }
+    }
+
+    fn get_help() -> Option<Vec<(&'static str, &'static str)>> {
+        Some(vec![
+            ("Enter", "Confirm"),
+            ("Esc, f, q", "Close"),
+            ("g", "Top"),
+            ("G", "Bottom"),
+            ("j, ↓", "Down"),
+            ("k, ↑", "Up"),
+        ])
     }
 }

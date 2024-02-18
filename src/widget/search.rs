@@ -5,12 +5,14 @@ use ratatui::{
     layout::Rect,
     style::{Style, Stylize},
     text::{Line, Span},
-    widgets::{Block, Borders, Clear, Paragraph},
+    widgets::{Clear, Paragraph},
     Frame,
 };
 use unicode_width::UnicodeWidthChar;
 
 use crate::app::{App, Mode};
+
+use super::create_block;
 
 pub struct SearchWidget {
     pub input: String,
@@ -42,18 +44,8 @@ impl super::Widget for SearchWidget {
         } else {
             self.input.to_owned()
         };
-        let p = Paragraph::new(visible).block(
-            Block::new()
-                .borders(Borders::ALL)
-                .border_type(app.theme.border)
-                .border_style(Style::new().fg(match app.mode {
-                    Mode::Search => app.theme.border_focused_color,
-                    _ => app.theme.border_color,
-                }))
-                .fg(app.theme.fg)
-                .bg(app.theme.bg)
-                .title("Search"),
-        );
+        let p = Paragraph::new(visible)
+            .block(create_block(app.theme, app.mode == Mode::Search).title("Search"));
         f.render_widget(Clear, area);
         f.render_widget(p, area);
 
@@ -122,7 +114,7 @@ impl super::Widget for SearchWidget {
                     };
                     self.input.replace_range(self.cursor..new_cursor, "");
                 }
-                (Backspace, &KeyModifiers::ALT | &KeyModifiers::CONTROL) => {
+                (Backspace, &KeyModifiers::CONTROL | &KeyModifiers::ALT) => {
                     let non_space = self.input[..min(self.cursor, self.input.len())]
                         .rfind(|item| item != ' ')
                         .unwrap_or(0);
@@ -169,5 +161,22 @@ impl super::Widget for SearchWidget {
                 _ => {}
             };
         }
+    }
+
+    fn get_help() -> Option<Vec<(&'static str, &'static str)>> {
+        Some(vec![
+            ("Enter", "Confirm"),
+            ("Esc", "Stop"),
+            ("←, Ctrl-h", "Move left"),
+            ("→, Ctrl-l", "Move right"),
+            ("End, Ctrl-e", "End of line"),
+            ("Home, Ctrl-a", "Beginning of line"),
+            ("Ctrl-B, Ctrl-←", "Back word"),
+            ("Ctrl-W, Ctrl-→", "Forward word"),
+            ("Ctrl/Alt-Del", "Delete word forward"),
+            ("Ctrl/Alt-Backspace", "Delete word backwards"),
+            ("Del", "Delete char forwards"),
+            ("Backspace", "Delete char backwards"),
+        ])
     }
 }

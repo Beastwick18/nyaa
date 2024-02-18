@@ -1,10 +1,11 @@
+use std::path::PathBuf;
+
 use crate::{
     app::APP_NAME,
     widget::{category::ALL_CATEGORIES, filter::Filter, sort::Sort, theme::THEMES},
 };
 use confy::ConfyError;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
 
 pub static CONFIG_FILE: &str = "config";
 

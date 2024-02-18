@@ -2,13 +2,13 @@ use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     layout::{Constraint, Rect},
     style::{Color, Style, Stylize},
-    widgets::{Block, BorderType, Borders, Clear, Row, Table},
+    widgets::{Block, BorderType, Clear, Row, Table},
     Frame,
 };
 
 use crate::app::{App, Mode};
 
-use super::{StatefulTable, Widget};
+use super::{create_block, StatefulTable, Widget};
 
 pub struct Theme {
     pub name: &'static str,
@@ -111,15 +111,7 @@ impl Widget for ThemePopup {
             }
         });
         let table = Table::new(items, [Constraint::Percentage(100)])
-            .block(
-                Block::new()
-                    .border_style(Style::new().fg(app.theme.border_focused_color))
-                    .borders(Borders::ALL)
-                    .border_type(app.theme.border)
-                    .title("Theme"),
-            )
-            .fg(app.theme.fg)
-            .bg(app.theme.bg)
+            .block(create_block(app.theme, true).title("Theme"))
             .highlight_style(Style::default().bg(app.theme.hl_bg));
         f.render_widget(Clear, clear);
         f.render_widget(Block::new().bg(app.theme.bg), clear);
@@ -134,7 +126,7 @@ impl Widget for ThemePopup {
         }) = e
         {
             match code {
-                KeyCode::Esc | KeyCode::Char('s') | KeyCode::Char('q') => {
+                KeyCode::Esc | KeyCode::Char('t') | KeyCode::Char('q') => {
                     app.mode = Mode::Normal;
                 }
                 KeyCode::Char('j') => {
@@ -150,16 +142,25 @@ impl Widget for ThemePopup {
                     self.table.select(0);
                 }
                 KeyCode::Enter => {
-                    if let Some(theme) = THEMES
-                        .iter()
-                        .nth(self.table.state.selected().unwrap_or_default())
+                    if let Some(theme) = THEMES.iter().nth(self.table.state.selected().unwrap_or(0))
                     {
-                        self.selected = self.table.state.selected().unwrap_or_default();
+                        self.selected = self.table.state.selected().unwrap_or(0);
                         app.theme = theme;
                     }
                 }
                 _ => {}
             }
         }
+    }
+
+    fn get_help() -> Option<Vec<(&'static str, &'static str)>> {
+        Some(vec![
+            ("Enter", "Confirm"),
+            ("Esc, t, q", "Close"),
+            ("j, ↓", "Down"),
+            ("k, ↑", "Up"),
+            ("g", "Top"),
+            ("G", "Bottom"),
+        ])
     }
 }

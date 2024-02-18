@@ -1,22 +1,25 @@
-use std::cmp::{self, Ordering};
+use std::{
+    cmp::{self, Ordering},
+    io::{BufReader, Read},
+    process::{Command, Stdio},
+};
 
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     layout::{Constraint, Margin, Rect},
     style::{Modifier, Style, Stylize},
-    text::{Line, Span, Text},
-    widgets::{
-        Block, Borders, Cell, Clear, Paragraph, Row, Scrollbar, ScrollbarOrientation, Table,
-    },
+    text::Text,
+    widgets::{Clear, Row, Scrollbar, ScrollbarOrientation, Table},
     Frame,
 };
 
 use crate::{
     app::{App, Mode},
+    config::Config,
     nyaa::{self, Item},
 };
 
-use super::{sort::Sort, StatefulTable};
+use super::{create_block, sort::Sort, StatefulTable};
 
 pub struct ResultsWidget {
     table: StatefulTable<nyaa::Item>,
@@ -70,38 +73,24 @@ impl super::Widget for ResultsWidget {
             Mode::Normal => app.theme.border_focused_color,
             _ => app.theme.border_color,
         };
-        let binding = [
-            Constraint::Length(3),
-            Constraint::Length(area.width - 32 as u16),
-            Constraint::Length(9),
-            Constraint::Length(4),
-            Constraint::Length(4),
-            Constraint::Length(5),
-        ];
-        let header: &[&String] = &[
-            &"Cat".to_owned(),
-            &"Name".to_owned(),
-            &format!("{:^9}", " Size"),
-            &format!("{:^4}", ""),
-            &format!("{:^4}", ""),
-            &format!("{:^4}", ""),
-        ];
-        let header_cells = header.iter().map(|h| {
-            Cell::from(Text::raw(*h)).style(Style::default().add_modifier(Modifier::BOLD))
-        });
-        let header = Row::new(header_cells)
-            .style(
-                Style::default()
-                    .add_modifier(Modifier::UNDERLINED)
-                    .add_modifier(Modifier::BOLD)
-                    .fg(focus_color),
-            )
-            .height(1)
-            .bottom_margin(0);
+        let binding = Constraint::from_lengths([3, area.width - 32 as u16, 9, 4, 4, 5]);
+        let header = Row::new([
+            "Cat".to_owned(),
+            "Name".to_owned(),
+            format!("{:^9}", " Size"),
+            format!("{:^4}", ""),
+            format!("{:^4}", ""),
+            format!("{:^4}", ""),
+        ])
+        .add_modifier(Modifier::BOLD)
+        .add_modifier(Modifier::UNDERLINED)
+        .fg(focus_color)
+        .height(1)
+        .bottom_margin(0);
 
         let items = self.table.items.iter().map(|item| {
             Row::new(vec![
-                Text::styled(item.icon.icon, Style::new().fg(item.icon.color)),
+                Text::styled(item.icon.label, Style::new().fg(item.icon.color)),
                 Text::styled(
                     item.title.to_owned(),
                     Style::new().fg(if item.trusted {
@@ -121,7 +110,7 @@ impl super::Widget for ResultsWidget {
                     format!("{:>4}", item.leechers.to_string()),
                     Style::new().fg(app.theme.remake),
                 ),
-                Text::raw(format!("{:<5}", shorten_number(item.downloads))),
+                Text::raw(shorten_number(item.downloads)),
             ])
             .fg(app.theme.fg)
             .height(1)
@@ -140,13 +129,7 @@ impl super::Widget for ResultsWidget {
 
         let table = Table::new(items, [Constraint::Percentage(100)])
             .header(header)
-            .block(
-                Block::new()
-                    .borders(Borders::ALL)
-                    .border_type(app.theme.border)
-                    .border_style(Style::new().fg(focus_color)),
-            )
-            .bg(app.theme.bg)
+            .block(create_block(app.theme, app.mode == Mode::Normal))
             .highlight_style(Style::default().bg(app.theme.hl_bg))
             .widths(&binding);
         f.render_widget(Clear, area);
@@ -154,7 +137,7 @@ impl super::Widget for ResultsWidget {
         f.render_stateful_widget(sb, sb_area, &mut self.table.scrollbar_state.to_owned());
     }
 
-    fn handle_event(&mut self, _app: &mut crate::app::App, e: &crossterm::event::Event) {
+    fn handle_event(&mut self, app: &mut crate::app::App, e: &crossterm::event::Event) {
         if let Event::Key(KeyEvent {
             code,
             kind: KeyEventKind::Press,
@@ -180,8 +163,99 @@ impl super::Widget for ResultsWidget {
                 KeyCode::Char('g') => {
                     self.table.select(0);
                 }
+                KeyCode::Enter => {
+                    let item = match self
+                        .table
+                        .state
+                        .selected()
+                        .and_then(|i| self.table.items.get(i))
+                    {
+                        Some(i) => i,
+                        None => return,
+                    };
+                    let cmd_str = app
+                        .config
+                        .torrent_client_cmd
+                        .clone()
+                        .replace("{magnet}", &item.magnet_link)
+                        .replace("{torrent}", &item.torrent_link)
+                        .replace("{title}", &item.title)
+                        .replace("{file}", &item.file_name);
+                    let cmd = match shellwords::split(&cmd_str) {
+                        Ok(cmd) => cmd,
+                        Err(e) => {
+                            app.errors.push(
+                                format!(
+                                    "{}:\nfailed to split command:\n{}",
+                                    cmd_str,
+                                    e.to_string()
+                                )
+                                .to_owned(),
+                            );
+                            return;
+                        }
+                    };
+                    if let [exec, args @ ..] = cmd.as_slice() {
+                        let cmd = Command::new(exec)
+                            .args(args)
+                            .stdin(Stdio::null())
+                            .stdout(Stdio::null())
+                            .stderr(Stdio::piped())
+                            .spawn();
+                        let child = match cmd {
+                            Ok(child) => child,
+                            Err(e) => {
+                                app.errors.push(
+                                    format!("{}:\nfailed to run:\n{}", cmd_str, e.to_string())
+                                        .to_owned(),
+                                );
+                                return;
+                            }
+                        };
+                        let output = match child.wait_with_output() {
+                            Ok(output) => output,
+                            Err(e) => {
+                                app.errors.push(
+                                    format!("Failed to get output from torrent_client_cmd:\n{}", e)
+                                        .to_owned(),
+                                );
+                                return;
+                            }
+                        };
+
+                        if output.status.code() != Some(0) {
+                            let mut err = BufReader::new(&*output.stderr);
+                            let mut err_str = String::new();
+                            err.read_to_string(&mut err_str).unwrap_or(0);
+                            app.errors.push(
+                                format!(
+                                    "{}:\nExited with status code {}:\n{}",
+                                    cmd_str, output.status, err_str
+                                )
+                                .to_owned(),
+                            );
+                        }
+                    } else if let Some(p) = Config::get_path().ok() {
+                        app.errors.push(format!(
+                            "The command found in {}:\n\n\"{}\"\n\n...is not valid.",
+                            p.to_str().unwrap_or_default().to_owned(),
+                            cmd_str
+                        ));
+                    }
+                }
                 _ => {}
             }
         }
+    }
+
+    fn get_help() -> Option<Vec<(&'static str, &'static str)>> {
+        Some(vec![
+            ("Enter", "Confirm"),
+            ("q", "Exit App"),
+            ("g", "Top"),
+            ("G", "Bottom"),
+            ("j, ↓", "Down"),
+            ("k, ↑", "Up"),
+        ])
     }
 }

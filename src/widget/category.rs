@@ -1,15 +1,15 @@
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     layout::{Constraint, Rect},
-    style::{Color, Style, Stylize as _},
+    style::{Color, Stylize as _},
     text::{Line, Span, Text},
-    widgets::{Block, Borders, Clear, Row, Table},
+    widgets::{Block, Clear, Row, Table},
     Frame,
 };
 
 use crate::app::{App, Mode};
 
-use super::Widget;
+use super::{create_block, Widget};
 
 pub struct CatEntry<'a> {
     name: &'a str,
@@ -20,7 +20,7 @@ pub struct CatEntry<'a> {
 
 #[derive(Clone)]
 pub struct CatIcon {
-    pub icon: &'static str,
+    pub label: &'static str,
     pub color: Color,
 }
 
@@ -33,7 +33,7 @@ impl<'a> CatEntry<'a> {
         color: Color,
     ) -> Self {
         let icon = CatIcon {
-            icon: icon_str,
+            label: icon_str,
             color,
         };
         CatEntry {
@@ -211,7 +211,7 @@ impl Widget for CategoryPopup {
                         true => "  ",
                         false => "   ",
                     }),
-                    Span::styled(e.icon.icon, Style::new().fg(e.icon.color)),
+                    e.icon.label.fg(e.icon.color),
                     Span::raw(" "),
                     Span::raw(e.name),
                 ])]);
@@ -229,15 +229,7 @@ impl Widget for CategoryPopup {
             f.render_widget(Block::new().bg(app.theme.bg), clear);
             f.render_widget(
                 Table::new(tbl, &[Constraint::Percentage(100)])
-                    .block(
-                        Block::new()
-                            .border_style(Style::new().fg(app.theme.border_focused_color))
-                            .border_type(app.theme.border)
-                            .borders(Borders::ALL)
-                            .title("Category"),
-                    )
-                    .fg(app.theme.fg)
-                    .bg(app.theme.bg),
+                    .block(create_block(app.theme, true).title("Category")),
                 center,
             );
         }
@@ -278,6 +270,14 @@ impl Widget for CategoryPopup {
                         };
                     }
                 }
+                KeyCode::Char('G') => {
+                    if let Some(cat) = ALL_CATEGORIES.get(self.major) {
+                        self.minor = cat.entries.len() - 1;
+                    }
+                }
+                KeyCode::Char('g') => {
+                    self.minor = 0;
+                }
                 KeyCode::Tab | KeyCode::Char('J') => {
                     self.major = match self.major + 1 >= ALL_CATEGORIES.len() {
                         true => 0,
@@ -295,5 +295,18 @@ impl Widget for CategoryPopup {
                 _ => {}
             }
         }
+    }
+
+    fn get_help() -> Option<Vec<(&'static str, &'static str)>> {
+        Some(vec![
+            ("Enter", "Confirm"),
+            ("Esc, c, q", "Close"),
+            ("j, ↓", "Down"),
+            ("k, ↑", "Up"),
+            ("g", "Top"),
+            ("G", "Bottom"),
+            ("Tab, J", "Next Tab"),
+            ("S-Tab, K", "Prev Tab"),
+        ])
     }
 }
