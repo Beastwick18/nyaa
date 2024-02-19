@@ -25,10 +25,18 @@ pub struct Item {
 }
 
 fn to_bytes(size: &String) -> usize {
-    let split = size.split(" ");
-    // TODO: Convert to bytes
-
-    return 0;
+    let mut split = size.split_whitespace();
+    let b = split.nth(0).unwrap_or("0");
+    let unit = split.last().unwrap_or("B");
+    let f = b.parse::<f64>().unwrap_or(0.0);
+    let factor: usize = match unit.chars().nth(0).unwrap_or('B') {
+        'T' => 1000000000000,
+        'G' => 1000000000,
+        'M' => 1000000,
+        'K' => 1000,
+        _ => 1,
+    };
+    (factor as f64 * f).floor() as usize
 }
 
 pub async fn get_feed_list(

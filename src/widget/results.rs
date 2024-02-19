@@ -25,15 +25,15 @@ pub struct ResultsWidget {
 }
 
 impl ResultsWidget {
-    pub fn with_items(&mut self, items: Vec<nyaa::Item>, sort: &Sort) {
+    pub fn with_items(&mut self, items: Vec<nyaa::Item>, sort: &Sort, reverse: bool) {
         let len = items.len();
         self.table.items = items;
-        self.sort(sort);
+        self.sort(sort, reverse);
         self.table.select(0);
         self.table.scrollbar_state = self.table.scrollbar_state.content_length(len);
     }
 
-    pub fn sort(&mut self, sort: &Sort) {
+    pub fn sort(&mut self, sort: &Sort, reverse: bool) {
         let f: fn(&Item, &Item) -> Ordering = match sort {
             Sort::Date => |a, b| a.index.cmp(&b.index),
             Sort::Downloads => |a, b| b.downloads.cmp(&a.downloads),
@@ -41,8 +41,12 @@ impl ResultsWidget {
             Sort::Leechers => |a, b| b.leechers.cmp(&a.leechers),
             Sort::Name => |a, b| b.title.cmp(&a.title),
             Sort::Category => |a, b| b.category.cmp(&a.category),
+            Sort::Size => |a, b| b.bytes.cmp(&a.bytes),
         };
         self.table.items.sort_by(f);
+        if reverse {
+            self.table.items.reverse();
+        }
     }
 
     pub fn clear(&mut self) {

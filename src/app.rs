@@ -63,6 +63,7 @@ pub struct App {
     pub should_sort: bool,
     pub config: Config,
     pub errors: Vec<String>,
+    pub reverse: bool,
     should_quit: bool,
 }
 
@@ -144,6 +145,11 @@ fn normal_event(app: &mut App, e: &Event) -> bool {
             }
             (Char('s'), &KeyModifiers::NONE) => {
                 app.mode = Mode::Sort;
+                app.reverse = false;
+            }
+            (Char('S'), &KeyModifiers::SHIFT) => {
+                app.mode = Mode::Sort;
+                app.reverse = true;
             }
             (Char('f'), &KeyModifiers::NONE) => {
                 app.mode = Mode::Filter;
@@ -160,7 +166,7 @@ fn normal_event(app: &mut App, e: &Event) -> bool {
             _ => {}
         }
     }
-    return false;
+    false
 }
 
 pub fn draw(widgets: &mut Widgets, app: &mut App, f: &mut Frame) {
@@ -254,7 +260,7 @@ pub async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io
     }
     loop {
         if app.should_sort {
-            w.results.sort(&w.sort.selected);
+            w.results.sort(&w.sort.selected, app.reverse);
         }
         if app.should_quit {
             return Ok(());
@@ -276,7 +282,7 @@ pub async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io
                 .await
                 {
                     Ok(items) => {
-                        w.results.with_items(items, &w.sort.selected);
+                        w.results.with_items(items, &w.sort.selected, app.reverse);
                     }
                     Err(e) => {
                         app.errors.push(e.to_string());

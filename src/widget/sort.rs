@@ -19,6 +19,7 @@ pub enum Sort {
     Leechers,
     Name,
     Category,
+    Size,
 }
 
 impl EnumIter<Sort> for Sort {
@@ -30,6 +31,7 @@ impl EnumIter<Sort> for Sort {
             Sort::Leechers,
             Sort::Name,
             Sort::Category,
+            Sort::Size,
         ];
         SORTS.iter()
     }
@@ -44,6 +46,7 @@ impl ToString for Sort {
             Sort::Leechers => "Leechers".to_owned(),
             Sort::Name => "Name".to_owned(),
             Sort::Category => "Category".to_owned(),
+            Sort::Size => "Size".to_owned(),
         }
     }
 }
