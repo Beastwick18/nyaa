@@ -13,6 +13,7 @@ pub struct Item {
     pub leechers: u32,
     pub downloads: u32,
     pub size: String,
+    pub bytes: usize,
     pub title: String,
     pub torrent_link: String,
     pub magnet_link: String,
@@ -21,6 +22,13 @@ pub struct Item {
     pub icon: CatIcon,
     pub trusted: bool,
     pub remake: bool,
+}
+
+fn to_bytes(size: &String) -> usize {
+    let split = size.split(" ");
+    // TODO: Convert to bytes
+
+    return 0;
 }
 
 pub async fn get_feed_list(
@@ -56,13 +64,17 @@ pub async fn get_feed_list(
                 .get(high - 1)
                 .and_then(|c| c.find(category))
                 .unwrap_or_default();
+            let size = get_ext_value::<String>(ext, "size")
+                .replace("i", "")
+                .replace("Bytes", "B");
 
             Some(Item {
                 index,
                 seeders: get_ext_value(ext, "seeders"),
                 leechers: get_ext_value(ext, "leechers"),
                 downloads: get_ext_value(ext, "downloads"),
-                size: get_ext_value::<String>(ext, "size").replace("i", ""),
+                bytes: to_bytes(&size),
+                size,
                 title: item.title.to_owned().unwrap_or("???".to_owned()),
                 torrent_link: format!("https://nyaa.si/download/{}.torrent", id),
                 magnet_link: item.link.to_owned().unwrap_or("???".to_owned()),
