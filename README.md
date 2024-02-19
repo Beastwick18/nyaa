@@ -27,6 +27,7 @@ cargo install --path .
 The default configuration file looks like:
 ```
 torrent_client_cmd = "bash -c 'curl {torrent} > \"{title}.torrent\"'"
+default_theme = 'Default'
 default_category = 'AllAnime'
 default_filter = 'NoFilter'
 default_sort = 'Date'
@@ -38,10 +39,12 @@ The option `torrent_client_cmd` is the command that will be run once `Enter` is 
   - `{title}` - The title of the post on nyaa.si
   - `{file}` - The name of the torrent file hosted on nyaa.si
 
+`default_category` refers to the theme selected by default when the app is opened. Possible values are `Default`, `Dracula`, `Gruvbox`, or `Catppuccin Macchiato`. Custom themes coming soon!
+
 `default_category` refers to the category selected by default when the app is opened. Possible values are defined in [CATEGORIES.md](./CATEGORIES.md).
 
-`default_filter` refers to the filter selected by default when the app is opened. Possible values are `NoFilter`, `NoRemakes`, and `TrustedOnly`.
+`default_filter` refers to the filter selected by default when the app is opened. Possible values are `NoFilter`, `NoRemakes`, `TrustedOnly` or `Batches`.
 
-`default_sort` refers to the sort selected by default when the app is opened. Possible values are `Date`, `Downloads`, `Seeders`, `Leechers`, `Name`, and `Category`.
+`default_sort` refers to the sort selected by default when the app is opened. Possible values are `Date`, `Downloads`, `Seeders`, `Leechers`, `Name`, `Category`, or `Size`.
 
 `default_search` refers to the search entered once the app is opened.

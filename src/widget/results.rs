@@ -245,6 +245,12 @@ impl super::Widget for ResultsWidget {
             ("G", "Bottom"),
             ("j, ↓", "Down"),
             ("k, ↑", "Up"),
+            ("/, i", "Search"),
+            ("c", "Categories"),
+            ("f", "Filters"),
+            ("s", "Sort"),
+            ("S", "Sort reversed"),
+            ("t", "Themes"),
         ])
     }
 }

@@ -67,7 +67,7 @@ impl Default for SortPopup {
 
 impl Widget for SortPopup {
     fn draw(&self, f: &mut Frame, app: &App, area: Rect) {
-        let center = super::centered_rect(30, 8, area);
+        let center = super::centered_rect(30, 9, area);
         let clear = super::centered_rect(center.width + 2, center.height, area);
         let items = self.table.items.iter().enumerate().map(|(i, item)| {
             Row::new(vec![match i == self.selected.to_owned() as usize {

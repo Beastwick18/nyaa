@@ -209,6 +209,20 @@ impl Widget for CategoryPopup {
                         .fg(app.theme.solid_fg),
                 })
                 .collect();
+            let all = Row::new(vec![Line::from(vec![
+                Span::raw(match self.category == 0 {
+                    true => "  ",
+                    false => "   ",
+                }),
+                Span::raw(" All Categories"),
+            ])]);
+            tbl.insert(
+                0,
+                match self.category == 0 {
+                    true => all.bg(app.theme.hl_bg),
+                    false => all,
+                },
+            );
 
             let cat_rows = cat.entries.iter().enumerate().map(|(i, e)| {
                 let row = Row::new(vec![Line::from(vec![
@@ -226,7 +240,7 @@ impl Widget for CategoryPopup {
                 }
             });
 
-            tbl.splice(self.major + 1..self.major + 1, cat_rows);
+            tbl.splice(self.major + 2..self.major + 2, cat_rows);
 
             let center = super::centered_rect(33, 13, area);
             let clear = super::centered_rect(center.width + 2, center.height, area);

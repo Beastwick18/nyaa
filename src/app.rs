@@ -92,6 +92,7 @@ impl Default for App {
             should_sort: false,
             config: Config::default(),
             errors: vec![],
+            reverse: false,
             should_quit: false,
         }
     }
@@ -261,6 +262,7 @@ pub async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io
     loop {
         if app.should_sort {
             w.results.sort(&w.sort.selected, app.reverse);
+            app.should_sort = false;
         }
         if app.should_quit {
             return Ok(());
