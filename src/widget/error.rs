@@ -1,12 +1,7 @@
 use std::cmp::max;
 
 use crossterm::event::{Event, KeyEvent, KeyEventKind};
-use ratatui::{
-    layout::Rect,
-    style::Stylize,
-    widgets::{Block, Clear, Paragraph},
-    Frame,
-};
+use ratatui::{layout::Rect, style::Stylize, widgets::Paragraph, Frame};
 
 use crate::app::{App, Mode};
 
@@ -32,16 +27,17 @@ impl Default for ErrorPopup {
 
 impl Widget for ErrorPopup {
     fn draw(&self, f: &mut Frame, app: &App, area: Rect) {
-        let max_line = self.error.split("\n").fold(30, |acc, e| max(e.len(), acc)) as u16 + 2;
-        let center = super::centered_rect(max_line, 8, area);
+        let lines = self.error.split("\n");
+        let max_line = lines.clone().fold(30, |acc, e| max(e.len(), acc)) as u16 + 2;
+        let height = lines.count() as u16 + 2;
+        let center = super::centered_rect(max_line, height, area);
         let clear = super::centered_rect(center.width + 2, center.height, area);
         let p = Paragraph::new(self.error.to_owned()).block(
             create_block(app.theme, true)
                 .fg(app.theme.remake)
                 .title("Error"),
         );
-        f.render_widget(Clear, clear);
-        f.render_widget(Block::new().bg(app.theme.bg), clear);
+        super::clear(f, clear, app.theme.bg);
         f.render_widget(p, center);
     }
 

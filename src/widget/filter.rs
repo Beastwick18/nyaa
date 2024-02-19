@@ -1,8 +1,8 @@
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     layout::{Constraint, Rect},
-    style::{Style, Stylize},
-    widgets::{Block, Clear, Row, Table},
+    style::Style,
+    widgets::{Row, Table},
     Frame,
 };
 use serde::{Deserialize, Serialize};
@@ -69,8 +69,7 @@ impl Widget for FilterPopup {
         let table = Table::new(items, [Constraint::Percentage(100)])
             .block(create_block(app.theme, true).title("Filter"))
             .highlight_style(Style::default().bg(app.theme.hl_bg));
-        f.render_widget(Clear, clear);
-        f.render_widget(Block::new().bg(app.theme.bg), clear);
+        super::clear(f, clear, app.theme.bg);
         f.render_stateful_widget(table, center, &mut self.table.state.to_owned());
     }
 

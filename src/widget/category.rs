@@ -3,7 +3,7 @@ use ratatui::{
     layout::{Constraint, Rect},
     style::{Color, Stylize as _},
     text::{Line, Span, Text},
-    widgets::{Block, Clear, Row, Table},
+    widgets::{Row, Table},
     Frame,
 };
 
@@ -11,9 +11,9 @@ use crate::app::{App, Mode};
 
 use super::{create_block, Widget};
 
-pub struct CatEntry<'a> {
-    name: &'a str,
-    pub cfg: &'a str,
+pub struct CatEntry {
+    name: &'static str,
+    pub cfg: &'static str,
     pub id: usize,
     pub icon: CatIcon,
 }
@@ -24,38 +24,43 @@ pub struct CatIcon {
     pub color: Color,
 }
 
-impl<'a> CatEntry<'a> {
-    const fn new(
-        name: &'a str,
-        cfg: &'a str,
-        id: usize,
-        icon_str: &'static str,
-        color: Color,
-    ) -> Self {
-        let icon = CatIcon {
-            label: icon_str,
-            color,
-        };
-        CatEntry {
-            name,
-            cfg,
-            id,
-            icon,
+impl Default for CatIcon {
+    fn default() -> Self {
+        CatIcon {
+            label: "???",
+            color: Color::White,
         }
     }
 }
 
-pub struct CatStruct<'a> {
-    name: &'a str,
-    pub entries: &'a [CatEntry<'a>],
+impl CatEntry {
+    const fn new(
+        name: &'static str,
+        cfg: &'static str,
+        id: usize,
+        label: &'static str,
+        color: Color,
+    ) -> Self {
+        CatEntry {
+            name,
+            cfg,
+            id,
+            icon: CatIcon { label, color },
+        }
+    }
 }
 
-impl<'a> CatStruct<'a> {
-    pub fn find(&'a self, category: u32) -> Option<CatIcon> {
-        if let Some(e) = self.entries.iter().find(|e| e.id == category as usize) {
-            return Some(e.icon.clone());
-        }
-        None
+pub struct CatStruct {
+    name: &'static str,
+    pub entries: &'static [CatEntry],
+}
+
+impl CatStruct {
+    pub fn find(&self, category: usize) -> Option<CatIcon> {
+        self.entries
+            .iter()
+            .find(|e| e.id == category as usize)
+            .and_then(|e| Some(e.icon.clone()))
     }
 }
 
@@ -100,7 +105,7 @@ pub static AUDIO: CatStruct = CatStruct {
 pub static LITERATURE: CatStruct = CatStruct {
     name: "Literature",
     entries: &[
-        CatEntry::new("All Literature", "AllLiterature", 30, "Lit", Color::Gray),
+        CatEntry::new("All Literature", "AllLiterature", 30, "Lit", Color::White),
         CatEntry::new(
             "English-Translated",
             "LitEnglishTranslated",
@@ -122,7 +127,7 @@ pub static LITERATURE: CatStruct = CatStruct {
 pub static LIVE_ACTION: CatStruct = CatStruct {
     name: "Live Action",
     entries: &[
-        CatEntry::new("All Live Action", "AllLiveAction", 40, "Liv", Color::Gray),
+        CatEntry::new("All Live Action", "AllLiveAction", 40, "Liv", Color::White),
         CatEntry::new(
             "English-Translated",
             "LiveEnglishTranslated",
@@ -151,7 +156,7 @@ pub static LIVE_ACTION: CatStruct = CatStruct {
 pub static PICTURES: CatStruct = CatStruct {
     name: "Pictures",
     entries: &[
-        CatEntry::new("All Pictures", "AllPictures", 50, "Pic", Color::Gray),
+        CatEntry::new("All Pictures", "AllPictures", 50, "Pic", Color::White),
         CatEntry::new("Graphics", "PicGraphics", 51, "Pic", Color::LightMagenta),
         CatEntry::new("Photos", "PicPhotos", 52, "Pic", Color::Magenta),
     ],
@@ -160,7 +165,7 @@ pub static PICTURES: CatStruct = CatStruct {
 pub static SOFTWARE: CatStruct = CatStruct {
     name: "Software",
     entries: &[
-        CatEntry::new("All Software", "AllSoftware", 60, "Sof", Color::Gray),
+        CatEntry::new("All Software", "AllSoftware", 60, "Sof", Color::White),
         CatEntry::new("Applications", "SoftApplications", 61, "Sof", Color::Blue),
         CatEntry::new("Games", "SoftGames", 62, "Sof", Color::LightBlue),
     ],
@@ -225,8 +230,7 @@ impl Widget for CategoryPopup {
 
             let center = super::centered_rect(33, 13, area);
             let clear = super::centered_rect(center.width + 2, center.height, area);
-            f.render_widget(Clear, clear);
-            f.render_widget(Block::new().bg(app.theme.bg), clear);
+            super::clear(f, clear, app.theme.bg);
             f.render_widget(
                 Table::new(tbl, &[Constraint::Percentage(100)])
                     .block(create_block(app.theme, true).title("Category")),

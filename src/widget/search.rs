@@ -88,9 +88,6 @@ impl super::Widget for SearchWidget {
                     self.cursor += c.width_cjk().unwrap_or(0);
                 }
                 (Char('b') | Left, &KeyModifiers::CONTROL) => {
-                    // self.cursor = self.input[..self.cursor]
-                    //     .rfind(|item| item == ' ')
-                    //     .unwrap_or(0);
                     let non_space = self.input[..min(self.cursor, self.input.len())]
                         .rfind(|item| item != ' ')
                         .unwrap_or(0);
@@ -134,16 +131,6 @@ impl super::Widget for SearchWidget {
                 (Left, &KeyModifiers::NONE)
                 | (Char('h'), &KeyModifiers::CONTROL | &KeyModifiers::ALT) => {
                     self.cursor = max(self.cursor, 1) - 1;
-                    // let actual_cursor = self.input.chars()
-                    //
-                    // let prev_boundry = self.input[..self.cursor]
-                    //     .char_indices()
-                    //     .rfind(|item| self.input.is_char_boundary(item.0));
-                    // if let Some(p) = prev_boundry {
-                    //     self.cursor = (p.0 + 1) - p.1.width().unwrap_or(0);
-                    // } else {
-                    //     self.cursor = 0;
-                    // }
                 }
                 (Right, &KeyModifiers::NONE)
                 | (Char('l'), &KeyModifiers::CONTROL | &KeyModifiers::ALT) => {
@@ -154,6 +141,10 @@ impl super::Widget for SearchWidget {
                 }
                 (Home, &KeyModifiers::NONE) | (Char('a'), &KeyModifiers::CONTROL) => {
                     self.cursor = 0;
+                }
+                (Char('u'), &KeyModifiers::CONTROL) => {
+                    self.cursor = 0;
+                    self.input = "".to_owned();
                 }
                 (Enter, &KeyModifiers::NONE) => {
                     app.mode = Mode::Loading;
@@ -169,14 +160,15 @@ impl super::Widget for SearchWidget {
             ("Esc", "Stop"),
             ("←, Ctrl-h", "Move left"),
             ("→, Ctrl-l", "Move right"),
+            ("Ctrl-u", "Clear search"),
             ("End, Ctrl-e", "End of line"),
             ("Home, Ctrl-a", "Beginning of line"),
-            ("Ctrl-B, Ctrl-←", "Back word"),
-            ("Ctrl-W, Ctrl-→", "Forward word"),
+            ("Ctrl-b, Ctrl-←", "Back word"),
+            ("Ctrl-w, Ctrl-→", "Forward word"),
             ("Ctrl/Alt-Del", "Delete word forward"),
             ("Ctrl/Alt-Backspace", "Delete word backwards"),
-            ("Del", "Delete char forwards"),
-            ("Backspace", "Delete char backwards"),
+            ("Del", "Delete letter forwards"),
+            ("Backspace", "Delete letter backwards"),
         ])
     }
 }

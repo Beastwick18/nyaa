@@ -5,7 +5,7 @@ use ratatui::{
     layout::{Alignment, Constraint, Margin, Rect},
     style::{Modifier, Style, Stylize},
     text::Line,
-    widgets::{Block, Clear, Row, Scrollbar, ScrollbarOrientation, Table},
+    widgets::{Row, Scrollbar, ScrollbarOrientation, Table},
     Frame,
 };
 
@@ -72,8 +72,7 @@ impl Widget for HelpPopup {
             .widths(Constraint::from_lengths([key_min, 1, map_min]))
             .highlight_style(Style::default().bg(app.theme.hl_bg));
 
-        f.render_widget(Clear, clear);
-        f.render_widget(Block::new().bg(app.theme.bg), clear);
+        super::clear(f, clear, app.theme.bg);
         f.render_stateful_widget(table, center, &mut self.table.state.to_owned());
 
         // Only show scrollbar if content overflows

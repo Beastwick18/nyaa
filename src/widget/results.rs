@@ -15,7 +15,6 @@ use ratatui::{
 
 use crate::{
     app::{App, Mode},
-    config::Config,
     nyaa::{self, Item},
 };
 
@@ -101,13 +100,13 @@ impl super::Widget for ResultsWidget {
                         app.theme.fg
                     }),
                 ),
-                Text::raw(format!("{:>9}", item.size.to_string())),
+                Text::raw(format!("{:>9}", item.size)),
                 Text::styled(
-                    format!("{:>4}", item.seeders.to_string()),
+                    format!("{:>4}", item.seeders),
                     Style::new().fg(app.theme.trusted),
                 ),
                 Text::styled(
-                    format!("{:>4}", item.leechers.to_string()),
+                    format!("{:>4}", item.leechers),
                     Style::new().fg(app.theme.remake),
                 ),
                 Text::raw(shorten_number(item.downloads)),
@@ -179,19 +178,15 @@ impl super::Widget for ResultsWidget {
                         .clone()
                         .replace("{magnet}", &item.magnet_link)
                         .replace("{torrent}", &item.torrent_link)
-                        .replace("{title}", &item.title)
-                        .replace("{file}", &item.file_name);
+                        .replace("{title}", &shellwords::escape(item.title.as_str()))
+                        .replace("{file}", &shellwords::escape(item.file_name.as_str()));
                     let cmd = match shellwords::split(&cmd_str) {
                         Ok(cmd) => cmd,
                         Err(e) => {
-                            app.errors.push(
-                                format!(
-                                    "{}:\nfailed to split command:\n{}",
-                                    cmd_str,
-                                    e.to_string()
-                                )
-                                .to_owned(),
-                            );
+                            app.errors.push(format!(
+                                "{}\n{}:\nfailed to split command:\n{}",
+                                cmd_str, app.config.torrent_client_cmd, e
+                            ));
                             return;
                         }
                     };
@@ -205,20 +200,16 @@ impl super::Widget for ResultsWidget {
                         let child = match cmd {
                             Ok(child) => child,
                             Err(e) => {
-                                app.errors.push(
-                                    format!("{}:\nfailed to run:\n{}", cmd_str, e.to_string())
-                                        .to_owned(),
-                                );
+                                app.errors
+                                    .push(format!("{}:\nFailed to run:\n{}", cmd_str, e));
                                 return;
                             }
                         };
                         let output = match child.wait_with_output() {
                             Ok(output) => output,
                             Err(e) => {
-                                app.errors.push(
-                                    format!("Failed to get output from torrent_client_cmd:\n{}", e)
-                                        .to_owned(),
-                                );
+                                app.errors
+                                    .push(format!("{}:\nFailed to get output:\n{}", cmd_str, e));
                                 return;
                             }
                         };
@@ -227,20 +218,14 @@ impl super::Widget for ResultsWidget {
                             let mut err = BufReader::new(&*output.stderr);
                             let mut err_str = String::new();
                             err.read_to_string(&mut err_str).unwrap_or(0);
-                            app.errors.push(
-                                format!(
-                                    "{}:\nExited with status code {}:\n{}",
-                                    cmd_str, output.status, err_str
-                                )
-                                .to_owned(),
-                            );
+                            app.errors.push(format!(
+                                "{}:\nExited with status code {}:\n{}",
+                                cmd_str, output.status, err_str
+                            ));
                         }
-                    } else if let Some(p) = Config::get_path().ok() {
-                        app.errors.push(format!(
-                            "The command found in {}:\n\n\"{}\"\n\n...is not valid.",
-                            p.to_str().unwrap_or_default().to_owned(),
-                            cmd_str
-                        ));
+                    } else {
+                        app.errors
+                            .push(format!("{}:\nThe command is not valid.", cmd_str));
                     }
                 }
                 _ => {}

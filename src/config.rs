@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use crate::{
     app::APP_NAME,
     widget::{category::ALL_CATEGORIES, filter::Filter, sort::Sort, theme::THEMES},
@@ -38,7 +36,7 @@ impl Config {
         confy::load::<Config>(APP_NAME, CONFIG_FILE)
     }
 
-    pub fn get_path() -> Result<PathBuf, ConfyError> {
-        confy::get_configuration_file_path(APP_NAME, CONFIG_FILE)
-    }
+    // pub fn get_path() -> Result<PathBuf, ConfyError> {
+    //     confy::get_configuration_file_path(APP_NAME, CONFIG_FILE)
+    // }
 }

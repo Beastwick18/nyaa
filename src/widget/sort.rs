@@ -1,8 +1,8 @@
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     layout::{Constraint, Rect},
-    style::{Style, Stylize},
-    widgets::{Block, Clear, Row, Table},
+    style::Style,
+    widgets::{Row, Table},
     Frame,
 };
 use serde::{Deserialize, Serialize};
@@ -67,16 +67,15 @@ impl Widget for SortPopup {
         let center = super::centered_rect(30, 8, area);
         let clear = super::centered_rect(center.width + 2, center.height, area);
         let items = self.table.items.iter().enumerate().map(|(i, item)| {
-            match i == (self.selected.to_owned() as usize) {
-                true => Row::new(vec![format!("  {}", item.to_owned())]),
-                false => Row::new(vec![format!("   {}", item.to_owned())]),
-            }
+            Row::new(vec![match i == self.selected.to_owned() as usize {
+                true => format!("  {}", item.to_owned()),
+                false => format!("   {}", item.to_owned()),
+            }])
         });
         let table = Table::new(items, [Constraint::Percentage(100)])
             .block(create_block(app.theme, true).title("Sort"))
             .highlight_style(Style::default().bg(app.theme.hl_bg));
-        f.render_widget(Clear, clear);
-        f.render_widget(Block::new().bg(app.theme.bg), clear);
+        super::clear(f, clear, app.theme.bg);
         f.render_stateful_widget(table, center, &mut self.table.state.to_owned());
     }
 

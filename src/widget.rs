@@ -3,8 +3,8 @@ use std::{cmp::min, slice::Iter};
 use crossterm::event::Event;
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
-    style::{Style, Stylize as _},
-    widgets::{Block, Borders, ScrollbarState, TableState},
+    style::{Color, Style, Stylize as _},
+    widgets::{Block, Borders, Clear, ScrollbarState, TableState},
     Frame,
 };
 
@@ -70,6 +70,11 @@ pub fn create_block<'a>(theme: &Theme, focused: bool) -> Block<'a> {
         .fg(theme.fg)
         .borders(Borders::ALL)
         .border_type(theme.border)
+}
+
+pub fn clear(f: &mut Frame, area: Rect, fill: Color) {
+    f.render_widget(Clear, area);
+    f.render_widget(Block::new().bg(fill), area);
 }
 
 pub struct StatefulTable<T> {

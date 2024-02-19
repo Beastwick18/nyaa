@@ -12,8 +12,10 @@ release:
 	cargo build --target $(LINUX_TARGET) --release
 	cp "target/$(WINDOWS_TARGET)/release/nyaa.exe" "release/$(VERSION)/nyaa-$(VERSION)-$(WINDOWS_TARGET).exe"
 	cp "target/$(LINUX_TARGET)/release/nyaa" "release/$(VERSION)/nyaa-$(VERSION)-$(LINUX_TARGET)"
-	@git log $(shell git describe --tags --abbrev=0)..HEAD --oneline
 	@echo "\nCommits since last tag:"
+	@git log $(shell git describe --tags --abbrev=0)..HEAD --oneline
+
+gh:
 	gh release create v$(VERSION) release/$(VERSION)/* --draft
 
 publish:

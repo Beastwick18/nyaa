@@ -4,7 +4,6 @@ use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifier
 use ratatui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout},
-    style::Stylize as _,
     widgets::Paragraph,
     Frame, Terminal,
 };
@@ -61,7 +60,6 @@ impl ToString for Mode {
 pub struct App {
     pub mode: Mode,
     pub theme: &'static Theme,
-    pub show_hints: bool,
     pub should_sort: bool,
     pub config: Config,
     pub errors: Vec<String>,
@@ -90,7 +88,6 @@ impl Default for App {
         App {
             mode: Mode::Loading,
             theme: widget::theme::THEMES[0],
-            show_hints: false,
             should_sort: false,
             config: Config::default(),
             errors: vec![],
@@ -160,9 +157,6 @@ fn normal_event(app: &mut App, e: &Event) -> bool {
             (Char('q'), &KeyModifiers::NONE) => {
                 app.quit();
             }
-            (Char('h'), &KeyModifiers::NONE) => {
-                app.show_hints = !app.show_hints;
-            }
             _ => {}
         }
     }
@@ -172,16 +166,12 @@ fn normal_event(app: &mut App, e: &Event) -> bool {
 pub fn draw(widgets: &mut Widgets, app: &mut App, f: &mut Frame) {
     let layout = Layout::new(
         Direction::Vertical,
-        &[
-            Constraint::Length(app.show_hints as u16),
-            Constraint::Length(3),
-            Constraint::Min(1),
-        ],
+        &[Constraint::Length(3), Constraint::Min(1)],
     )
     .split(f.size());
 
-    widgets.search.draw(f, app, layout[1]);
-    widgets.results.draw(f, app, layout[2]);
+    widgets.search.draw(f, app, layout[0]);
+    widgets.results.draw(f, app, layout[1]);
     match app.mode {
         Mode::Category => {
             widgets.category.draw(f, app, f.size());
@@ -198,7 +188,7 @@ pub fn draw(widgets: &mut Widgets, app: &mut App, f: &mut Frame) {
         Mode::Loading => {
             let area = centered_rect(10, 1, f.size());
             widgets.results.clear();
-            widgets.results.draw(f, app, layout[2]);
+            widgets.results.draw(f, app, layout[1]);
             f.render_widget(Paragraph::new("Loading..."), area);
         }
         Mode::Error => {
@@ -212,12 +202,6 @@ pub fn draw(widgets: &mut Widgets, app: &mut App, f: &mut Frame) {
         }
         Mode::Normal | Mode::Search => {}
     }
-    f.render_widget(
-        Paragraph::new(app.config.torrent_client_cmd.to_owned())
-            .bg(app.theme.bg)
-            .fg(app.theme.border_focused_color),
-        layout[0],
-    );
 }
 
 fn get_help(app: &mut App, w: &mut Widgets) {
@@ -298,10 +282,7 @@ pub async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io
                         app.errors.push(e.to_string());
                     }
                 }
-                if let Err(e) = terminal.clear() {
-                    app.errors.push(e.to_string());
-                }
-                continue;
+                continue; // Redraw
             }
             _ => {}
         }
