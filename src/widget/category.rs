@@ -28,7 +28,7 @@ impl Default for CatIcon {
     fn default() -> Self {
         CatIcon {
             label: "???",
-            color: Color::White,
+            color: Color::Gray,
         }
     }
 }
@@ -64,10 +64,21 @@ impl CatStruct {
     }
 }
 
+pub static ALL: CatStruct = CatStruct {
+    name: "All Categories",
+    entries: &[CatEntry::new(
+        "Categories",
+        "AllCategories",
+        0,
+        "All",
+        Color::White,
+    )],
+};
+
 pub static ANIME: CatStruct = CatStruct {
     name: "Anime",
     entries: &[
-        CatEntry::new("All Anime", "AllAnime", 10, "Ani", Color::White),
+        CatEntry::new("All Anime", "AllAnime", 10, "Ani", Color::Gray),
         CatEntry::new(
             "English Translated",
             "AnimeEnglishTranslated",
@@ -96,7 +107,7 @@ pub static ANIME: CatStruct = CatStruct {
 pub static AUDIO: CatStruct = CatStruct {
     name: "Audio",
     entries: &[
-        CatEntry::new("All Audio", "AllAudio", 20, "Aud", Color::White),
+        CatEntry::new("All Audio", "AllAudio", 20, "Aud", Color::Gray),
         CatEntry::new("Lossless", "AudioLossless", 21, "Aud", Color::Red),
         CatEntry::new("Lossy", "AudioLossy", 22, "Aud", Color::Yellow),
     ],
@@ -105,7 +116,7 @@ pub static AUDIO: CatStruct = CatStruct {
 pub static LITERATURE: CatStruct = CatStruct {
     name: "Literature",
     entries: &[
-        CatEntry::new("All Literature", "AllLiterature", 30, "Lit", Color::White),
+        CatEntry::new("All Literature", "AllLiterature", 30, "Lit", Color::Gray),
         CatEntry::new(
             "English-Translated",
             "LitEnglishTranslated",
@@ -127,7 +138,7 @@ pub static LITERATURE: CatStruct = CatStruct {
 pub static LIVE_ACTION: CatStruct = CatStruct {
     name: "Live Action",
     entries: &[
-        CatEntry::new("All Live Action", "AllLiveAction", 40, "Liv", Color::White),
+        CatEntry::new("All Live Action", "AllLiveAction", 40, "Liv", Color::Gray),
         CatEntry::new(
             "English-Translated",
             "LiveEnglishTranslated",
@@ -156,7 +167,7 @@ pub static LIVE_ACTION: CatStruct = CatStruct {
 pub static PICTURES: CatStruct = CatStruct {
     name: "Pictures",
     entries: &[
-        CatEntry::new("All Pictures", "AllPictures", 50, "Pic", Color::White),
+        CatEntry::new("All Pictures", "AllPictures", 50, "Pic", Color::Gray),
         CatEntry::new("Graphics", "PicGraphics", 51, "Pic", Color::LightMagenta),
         CatEntry::new("Photos", "PicPhotos", 52, "Pic", Color::Magenta),
     ],
@@ -165,13 +176,14 @@ pub static PICTURES: CatStruct = CatStruct {
 pub static SOFTWARE: CatStruct = CatStruct {
     name: "Software",
     entries: &[
-        CatEntry::new("All Software", "AllSoftware", 60, "Sof", Color::White),
+        CatEntry::new("All Software", "AllSoftware", 60, "Sof", Color::Gray),
         CatEntry::new("Applications", "SoftApplications", 61, "Sof", Color::Blue),
         CatEntry::new("Games", "SoftGames", 62, "Sof", Color::LightBlue),
     ],
 };
 
 pub static ALL_CATEGORIES: &'static [&CatStruct] = &[
+    &ALL,
     &ANIME,
     &AUDIO,
     &LITERATURE,
@@ -189,7 +201,7 @@ pub struct CategoryPopup {
 impl Default for CategoryPopup {
     fn default() -> Self {
         return CategoryPopup {
-            category: 10,
+            category: 0,
             major: 0,
             minor: 0,
         };
@@ -209,20 +221,6 @@ impl Widget for CategoryPopup {
                         .fg(app.theme.solid_fg),
                 })
                 .collect();
-            let all = Row::new(vec![Line::from(vec![
-                Span::raw(match self.category == 0 {
-                    true => "  ",
-                    false => "   ",
-                }),
-                Span::raw(" All Categories"),
-            ])]);
-            tbl.insert(
-                0,
-                match self.category == 0 {
-                    true => all.bg(app.theme.hl_bg),
-                    false => all,
-                },
-            );
 
             let cat_rows = cat.entries.iter().enumerate().map(|(i, e)| {
                 let row = Row::new(vec![Line::from(vec![
@@ -240,9 +238,9 @@ impl Widget for CategoryPopup {
                 }
             });
 
-            tbl.splice(self.major + 2..self.major + 2, cat_rows);
+            tbl.splice(self.major + 1..self.major + 1, cat_rows);
 
-            let center = super::centered_rect(33, 13, area);
+            let center = super::centered_rect(33, 14, area);
             let clear = super::centered_rect(center.width + 2, center.height, area);
             super::clear(f, clear, app.theme.bg);
             f.render_widget(
@@ -304,7 +302,7 @@ impl Widget for CategoryPopup {
                     self.minor = 0;
                 }
                 KeyCode::BackTab | KeyCode::Char('K') => {
-                    self.major = match self.major < 1 {
+                    self.major = match self.major == 0 {
                         true => ALL_CATEGORIES.len() - 1,
                         false => self.major - 1,
                     };

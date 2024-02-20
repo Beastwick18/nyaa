@@ -179,9 +179,8 @@ impl super::Widget for ResultsWidget {
                     let cmd_str = app
                         .config
                         .torrent_client_cmd
-                        .clone()
-                        .replace("{magnet}", &item.magnet_link)
-                        .replace("{torrent}", &item.torrent_link)
+                        .replace("{magnet}", &shellwords::escape(item.magnet_link.as_str()))
+                        .replace("{torrent}", &shellwords::escape(item.torrent_link.as_str()))
                         .replace("{title}", &shellwords::escape(item.title.as_str()))
                         .replace("{file}", &shellwords::escape(item.file_name.as_str()));
                     let cmd = match shellwords::split(&cmd_str) {

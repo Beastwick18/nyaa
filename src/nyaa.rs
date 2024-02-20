@@ -69,7 +69,7 @@ pub async fn get_feed_list(
             let low = split.last().unwrap_or(&"0").parse::<usize>().unwrap_or(0);
             let category = high * 10 + low;
             let icon = ALL_CATEGORIES
-                .get(high - 1)
+                .get(high)
                 .and_then(|c| c.find(category))
                 .unwrap_or_default();
             let size = get_ext_value::<String>(ext, "size")
