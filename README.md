@@ -1,7 +1,13 @@
-# nyaa
+<h1 align="left">nyaa</h1>
+<h3>A simple tui for browsing and downloading Anime torrents from nyaa.si.</h3>
+<p>
+  <img src="https://img.shields.io/github/v/release/Beastwick18/nyaa.svg" />
+  <img src="https://img.shields.io/aur/version/nyaa?color=orange" />
+  <img src="https://img.shields.io/crates/v/nyaa" />
+</p>
+
 <p align="center">
-  <h3 align="center">A simple cli tool foor browsing and downloading Anime torrents from nyaa.si.</h3>
-  <img src="assets/tty.gif" alt="animated" />
+  <img src="assets/tty.gif" width="800" alt="animated" />
 </p>
 
 ## Installation
@@ -26,9 +32,9 @@ cargo install --path .
 ## Configuration
 The default configuration file looks like:
 ```
-torrent_client_cmd = "bash -c 'curl {torrent} > \"{title}.torrent\"'"
+torrent_client_cmd = 'bash -c "curl {torrent} > ~/torrents/{title}.torrent"'
 default_theme = 'Default'
-default_category = 'AllAnime'
+default_category = 'AllCategories'
 default_filter = 'NoFilter'
 default_sort = 'Date'
 default_search = ''
