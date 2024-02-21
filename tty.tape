@@ -1,7 +1,7 @@
 Require nyaa
 Output assets/tty.gif
 
-Set FontFamily "JetBrainsMonoNerdFont"
+Set FontFamily "JetBrainsMono Nerd Font"
 Set FontSize 20
 Set Width 1280
 Set Height 720
@@ -52,6 +52,7 @@ Sleep 2s
 
 Type "c"
 Sleep 1s
+Tab@500ms 1
 Tab@500ms 1
 Tab@500ms 1
 Sleep 1s
