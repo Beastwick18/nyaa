@@ -45,7 +45,7 @@ The option `torrent_client_cmd` is the command that will be run once `Enter` is 
   - `{title}` - The title of the post on nyaa.si
   - `{file}` - The name of the torrent file hosted on nyaa.si
 
-`default_category` refers to the theme selected by default when the app is opened. Possible values are `Default`, `Dracula`, `Gruvbox`, or `Catppuccin Macchiato`. Custom themes coming soon!
+`default_theme` refers to the theme selected by default when the app is opened. Possible values are `Default`, `Dracula`, `Gruvbox`, or `Catppuccin Macchiato`. Custom themes coming soon!
 
 `default_category` refers to the category selected by default when the app is opened. Possible values are defined in [CATEGORIES.md](./CATEGORIES.md).
 
