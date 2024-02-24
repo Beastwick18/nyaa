@@ -24,7 +24,7 @@ pub enum Sort {
 
 impl EnumIter<Sort> for Sort {
     fn iter() -> std::slice::Iter<'static, Sort> {
-        static SORTS: &'static [Sort] = &[
+        static SORTS: &[Sort] = &[
             Sort::Date,
             Sort::Downloads,
             Sort::Seeders,

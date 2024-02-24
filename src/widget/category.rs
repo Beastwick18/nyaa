@@ -59,8 +59,8 @@ impl CatStruct {
     pub fn find(&self, category: usize) -> Option<CatIcon> {
         self.entries
             .iter()
-            .find(|e| e.id == category as usize)
-            .and_then(|e| Some(e.icon.clone()))
+            .find(|e| e.id == category)
+            .map(|e| e.icon.clone())
     }
 }
 
@@ -182,7 +182,7 @@ pub static SOFTWARE: CatStruct = CatStruct {
     ],
 };
 
-pub static ALL_CATEGORIES: &'static [&CatStruct] = &[
+pub static ALL_CATEGORIES: &[&CatStruct] = &[
     &ALL,
     &ANIME,
     &AUDIO,
@@ -192,20 +192,11 @@ pub static ALL_CATEGORIES: &'static [&CatStruct] = &[
     &SOFTWARE,
 ];
 
+#[derive(Default)]
 pub struct CategoryPopup {
     pub category: usize,
     pub major: usize,
     pub minor: usize,
-}
-
-impl Default for CategoryPopup {
-    fn default() -> Self {
-        return CategoryPopup {
-            category: 0,
-            major: 0,
-            minor: 0,
-        };
-    }
 }
 
 impl Widget for CategoryPopup {
@@ -244,7 +235,7 @@ impl Widget for CategoryPopup {
             let clear = super::centered_rect(center.width + 2, center.height, area);
             super::clear(f, clear, app.theme.bg);
             f.render_widget(
-                Table::new(tbl, &[Constraint::Percentage(100)])
+                Table::new(tbl, [Constraint::Percentage(100)])
                     .block(create_block(app.theme, true).title("Category")),
                 center,
             );

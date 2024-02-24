@@ -73,6 +73,7 @@ impl App {
     }
 }
 
+#[derive(Default)]
 pub struct Widgets {
     pub category: CategoryPopup,
     pub sort: SortPopup,
@@ -94,21 +95,6 @@ impl Default for App {
             errors: vec![],
             reverse: false,
             should_quit: false,
-        }
-    }
-}
-
-impl Default for Widgets {
-    fn default() -> Self {
-        Widgets {
-            category: CategoryPopup::default(),
-            sort: SortPopup::default(),
-            filter: FilterPopup::default(),
-            theme: ThemePopup::default(),
-            search: SearchWidget::default(),
-            results: ResultsWidget::default(),
-            error: ErrorPopup::default(),
-            help: HelpPopup::default(),
         }
     }
 }
@@ -173,7 +159,7 @@ fn normal_event(app: &mut App, e: &Event) -> bool {
 pub fn draw(widgets: &mut Widgets, app: &mut App, f: &mut Frame) {
     let layout = Layout::new(
         Direction::Vertical,
-        &[Constraint::Length(3), Constraint::Min(1)],
+        [Constraint::Length(3), Constraint::Min(1)],
     )
     .split(f.size());
 
@@ -267,32 +253,29 @@ pub async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io
         if app.should_quit {
             return Ok(());
         }
-        if app.errors.len() > 0 {
+        if !app.errors.is_empty() {
             app.mode = Mode::Error;
         }
 
         get_help(&mut app, &mut w);
         terminal.draw(|f| draw(&mut w, &mut app, f))?;
-        match app.mode {
-            Mode::Loading => {
-                app.mode = Mode::Normal;
-                match nyaa::get_feed_list(
-                    &w.search.input,
-                    w.category.category,
-                    w.filter.selected.to_owned() as usize,
-                )
-                .await
-                {
-                    Ok(items) => {
-                        w.results.with_items(items, &w.sort.selected, app.reverse);
-                    }
-                    Err(e) => {
-                        app.errors.push(e.to_string());
-                    }
+        if app.mode == Mode::Loading {
+            app.mode = Mode::Normal;
+            match nyaa::get_feed_list(
+                &w.search.input,
+                w.category.category,
+                w.filter.selected.to_owned() as usize,
+            )
+            .await
+            {
+                Ok(items) => {
+                    w.results.with_items(items, &w.sort.selected, app.reverse);
                 }
-                continue; // Redraw
+                Err(e) => {
+                    app.errors.push(e.to_string());
+                }
             }
-            _ => {}
+            continue; // Redraw
         }
 
         let evt = event::read()?;

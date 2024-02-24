@@ -26,7 +26,7 @@ pub struct Theme {
     pub remake: Color,
 }
 
-pub static THEMES: &'static [&'static Theme] = &[
+pub static THEMES: &[&Theme] = &[
     &Theme {
         name: "Default",
         bg: Color::Reset,
@@ -156,8 +156,7 @@ impl Widget for ThemePopup {
                     self.table.select(0);
                 }
                 KeyCode::Enter => {
-                    if let Some(theme) = THEMES.iter().nth(self.table.state.selected().unwrap_or(0))
-                    {
+                    if let Some(theme) = THEMES.get(self.table.state.selected().unwrap_or(0)) {
                         self.selected = self.table.state.selected().unwrap_or(0);
                         app.theme = theme;
                     }

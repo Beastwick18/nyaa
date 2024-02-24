@@ -76,7 +76,7 @@ impl super::Widget for ResultsWidget {
             Mode::Normal => app.theme.border_focused_color,
             _ => app.theme.border_color,
         };
-        let binding = Constraint::from_lengths([3, area.width - 32 as u16, 9, 4, 4, 5]);
+        let binding = Constraint::from_lengths([3, area.width - 32_u16, 9, 4, 4, 5]);
         let header = Row::new([
             "Cat".to_owned(),
             "Name".to_owned(),

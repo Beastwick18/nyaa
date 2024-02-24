@@ -58,15 +58,12 @@ impl super::Widget for SearchWidget {
         ]));
         let right = Rect::new(area.right() - 23, area.top(), 23, 1);
         f.render_widget(text, right);
-        match app.mode {
-            Mode::Search => {
-                // Render cursor if in editing mode
-                f.set_cursor(
-                    min(area.x + self.cursor as u16 + 1, area.x + area.width - 2),
-                    area.y + 1,
-                );
-            }
-            _ => {}
+        if app.mode == Mode::Search {
+            // Render cursor if in editing mode
+            f.set_cursor(
+                min(area.x + self.cursor as u16 + 1, area.x + area.width - 2),
+                area.y + 1,
+            );
         }
     }
 
@@ -123,7 +120,7 @@ impl super::Widget for SearchWidget {
                     self.input.replace_range(self.cursor..prev_cursor, "");
                 }
                 (Backspace, &KeyModifiers::NONE) => {
-                    if self.input.len() > 0 && self.cursor > 0 {
+                    if !self.input.is_empty() && self.cursor > 0 {
                         self.input.remove(self.cursor - 1);
                         self.cursor -= 1;
                     }

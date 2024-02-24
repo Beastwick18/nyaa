@@ -13,6 +13,7 @@ use super::{create_block, EnumIter, StatefulTable, Widget};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub enum Filter {
+    #[allow(clippy::enum_variant_names)]
     NoFilter = 0,
     NoRemakes = 1,
     TrustedOnly = 2,
@@ -21,7 +22,7 @@ pub enum Filter {
 
 impl EnumIter<Filter> for Filter {
     fn iter() -> std::slice::Iter<'static, Filter> {
-        static FILTERS: &'static [Filter] = &[
+        static FILTERS: &[Filter] = &[
             Filter::NoFilter,
             Filter::NoRemakes,
             Filter::TrustedOnly,

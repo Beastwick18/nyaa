@@ -24,12 +24,12 @@ pub struct Item {
     pub remake: bool,
 }
 
-fn to_bytes(size: &String) -> usize {
+fn to_bytes(size: &str) -> usize {
     let mut split = size.split_whitespace();
-    let b = split.nth(0).unwrap_or("0");
+    let b = split.next().unwrap_or("0");
     let unit = split.last().unwrap_or("B");
     let f = b.parse::<f64>().unwrap_or(0.0);
-    let factor: usize = match unit.chars().nth(0).unwrap_or('B') {
+    let factor: usize = match unit.chars().next().unwrap_or('B') {
         'T' => 1000000000000,
         'G' => 1000000000,
         'M' => 1000000,
@@ -40,12 +40,12 @@ fn to_bytes(size: &String) -> usize {
 }
 
 pub async fn get_feed_list(
-    query: &String,
+    query: &str,
     cat: usize,
     filter: usize,
 ) -> Result<Vec<Item>, Box<dyn Error>> {
     let (high, low) = (cat / 10, cat % 10);
-    let query = encode(&query);
+    let query = encode(query);
     let url = format!(
         "https://nyaa.si/?page=rss&f={}&c={}_{}&q={}&m",
         filter, high, low, query
@@ -61,10 +61,10 @@ pub async fn get_feed_list(
         .filter_map(|(index, item)| {
             let ext = item.extensions().get("nyaa")?;
             let guid = item.guid.to_owned().unwrap_or_default();
-            let id = guid.value.split("/").last().unwrap_or_default().to_owned(); // Get nyaa id from guid url in format
+            let id = guid.value.split('/').last().unwrap_or_default().to_owned(); // Get nyaa id from guid url in format
                                                                                   // `https://nyaa.si/view/{id}`
             let category_str = get_ext_value::<String>(ext, "categoryId");
-            let split: Vec<&str> = category_str.split("_").collect();
+            let split: Vec<&str> = category_str.split('_').collect();
             let high = split.first().unwrap_or(&"1").parse::<usize>().unwrap_or(1);
             let low = split.last().unwrap_or(&"0").parse::<usize>().unwrap_or(0);
             let category = high * 10 + low;
@@ -73,7 +73,7 @@ pub async fn get_feed_list(
                 .and_then(|c| c.find(category))
                 .unwrap_or_default();
             let size = get_ext_value::<String>(ext, "size")
-                .replace("i", "")
+                .replace('i', "")
                 .replace("Bytes", "B");
 
             Some(Item {
@@ -99,7 +99,7 @@ pub async fn get_feed_list(
 pub fn get_ext_value<T: Default + FromStr>(ext_map: &ExtensionMap, key: &str) -> T {
     ext_map
         .get(key)
-        .and_then(|v| v.get(0))
+        .and_then(|v| v.first())
         .and_then(|s| s.value.to_owned())
         .and_then(|val| val.parse::<T>().ok())
         .unwrap_or_default()

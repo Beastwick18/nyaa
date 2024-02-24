@@ -41,7 +41,7 @@ pub fn centered_rect(mut x_len: u16, mut y_len: u16, r: Rect) -> Rect {
     y_len = min(y_len, r.height);
     let popup_layout = Layout::new(
         Direction::Vertical,
-        &[
+        [
             Constraint::Length((r.height - y_len) / 2),
             Constraint::Length(y_len),
             Constraint::Length((r.height - y_len) / 2),
@@ -51,7 +51,7 @@ pub fn centered_rect(mut x_len: u16, mut y_len: u16, r: Rect) -> Rect {
 
     Layout::new(
         Direction::Horizontal,
-        &[
+        [
             Constraint::Length((r.width - x_len) / 2),
             Constraint::Length(x_len),
             Constraint::Length((r.width - x_len) / 2),
@@ -114,7 +114,7 @@ impl<T> StatefulTable<T> {
         };
         let idx = i.max(0).min(self.items.len() as isize - 1) as usize;
         self.state.select(Some(idx));
-        self.scrollbar_state = self.scrollbar_state.position(idx as usize);
+        self.scrollbar_state = self.scrollbar_state.position(idx);
     }
 
     pub fn select(&mut self, idx: usize) {
