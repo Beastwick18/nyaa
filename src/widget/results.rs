@@ -1,5 +1,5 @@
 use std::{
-    cmp::{self, Ordering},
+    cmp::{self},
     io::{BufReader, Read},
     process::{Command, Stdio},
 };
@@ -15,39 +15,37 @@ use ratatui::{
 
 use crate::{
     app::{App, Mode},
-    nyaa::{self, Item},
+    nyaa::{self},
 };
 
-use super::{create_block, sort::Sort, StatefulTable};
+use super::{create_block, StatefulTable};
 
 pub struct ResultsWidget {
     table: StatefulTable<nyaa::Item>,
 }
 
 impl ResultsWidget {
-    pub fn with_items(&mut self, items: Vec<nyaa::Item>, sort: &Sort, reverse: bool) {
+    pub fn with_items(&mut self, items: Vec<nyaa::Item>) {
         let len = items.len();
         self.table.items = items;
-        self.sort(sort, reverse);
         self.table.select(0);
         self.table.scrollbar_state = self.table.scrollbar_state.content_length(len);
     }
-
-    pub fn sort(&mut self, sort: &Sort, reverse: bool) {
-        let f: fn(&Item, &Item) -> Ordering = match sort {
-            Sort::Date => |a, b| a.index.cmp(&b.index),
-            Sort::Downloads => |a, b| b.downloads.cmp(&a.downloads),
-            Sort::Seeders => |a, b| b.seeders.cmp(&a.seeders),
-            Sort::Leechers => |a, b| b.leechers.cmp(&a.leechers),
-            Sort::Name => |a, b| b.title.cmp(&a.title),
-            Sort::Category => |a, b| b.category.cmp(&a.category),
-            Sort::Size => |a, b| b.bytes.cmp(&a.bytes),
-        };
-        self.table.items.sort_by(f);
-        if reverse {
-            self.table.items.reverse();
-        }
-    }
+    // pub fn sort(&mut self, sort: &Sort) {
+    //     let f: fn(&Item, &Item) -> Ordering = match sort {
+    //         Sort::Date => |a, b| a.index.cmp(&b.index),
+    //         Sort::Downloads => |a, b| b.downloads.cmp(&a.downloads),
+    //         Sort::Seeders => |a, b| b.seeders.cmp(&a.seeders),
+    //         Sort::Leechers => |a, b| b.leechers.cmp(&a.leechers),
+    //         Sort::Name => |a, b| b.title.cmp(&a.title),
+    //         Sort::Category => |a, b| b.category.cmp(&a.category),
+    //         Sort::Size => |a, b| b.bytes.cmp(&a.bytes),
+    //     };
+    //     self.table.items.sort_by(f);
+    //     if reverse {
+    //         self.table.items.reverse();
+    //     }
+    // }
 
     pub fn clear(&mut self) {
         self.table.items = vec![];
@@ -132,7 +130,10 @@ impl super::Widget for ResultsWidget {
 
         let table = Table::new(items, [Constraint::Percentage(100)])
             .header(header)
-            .block(create_block(app.theme, app.mode == Mode::Normal))
+            .block(
+                create_block(app.theme, app.mode == Mode::Normal)
+                    .title(format!("Page {}", app.page)),
+            )
             .highlight_style(Style::default().bg(app.theme.hl_bg))
             .widths(&binding);
         f.render_widget(Clear, area);

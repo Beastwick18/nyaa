@@ -12,8 +12,7 @@ license = "GPL-3.0-or-later"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-rss = "2.0.1"
-reqwest = "0.11"
+reqwest = { version = "0.11", features=["gzip"]}
 tokio = { version = "1.36.0", features=["rt", "macros", "rt-multi-thread"] }
 urlencoding = "2.1.0"
 ratatui = "0.25.0"
@@ -22,3 +21,4 @@ unicode-width = "0.1.5"
 confy = "0.6.0"
 shellwords = "1.1.0"
 serde = { version = "1.0.152", features = ["derive"] }
+scraper = "0.18.1"

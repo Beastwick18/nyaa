@@ -17,8 +17,6 @@ pub enum Sort {
     Downloads,
     Seeders,
     Leechers,
-    Name,
-    Category,
     Size,
 }
 
@@ -29,8 +27,6 @@ impl EnumIter<Sort> for Sort {
             Sort::Downloads,
             Sort::Seeders,
             Sort::Leechers,
-            Sort::Name,
-            Sort::Category,
             Sort::Size,
         ];
         SORTS.iter()
@@ -44,9 +40,19 @@ impl ToString for Sort {
             Sort::Downloads => "Downloads".to_owned(),
             Sort::Seeders => "Seeders".to_owned(),
             Sort::Leechers => "Leechers".to_owned(),
-            Sort::Name => "Name".to_owned(),
-            Sort::Category => "Category".to_owned(),
             Sort::Size => "Size".to_owned(),
+        }
+    }
+}
+
+impl Sort {
+    pub fn to_url(&self) -> String {
+        match self {
+            Sort::Date => "id".to_owned(),
+            Sort::Downloads => "downloads".to_owned(),
+            Sort::Seeders => "seeders".to_owned(),
+            Sort::Leechers => "leechers".to_owned(),
+            Sort::Size => "size".to_owned(),
         }
     }
 }
@@ -110,8 +116,7 @@ impl Widget for SortPopup {
                         Sort::iter().nth(self.table.state.selected().unwrap_or_default())
                     {
                         self.selected = i.to_owned();
-                        app.mode = Mode::Normal;
-                        app.should_sort = true;
+                        app.mode = Mode::Loading;
                     }
                 }
                 _ => {}

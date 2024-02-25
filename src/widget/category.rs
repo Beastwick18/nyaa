@@ -67,10 +67,10 @@ impl CatStruct {
 pub static ALL: CatStruct = CatStruct {
     name: "All Categories",
     entries: &[CatEntry::new(
-        "Categories",
+        "All Categories",
         "AllCategories",
         0,
-        "All",
+        "---",
         Color::White,
     )],
 };

@@ -60,10 +60,11 @@ impl ToString for Mode {
 pub struct App {
     pub mode: Mode,
     pub theme: &'static Theme,
-    pub should_sort: bool,
     pub config: Config,
     pub errors: Vec<String>,
     pub reverse: bool,
+    pub page: usize,
+    pub last_page: usize,
     should_quit: bool,
 }
 
@@ -90,10 +91,11 @@ impl Default for App {
         App {
             mode: Mode::Loading,
             theme: widget::theme::THEMES[0],
-            should_sort: false,
             config: Config::default(),
             errors: vec![],
             reverse: false,
+            page: 1,
+            last_page: 1,
             should_quit: false,
         }
     }
@@ -146,6 +148,16 @@ fn normal_event(app: &mut App, e: &Event) -> bool {
             }
             (Char('/') | KeyCode::Char('i'), &KeyModifiers::NONE) => {
                 app.mode = Mode::Search;
+            }
+            (Char('p') | Char('h') | Left, &KeyModifiers::NONE) => {
+                if app.page > 1 {
+                    app.page -= 1;
+                    app.mode = Mode::Loading;
+                }
+            }
+            (Char('n') | Char('l') | Right, &KeyModifiers::NONE) => {
+                app.page += 1;
+                app.mode = Mode::Loading;
             }
             (Char('q'), &KeyModifiers::NONE) => {
                 app.quit();
@@ -246,10 +258,6 @@ pub async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io
         }
     }
     loop {
-        if app.should_sort {
-            w.results.sort(&w.sort.selected, app.reverse);
-            app.should_sort = false;
-        }
         if app.should_quit {
             return Ok(());
         }
@@ -263,13 +271,16 @@ pub async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io
             app.mode = Mode::Normal;
             match nyaa::get_feed_list(
                 &w.search.input,
-                w.category.category,
                 w.filter.selected.to_owned() as usize,
+                w.category.category,
+                app.page,
+                w.sort.selected.to_url(),
+                app.reverse,
             )
             .await
             {
                 Ok(items) => {
-                    w.results.with_items(items, &w.sort.selected, app.reverse);
+                    w.results.with_items(items);
                 }
                 Err(e) => {
                     app.errors.push(e.to_string());
