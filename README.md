@@ -1,9 +1,9 @@
 <h1 align="left">nyaa</h1>
 <h3>A simple tui for browsing and downloading Anime torrents from nyaa.si.</h3>
 <p>
-  <img src="https://img.shields.io/github/v/release/Beastwick18/nyaa.svg" />
-  <img src="https://img.shields.io/aur/version/nyaa?color=orange" />
-  <img src="https://img.shields.io/crates/v/nyaa" />
+  <a href="https://github.com/Beastwick18/nyaa/releases/latest"><img src="https://img.shields.io/github/v/release/Beastwick18/nyaa.svg" /></a>
+  <a href="https://aur.archlinux.org/packages/nyaa"><img src="https://img.shields.io/aur/version/nyaa?color=orange" /></a>
+  <a href="https://crates.io/crates/nyaa"><img src="https://img.shields.io/crates/v/nyaa" /></a>
 </p>
 
 <p align="center">
