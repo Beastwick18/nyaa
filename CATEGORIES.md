@@ -1,6 +1,9 @@
 # Categories
-- Possible values for selecting the default category from the config is defined below.
+- Possible values for selecting the default category from the config are defined below.
   - e.g. `default_category = 'AnimeEnglishTranslated'`
+
+## All Categories
+- `AllCategories`
 
 ## Anime
 - `AllAnime`
@@ -36,5 +39,3 @@
 - `AllSoftware`
 - `SoftApplications`
 - `SoftGames`
-
-
