@@ -72,7 +72,7 @@ default_search = ''
 `default_search` refers to the search entered once the app is opened.
 
 ## 🗺️ Planned Features
-- [ ] Nyaa proxies/mirrors support
+- [x] Nyaa proxies/mirrors support
 - [ ] Page navigation
 - [ ] RPM Release
 - [ ] User-defined themes
