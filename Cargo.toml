@@ -1,6 +1,6 @@
 [package]
 name = "nyaa"
-version = "0.5.0"
+version = "0.6.0"
 edition = "2021"
 categories = ["command-line-utilities"]
 keywords = ["tui", "cli", "nyaa", "torrent", "download"]
@@ -12,7 +12,7 @@ license = "GPL-3.0-or-later"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-reqwest = { version = "0.11", features=["gzip"]}
+reqwest = { version = "0.11.24", features=["gzip"]}
 tokio = { version = "1.36.0", features=["rt", "macros", "rt-multi-thread"] }
 urlencoding = "2.1.0"
 ratatui = "0.25.0"
@@ -22,3 +22,16 @@ confy = "0.6.0"
 shellwords = "1.1.0"
 serde = { version = "1.0.152", features = ["derive"] }
 scraper = "0.18.1"
+
+[package.metadata.deb]
+maintainer = "Steven Culwell <bradculwell@pm.me>"
+copyright = "2024, Steven Culwell <bradculwell@pm.me>"
+license-file = ["LICENSE", "4"]
+extended-description = """A nyaa.si tui tool for browsing and downloading torrents"""
+depends = "$auto"
+section = "utility"
+priority = "optional"
+assets = [
+    ["target/release/nyaa", "usr/bin/", "755"],
+    ["README.md", "usr/share/doc/nyaa/README", "644"],
+]
