@@ -22,7 +22,7 @@ yay -S nyaa
 ```
 
 ### Windows/Linux Binaries
-Binaries for Linux and Windows are available on the releases page.
+Binaries for Linux and Windows are available on the [releases](https://github.com/Beastwick18/nyaa/releases/latest) page.
 
 ### From Source
 To build from source, you must have both `git` and `cargo` installed.
@@ -42,6 +42,9 @@ or `dpkg`
 sudo dpkg -i ./nyaa-VERSION-x86_64.deb
 ```
 
+## ⌨️ Keybinds
+- Like modal text editors such as Vim, there are several modes. Each have their own keybinds, which can be found out by pressing `F1` or `?` while in that mode. For a list of all modes and their respective keybinds, check [KEYS.md](KEYS.md).
+
 ## ⚙️ Configuration
 The default configuration file looks like:
 ```
@@ -52,7 +55,7 @@ default_filter = 'NoFilter'
 default_sort = 'Date'
 default_search = ''
 ```
-The option `torrent_client_cmd` is the command that will be run once `Enter` is pressed on a selected torrent. Typically, this is meant to open a torrent client along with the magnet/torrent link passed along as an argument. There are multiple placeholders you can use to fill in information for the command.
+`torrent_client_cmd` is the command that will be run once `Enter` is pressed on a selected torrent. Typically, this is meant to open a torrent client along with the magnet/torrent link passed along as an argument. There are multiple placeholders you can use to fill in information for the command.
   - `{torrent}` - The link to the torrent file hosted on nyaa.si
   - `{magnet}` - The magnet link associated with the torrent
   - `{title}` - The title of the post on nyaa.si
@@ -64,7 +67,7 @@ The option `torrent_client_cmd` is the command that will be run once `Enter` is 
 
 `default_filter` refers to the filter selected by default when the app is opened. Possible values are `NoFilter`, `NoRemakes`, `TrustedOnly` or `Batches`.
 
-`default_sort` refers to the sort selected by default when the app is opened. Possible values are `Date`, `Downloads`, `Seeders`, `Leechers`, `Name`, `Category`, or `Size`.
+`default_sort` refers to the sort selected by default when the app is opened. Possible values are `Date`, `Downloads`, `Seeders`, `Leechers`, or `Size`.
 
 `default_search` refers to the search entered once the app is opened.
 
@@ -73,5 +76,5 @@ The option `torrent_client_cmd` is the command that will be run once `Enter` is 
 - [ ] Page navigation
 - [ ] RPM Release
 - [ ] User-defined themes
-- [ ] Sources other than nyaa
+- [ ] Sources other than nyaa/Custom user-defined sources
 - [ ] Choice between HTML scraper or RSS feed

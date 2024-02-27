@@ -22,6 +22,7 @@ confy = "0.6.0"
 shellwords = "1.1.0"
 serde = { version = "1.0.152", features = ["derive"] }
 scraper = "0.18.1"
+regex = "1.10.3"
 
 [package.metadata.deb]
 maintainer = "Steven Culwell <bradculwell@pm.me>"

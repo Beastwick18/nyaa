@@ -73,7 +73,7 @@ impl Default for SortPopup {
 
 impl Widget for SortPopup {
     fn draw(&self, f: &mut Frame, app: &App, area: Rect) {
-        let center = super::centered_rect(30, 9, area);
+        let center = super::centered_rect(30, self.table.items.len() as u16 + 2, area);
         let clear = super::centered_rect(center.width + 2, center.height, area);
         let items = self.table.items.iter().enumerate().map(|(i, item)| {
             Row::new(vec![match i == self.selected.to_owned() as usize {
@@ -82,7 +82,10 @@ impl Widget for SortPopup {
             }])
         });
         let table = Table::new(items, [Constraint::Percentage(100)])
-            .block(create_block(app.theme, true).title("Sort"))
+            .block(create_block(app.theme, true).title(match app.reverse {
+                true => "Sort Ascending",
+                false => "Sort Descending",
+            }))
             .highlight_style(Style::default().bg(app.theme.hl_bg));
         super::clear(f, clear, app.theme.bg);
         f.render_stateful_widget(table, center, &mut self.table.state.to_owned());

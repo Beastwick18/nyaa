@@ -4,7 +4,7 @@ use std::{
     process::{Command, Stdio},
 };
 
-use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
+use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::{
     layout::{Constraint, Margin, Rect},
     style::{Modifier, Style, Stylize},
@@ -74,7 +74,7 @@ impl super::Widget for ResultsWidget {
             Mode::Normal => app.theme.border_focused_color,
             _ => app.theme.border_color,
         };
-        let binding = Constraint::from_lengths([3, area.width - 32_u16, 9, 4, 4, 5]);
+        let binding = Constraint::from_lengths([3, area.width - 32, 9, 4, 4, 5]);
         let header = Row::new([
             "Cat".to_owned(),
             "Name".to_owned(),
@@ -128,11 +128,15 @@ impl super::Widget for ResultsWidget {
             horizontal: 0,
         });
 
+        let num_items = match items.len() {
+            75 => "75+".to_owned(),
+            _ => items.len().to_string(),
+        };
         let table = Table::new(items, [Constraint::Percentage(100)])
             .header(header)
             .block(
                 create_block(app.theme, app.mode == Mode::Normal)
-                    .title(format!("Page {}", app.page)),
+                    .title(format!("Results ({}): Page {}", num_items, app.page)),
             )
             .highlight_style(Style::default().bg(app.theme.hl_bg))
             .widths(&binding);
@@ -145,29 +149,78 @@ impl super::Widget for ResultsWidget {
         if let Event::Key(KeyEvent {
             code,
             kind: KeyEventKind::Press,
+            modifiers,
             ..
         }) = e
         {
-            match code {
-                KeyCode::Char('j') | KeyCode::Down => {
+            use KeyCode::*;
+            match (code, modifiers) {
+                (Char('c'), &KeyModifiers::NONE) => {
+                    app.mode = Mode::Category;
+                }
+                (Char('s'), &KeyModifiers::NONE) => {
+                    app.mode = Mode::Sort;
+                    app.reverse = false;
+                }
+                (Char('S'), &KeyModifiers::SHIFT) => {
+                    app.mode = Mode::Sort;
+                    app.reverse = true;
+                }
+                (Char('f'), &KeyModifiers::NONE) => {
+                    app.mode = Mode::Filter;
+                }
+                (Char('t'), &KeyModifiers::NONE) => {
+                    app.mode = Mode::Theme;
+                }
+                (Char('/') | Char('i'), &KeyModifiers::NONE) => {
+                    app.mode = Mode::Search;
+                }
+                (Char('p'), &KeyModifiers::CONTROL) => {
+                    app.mode = Mode::Page;
+                }
+                (Char('p') | Char('h') | Left, &KeyModifiers::NONE) => {
+                    if app.page > 1 {
+                        app.page -= 1;
+                        app.mode = Mode::Loading;
+                    }
+                }
+                (Char('n') | Char('l') | Right, &KeyModifiers::NONE) => {
+                    app.page += 1;
+                    app.mode = Mode::Loading;
+                }
+                (Char('r'), &KeyModifiers::NONE) => {
+                    app.mode = Mode::Loading;
+                }
+                (Char('q'), &KeyModifiers::NONE) => {
+                    app.quit();
+                }
+                (Char('j') | KeyCode::Down, &KeyModifiers::NONE) => {
                     self.table.next(1);
                 }
-                KeyCode::Char('k') | KeyCode::Up => {
+                (Char('k') | KeyCode::Up, &KeyModifiers::NONE) => {
                     self.table.next(-1);
                 }
-                KeyCode::Char('J') => {
+                (Char('J'), &KeyModifiers::SHIFT) => {
                     self.table.next(4);
                 }
-                KeyCode::Char('K') => {
+                (Char('K'), &KeyModifiers::SHIFT) => {
                     self.table.next(-4);
                 }
-                KeyCode::Char('G') => {
+                (Char('G'), &KeyModifiers::SHIFT) => {
                     self.table.select(cmp::max(self.table.items.len(), 1) - 1);
                 }
-                KeyCode::Char('g') => {
+                (Char('g'), &KeyModifiers::NONE) => {
                     self.table.select(0);
                 }
-                KeyCode::Enter => {
+                (Char('H'), &KeyModifiers::SHIFT) => {
+                    app.page = 1;
+                    app.mode = Mode::Loading;
+                }
+                (Char('L'), &KeyModifiers::SHIFT) => {
+                    app.page = 100;
+                    app.mode = Mode::Loading;
+                }
+                (Enter, &KeyModifiers::NONE) => {
                     let item = match self
                         .table
                         .state
@@ -245,12 +298,16 @@ impl super::Widget for ResultsWidget {
             ("G", "Bottom"),
             ("j, ↓", "Down"),
             ("k, ↑", "Up"),
+            ("n, l, →", "Next Page"),
+            ("p, h, ←", "Prev Page"),
+            ("r", "Reload"),
             ("/, i", "Search"),
             ("c", "Categories"),
             ("f", "Filters"),
             ("s", "Sort"),
             ("S", "Sort reversed"),
             ("t", "Themes"),
+            ("Ctrl-P", "Goto page"),
         ])
     }
 }

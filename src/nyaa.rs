@@ -1,9 +1,13 @@
-use std::error::Error;
+use std::{error::Error, time::Duration};
 
+use regex::Regex;
 use scraper::{Html, Selector};
 use urlencoding::encode;
 
-use crate::widget::category::{CatIcon, ALL_CATEGORIES};
+use crate::{
+    app::{App, Widgets},
+    widget::category::{CatIcon, ALL_CATEGORIES},
+};
 
 pub struct Item {
     pub index: usize,
@@ -22,7 +26,7 @@ pub struct Item {
     pub remake: bool,
 }
 
-fn to_bytes(size: &String) -> usize {
+fn to_bytes(size: &str) -> usize {
     let mut split = size.split_whitespace();
     let b = split.next().unwrap_or("0");
     let unit = split.last().unwrap_or("B");
@@ -37,27 +41,43 @@ fn to_bytes(size: &String) -> usize {
     (factor as f64 * f).floor() as usize
 }
 
-pub async fn get_feed_list(
-    query: &str,
-    filter: usize,
-    cat: usize,
-    page: usize,
-    sort: String,
-    asc: bool,
-) -> Result<Vec<Item>, Box<dyn Error>> {
+pub async fn get_feed_list(app: &App, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
+    let mut base_url = app.config.base_url.clone();
+    let cat = w.category.category;
+    let query = w.search.input.input.clone();
+    let filter = w.filter.selected.clone() as u16;
+    let page = app.page;
+    let sort = w.sort.selected.to_url();
+    let asc = app.reverse;
+    let timeout = app.config.timeout;
+
+    let re = Regex::new(r"^https?://.+$").unwrap();
+    if !re.is_match(&base_url) {
+        // Assume https if not present
+        base_url = format!("https://{}", base_url);
+    }
     let (high, low) = (cat / 10, cat % 10);
-    let query = encode(query);
+    let query = encode(&query);
     let ord = match asc {
         true => "asc",
         false => "desc",
     };
     let url = format!(
-        "https://nyaa.si/?q={}&c={}_{}&f={}&p={}&s={}&o={}",
-        query, high, low, filter, page, sort, ord
+        "{}/?q={}&c={}_{}&f={}&p={}&s={}&o={}",
+        base_url, query, high, low, filter, page, sort, ord
     );
 
-    let client = reqwest::Client::builder().gzip(true).build()?;
-    let content = client.get(url).send().await?.bytes().await?;
+    let client = reqwest::Client::builder()
+        .gzip(true)
+        .timeout(Duration::from_secs(timeout))
+        .build()?;
+    let response = client.get(url.to_owned()).send().await?;
+    let code = response.status().as_u16();
+    if code != 200 {
+        // Throw error if response code is not OK
+        return Err(format!("{}\nInvalid repsponse code: {}", url, code).into());
+    }
+    let content = response.bytes().await?;
     let doc = Html::parse_document(std::str::from_utf8(&content[..])?);
 
     let item_sel = &Selector::parse("table.torrent-list > tbody > tr").unwrap();
@@ -71,17 +91,19 @@ pub async fn get_feed_list(
     let leechers_sel = &Selector::parse("td:nth-of-type(7)").unwrap();
     let downloads_sel = &Selector::parse("td:nth-of-type(8)").unwrap();
 
+    // TODO: Find max_page, if ellipsis (...) is present in pagination on nyaa, max_page is visible
+    // in html. Otherwise, 100
+
     let mut items: Vec<Item> = vec![];
     for (index, e) in doc.select(item_sel).enumerate() {
-        let trusted = e.value().classes().find(|e| *e == "success").is_some();
-        let remake = e.value().classes().find(|e| *e == "danger").is_some();
+        let trusted = e.value().classes().any(|e| e == "success");
+        let remake = e.value().classes().any(|e| e == "danger");
         let cat_str = e
             .select(icon_sel)
             .next()
             .and_then(|i| i.value().attr("href"))
-            .and_then(|i| i.split("=").last())
+            .and_then(|i| i.split('=').last())
             .unwrap_or("");
-
         let split: Vec<&str> = cat_str.split('_').collect();
         let high = split.first().unwrap_or(&"1").parse::<usize>().unwrap_or(1);
         let low = split.last().unwrap_or(&"0").parse::<usize>().unwrap_or(0);
@@ -135,7 +157,7 @@ pub async fn get_feed_list(
             .unwrap_or("0".to_owned())
             .parse::<u32>()
             .unwrap_or(0);
-        let file_name = torrent_rel.split("/").last().unwrap_or("nyaa.torrent");
+        let file_name = torrent_rel.split('/').last().unwrap_or("nyaa.torrent");
 
         let icon = ALL_CATEGORIES
             .get(high)

@@ -1,6 +1,6 @@
 use std::io;
 
-use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout},
@@ -18,6 +18,7 @@ use crate::{
         error::ErrorPopup,
         filter::FilterPopup,
         help::HelpPopup,
+        page::PagePopup,
         results::ResultsWidget,
         search::SearchWidget,
         sort::SortPopup,
@@ -38,6 +39,7 @@ pub enum Mode {
     Theme,
     Loading,
     Error,
+    Page,
     Help,
 }
 
@@ -52,6 +54,7 @@ impl ToString for Mode {
             Mode::Theme => "Theme".to_string(),
             Mode::Loading => "Loading".to_string(),
             Mode::Error => "Error".to_string(),
+            Mode::Page => "Page".to_owned(),
             Mode::Help => "Help".to_string(),
         }
     }
@@ -69,7 +72,7 @@ pub struct App {
 }
 
 impl App {
-    fn quit(&mut self) {
+    pub fn quit(&mut self) {
         self.should_quit = true;
     }
 }
@@ -83,6 +86,7 @@ pub struct Widgets {
     pub search: SearchWidget,
     pub results: ResultsWidget,
     pub error: ErrorPopup,
+    pub page: PagePopup,
     pub help: HelpPopup,
 }
 
@@ -119,54 +123,6 @@ fn help_event(app: &mut App, e: &Event) {
         }
     }
 }
-fn normal_event(app: &mut App, e: &Event) -> bool {
-    if let Event::Key(KeyEvent {
-        code,
-        kind: KeyEventKind::Press,
-        modifiers,
-        ..
-    }) = e
-    {
-        use KeyCode::*;
-        match (code, modifiers) {
-            (Char('c'), &KeyModifiers::NONE) => {
-                app.mode = Mode::Category;
-            }
-            (Char('s'), &KeyModifiers::NONE) => {
-                app.mode = Mode::Sort;
-                app.reverse = false;
-            }
-            (Char('S'), &KeyModifiers::SHIFT) => {
-                app.mode = Mode::Sort;
-                app.reverse = true;
-            }
-            (Char('f'), &KeyModifiers::NONE) => {
-                app.mode = Mode::Filter;
-            }
-            (Char('t'), &KeyModifiers::NONE) => {
-                app.mode = Mode::Theme;
-            }
-            (Char('/') | KeyCode::Char('i'), &KeyModifiers::NONE) => {
-                app.mode = Mode::Search;
-            }
-            (Char('p') | Char('h') | Left, &KeyModifiers::NONE) => {
-                if app.page > 1 {
-                    app.page -= 1;
-                    app.mode = Mode::Loading;
-                }
-            }
-            (Char('n') | Char('l') | Right, &KeyModifiers::NONE) => {
-                app.page += 1;
-                app.mode = Mode::Loading;
-            }
-            (Char('q'), &KeyModifiers::NONE) => {
-                app.quit();
-            }
-            _ => {}
-        }
-    }
-    false
-}
 
 pub fn draw(widgets: &mut Widgets, app: &mut App, f: &mut Frame) {
     let layout = Layout::new(
@@ -191,10 +147,10 @@ pub fn draw(widgets: &mut Widgets, app: &mut App, f: &mut Frame) {
             widgets.theme.draw(f, app, f.size());
         }
         Mode::Loading => {
-            let area = centered_rect(10, 1, f.size());
+            let area = centered_rect(8, 1, f.size());
             widgets.results.clear();
             widgets.results.draw(f, app, layout[1]);
-            f.render_widget(Paragraph::new("Loading..."), area);
+            f.render_widget(Paragraph::new("Loading…"), area);
         }
         Mode::Error => {
             widgets
@@ -205,6 +161,7 @@ pub fn draw(widgets: &mut Widgets, app: &mut App, f: &mut Frame) {
         Mode::Help => {
             widgets.help.draw(f, app, f.size());
         }
+        Mode::Page => widgets.page.draw(f, app, f.size()),
         Mode::Normal | Mode::Search => {}
     }
 }
@@ -217,6 +174,7 @@ fn get_help(app: &mut App, w: &mut Widgets) {
         Mode::Search => SearchWidget::get_help(),
         Mode::Filter => FilterPopup::get_help(),
         Mode::Theme => ThemePopup::get_help(),
+        Mode::Page => PagePopup::get_help(),
         Mode::Error => None,
         Mode::Help => None,
         Mode::Loading => None,
@@ -236,12 +194,13 @@ pub async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io
             app.config
         }
     };
-    w.search.input = app.config.default_search.to_owned();
-    w.search.cursor = w.search.input.len();
+    w.search.input.input = app.config.default_search.to_owned();
+    w.search.input.cursor = w.search.input.input.len();
     w.sort.selected = app.config.default_sort.to_owned();
     w.filter.selected = app.config.default_filter.to_owned();
+    let theme_name = app.config.default_theme.to_lowercase();
     for (i, theme) in THEMES.iter().enumerate() {
-        if theme.name == app.config.default_theme {
+        if theme.name == theme_name {
             w.theme.selected = i;
             app.theme = theme;
             break;
@@ -270,12 +229,15 @@ pub async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io
         if app.mode == Mode::Loading {
             app.mode = Mode::Normal;
             match nyaa::get_feed_list(
-                &w.search.input,
-                w.filter.selected.to_owned() as usize,
-                w.category.category,
-                app.page,
-                w.sort.selected.to_url(),
-                app.reverse,
+                // app.config.base_url.clone(),
+                // app.config.timeout,
+                // &w.search.input.input,
+                // w.filter.selected.to_owned() as usize,
+                // w.category.category,
+                // app.page,
+                // w.sort.selected.to_url(),
+                // app.reverse,
+                &app, &w,
             )
             .await
             {
@@ -298,7 +260,6 @@ pub async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io
                 w.sort.handle_event(&mut app, &evt);
             }
             Mode::Normal => {
-                normal_event(&mut app, &evt);
                 w.results.handle_event(&mut app, &evt);
             }
             Mode::Search => {
@@ -312,6 +273,9 @@ pub async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io
             }
             Mode::Error => {
                 w.error.handle_event(&mut app, &evt);
+            }
+            Mode::Page => {
+                w.page.handle_event(&mut app, &evt);
             }
             Mode::Help => {
                 w.help.handle_event(&mut app, &evt);

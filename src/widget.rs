@@ -16,16 +16,13 @@ pub mod category;
 pub mod error;
 pub mod filter;
 pub mod help;
+pub mod input;
+pub mod page;
 pub mod results;
 pub mod search;
 pub mod sort;
 pub mod theme;
 
-// pub trait Popup {
-//     fn draw(&self, f: &mut Frame, theme: &Theme);
-//     fn handle_event(&mut self, app: &mut App, e: &Event);
-// }
-//
 pub trait Widget {
     fn draw(&self, f: &mut Frame, app: &App, area: Rect);
     fn handle_event(&mut self, app: &mut App, e: &Event);

@@ -16,6 +16,8 @@ pub struct Config {
     pub default_sort: Sort,
     pub default_theme: String,
     pub default_search: String,
+    pub base_url: String,
+    pub timeout: u64,
 }
 
 impl Default for Config {
@@ -27,6 +29,8 @@ impl Default for Config {
             default_sort: Sort::Date,
             default_theme: THEMES[0].name.to_owned(),
             default_search: "".to_owned(),
+            base_url: "http://nyaa.si/".to_owned(),
+            timeout: 30,
         }
     }
 }
@@ -35,8 +39,4 @@ impl Config {
     pub fn from_file() -> Result<Config, ConfyError> {
         confy::load::<Config>(APP_NAME, CONFIG_FILE)
     }
-
-    // pub fn get_path() -> Result<PathBuf, ConfyError> {
-    //     confy::get_configuration_file_path(APP_NAME, CONFIG_FILE)
-    // }
 }
