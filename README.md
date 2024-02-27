@@ -1,4 +1,4 @@
-<h1 align="left">nyaa</h1>
+<h1 align="left">nyaa 🐈‍⬛</h1>
 <h3>A simple tui for browsing and downloading Anime torrents from nyaa.si.</h3>
 <p>
   <a href="https://github.com/Beastwick18/nyaa/releases/latest"><img src="https://img.shields.io/github/v/release/Beastwick18/nyaa.svg" /></a>
@@ -10,26 +10,39 @@
   <img src="assets/tty.gif" width="800" alt="animated" />
 </p>
 
-## Installation
+## ⚡ Installation
 ### With cargo
 ```
 cargo install nyaa
 ```
+
 ### On Arch Linux ([AUR](https://aur.archlinux.org/packages/nyaa))
 ```
 yay -S nyaa
 ```
-### Pre-Built Binaries
+
+### Windows/Linux Binaries
 Binaries for Linux and Windows are available on the releases page.
 
 ### From Source
+To build from source, you must have both `git` and `cargo` installed.
 ```
 git clone https://github.com/Beastwick18/nyaa
 cd nyaa
 cargo install --path .
 ```
 
-## Configuration
+### Ubuntu/Debian
+Download the .deb file from the [latest release](https://github.com/Beastwick18/nyaa/releases/latest) and install with `apt`:
+```sh
+sudo apt install ./nyaa-VERSION-x86_64.deb
+```
+or `dpkg`
+```sh
+sudo dpkg -i ./nyaa-VERSION-x86_64.deb
+```
+
+## ⚙️ Configuration
 The default configuration file looks like:
 ```
 torrent_client_cmd = 'bash -c "curl {torrent} > ~/torrents/{title}.torrent"'
@@ -54,3 +67,11 @@ The option `torrent_client_cmd` is the command that will be run once `Enter` is 
 `default_sort` refers to the sort selected by default when the app is opened. Possible values are `Date`, `Downloads`, `Seeders`, `Leechers`, `Name`, `Category`, or `Size`.
 
 `default_search` refers to the search entered once the app is opened.
+
+## 🗺️ Planned Features
+- [ ] Nyaa proxies/mirrors support
+- [ ] Page navigation
+- [ ] RPM Release
+- [ ] User-defined themes
+- [ ] Sources other than nyaa
+- [ ] Choice between HTML scraper or RSS feed
