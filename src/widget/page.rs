@@ -1,6 +1,6 @@
 use std::cmp::{max, min};
 
-use crate::app::{App, Mode};
+use crate::app::{App, LoadType, Mode};
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     layout::{Margin, Rect},
@@ -65,7 +65,7 @@ impl Widget for PagePopup {
                 }
                 KeyCode::Enter => {
                     app.page = max(min(self.input.input.parse().unwrap_or(1), 100), 1);
-                    app.mode = Mode::Loading;
+                    app.mode = Mode::Loading(LoadType::Searching);
                 }
                 _ => {
                     self.input.handle_event(app, e);

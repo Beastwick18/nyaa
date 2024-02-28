@@ -7,7 +7,7 @@ use ratatui::{
     Frame,
 };
 
-use crate::app::{App, Mode};
+use crate::app::{App, LoadType, Mode};
 
 use super::{create_block, Widget};
 
@@ -256,7 +256,7 @@ impl Widget for CategoryPopup {
                             self.category = item.id;
                         }
                     }
-                    app.mode = Mode::Loading;
+                    app.mode = Mode::Loading(LoadType::Categorizing);
                 }
                 KeyCode::Esc | KeyCode::Char('c') | KeyCode::Char('q') => {
                     app.mode = Mode::Normal;

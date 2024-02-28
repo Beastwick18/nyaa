@@ -1,5 +1,5 @@
 use std::{
-    cmp::{self},
+    cmp::max,
     io::{BufReader, Read},
     process::{Command, Stdio},
 };
@@ -9,46 +9,27 @@ use ratatui::{
     layout::{Constraint, Margin, Rect},
     style::{Modifier, Style, Stylize},
     text::Text,
-    widgets::{Clear, Row, Scrollbar, ScrollbarOrientation, Table},
+    widgets::{Clear, Paragraph, Row, Scrollbar, ScrollbarOrientation, Table},
     Frame,
 };
 
 use crate::{
-    app::{App, Mode},
-    nyaa::{self},
+    app::{App, LoadType, Mode},
+    source::nyaa_html::Item,
 };
 
-use super::{create_block, StatefulTable};
+use super::{centered_rect, create_block, StatefulTable};
 
 pub struct ResultsWidget {
-    table: StatefulTable<nyaa::Item>,
+    pub table: StatefulTable<Item>,
 }
 
 impl ResultsWidget {
-    pub fn with_items(&mut self, items: Vec<nyaa::Item>) {
+    pub fn with_items(&mut self, items: Vec<Item>) {
         let len = items.len();
         self.table.items = items;
         self.table.select(0);
         self.table.scrollbar_state = self.table.scrollbar_state.content_length(len);
-    }
-    // pub fn sort(&mut self, sort: &Sort) {
-    //     let f: fn(&Item, &Item) -> Ordering = match sort {
-    //         Sort::Date => |a, b| a.index.cmp(&b.index),
-    //         Sort::Downloads => |a, b| b.downloads.cmp(&a.downloads),
-    //         Sort::Seeders => |a, b| b.seeders.cmp(&a.seeders),
-    //         Sort::Leechers => |a, b| b.leechers.cmp(&a.leechers),
-    //         Sort::Name => |a, b| b.title.cmp(&a.title),
-    //         Sort::Category => |a, b| b.category.cmp(&a.category),
-    //         Sort::Size => |a, b| b.bytes.cmp(&a.bytes),
-    //     };
-    //     self.table.items.sort_by(f);
-    //     if reverse {
-    //         self.table.items.reverse();
-    //     }
-    // }
-
-    pub fn clear(&mut self) {
-        self.table.items = vec![];
     }
 }
 
@@ -89,35 +70,47 @@ impl super::Widget for ResultsWidget {
         .height(1)
         .bottom_margin(0);
 
-        let items = self.table.items.iter().map(|item| {
-            Row::new(vec![
-                Text::styled(item.icon.label, Style::new().fg(item.icon.color)),
-                Text::styled(
-                    item.title.to_owned(),
-                    Style::new().fg(if item.trusted {
-                        app.theme.trusted
-                    } else if item.remake {
-                        app.theme.remake
-                    } else {
-                        app.theme.fg
-                    }),
-                ),
-                Text::raw(format!("{:>9}", item.size)),
-                Text::styled(
-                    format!("{:>4}", item.seeders),
-                    Style::new().fg(app.theme.trusted),
-                ),
-                Text::styled(
-                    format!("{:>4}", item.leechers),
-                    Style::new().fg(app.theme.remake),
-                ),
-                Text::raw(shorten_number(item.downloads)),
-            ])
-            .fg(app.theme.fg)
-            .height(1)
-            .bottom_margin(0)
-        });
-
+        f.render_widget(Clear, area);
+        let items: Vec<Row> = match app.mode {
+            Mode::Loading(_) => {
+                let area = centered_rect(8, 1, f.size());
+                f.render_widget(Paragraph::new("Loading…"), area);
+                vec![]
+            }
+            _ => self
+                .table
+                .items
+                .iter()
+                .map(|item| {
+                    Row::new(vec![
+                        Text::styled(item.icon.label, Style::new().fg(item.icon.color)),
+                        Text::styled(
+                            item.title.to_owned(),
+                            Style::new().fg(if item.trusted {
+                                app.theme.trusted
+                            } else if item.remake {
+                                app.theme.remake
+                            } else {
+                                app.theme.fg
+                            }),
+                        ),
+                        Text::raw(format!("{:>9}", item.size)),
+                        Text::styled(
+                            format!("{:>4}", item.seeders),
+                            Style::new().fg(app.theme.trusted),
+                        ),
+                        Text::styled(
+                            format!("{:>4}", item.leechers),
+                            Style::new().fg(app.theme.remake),
+                        ),
+                        Text::raw(shorten_number(item.downloads)),
+                    ])
+                    .fg(app.theme.fg)
+                    .height(1)
+                    .bottom_margin(0)
+                })
+                .collect(),
+        };
         let sb = Scrollbar::default()
             .orientation(ScrollbarOrientation::VerticalRight)
             .track_symbol(Some("│"))
@@ -128,21 +121,44 @@ impl super::Widget for ResultsWidget {
             horizontal: 0,
         });
 
-        let num_items = match items.len() {
-            75 => "75+".to_owned(),
-            _ => items.len().to_string(),
-        };
+        let num_items = items.len();
+        let first_item = (app.page - 1) * 75;
         let table = Table::new(items, [Constraint::Percentage(100)])
             .header(header)
             .block(
-                create_block(app.theme, app.mode == Mode::Normal)
-                    .title(format!("Results ({}): Page {}", num_items, app.page)),
+                create_block(app.theme, app.mode == Mode::Normal).title(format!(
+                    "Results {}-{} ({} total): Page {}/{}",
+                    first_item + 1,
+                    num_items + first_item,
+                    app.total_results,
+                    app.page,
+                    app.last_page
+                )),
             )
             .highlight_style(Style::default().bg(app.theme.hl_bg))
             .widths(&binding);
-        f.render_widget(Clear, area);
         f.render_stateful_widget(table, area, &mut self.table.state.to_owned());
         f.render_stateful_widget(sb, sb_area, &mut self.table.scrollbar_state.to_owned());
+
+        let source_str = format!("Source: {}", app.src.to_string());
+        let text = Paragraph::new(source_str.clone());
+        let right = Rect::new(
+            area.right() - 1 - source_str.len() as u16,
+            area.top(),
+            source_str.len() as u16,
+            1,
+        );
+        f.render_widget(text, right);
+
+        match app.mode {
+            Mode::Loading(_) => {}
+            _ => {
+                if num_items == 0 {
+                    let center = centered_rect(10, 1, f.size());
+                    f.render_widget(Paragraph::new("No results"), center);
+                }
+            }
+        }
     }
 
     fn handle_event(&mut self, app: &mut crate::app::App, e: &crossterm::event::Event) {
@@ -181,15 +197,17 @@ impl super::Widget for ResultsWidget {
                 (Char('p') | Char('h') | Left, &KeyModifiers::NONE) => {
                     if app.page > 1 {
                         app.page -= 1;
-                        app.mode = Mode::Loading;
+                        app.mode = Mode::Loading(LoadType::Searching);
                     }
                 }
                 (Char('n') | Char('l') | Right, &KeyModifiers::NONE) => {
-                    app.page += 1;
-                    app.mode = Mode::Loading;
+                    if app.page < app.last_page {
+                        app.page += 1;
+                        app.mode = Mode::Loading(LoadType::Searching);
+                    }
                 }
                 (Char('r'), &KeyModifiers::NONE) => {
-                    app.mode = Mode::Loading;
+                    app.mode = Mode::Loading(LoadType::Searching);
                 }
                 (Char('q'), &KeyModifiers::NONE) => {
                     app.quit();
@@ -207,18 +225,22 @@ impl super::Widget for ResultsWidget {
                     self.table.next(-4);
                 }
                 (Char('G'), &KeyModifiers::SHIFT) => {
-                    self.table.select(cmp::max(self.table.items.len(), 1) - 1);
+                    self.table.select(max(self.table.items.len(), 1) - 1);
                 }
                 (Char('g'), &KeyModifiers::NONE) => {
                     self.table.select(0);
                 }
-                (Char('H'), &KeyModifiers::SHIFT) => {
-                    app.page = 1;
-                    app.mode = Mode::Loading;
+                (Char('H') | Char('P'), &KeyModifiers::SHIFT) => {
+                    if app.page != 1 {
+                        app.page = 1;
+                        app.mode = Mode::Loading(LoadType::Searching);
+                    }
                 }
-                (Char('L'), &KeyModifiers::SHIFT) => {
-                    app.page = 100;
-                    app.mode = Mode::Loading;
+                (Char('L') | Char('N'), &KeyModifiers::SHIFT) => {
+                    if app.page != app.last_page && app.last_page > 0 {
+                        app.page = app.last_page;
+                        app.mode = Mode::Loading(LoadType::Searching);
+                    }
                 }
                 (Enter, &KeyModifiers::NONE) => {
                     let item = match self
@@ -285,6 +307,9 @@ impl super::Widget for ResultsWidget {
                             .push(format!("{}:\nThe command is not valid.", cmd_str));
                     }
                 }
+                (Char('s'), &KeyModifiers::CONTROL) => {
+                    app.mode = Mode::Sources;
+                }
                 _ => {}
             }
         }
@@ -300,6 +325,8 @@ impl super::Widget for ResultsWidget {
             ("k, ↑", "Up"),
             ("n, l, →", "Next Page"),
             ("p, h, ←", "Prev Page"),
+            ("N, L, →", "Last Page"),
+            ("P, H, ←", "First Page"),
             ("r", "Reload"),
             ("/, i", "Search"),
             ("c", "Categories"),
@@ -307,7 +334,8 @@ impl super::Widget for ResultsWidget {
             ("s", "Sort"),
             ("S", "Sort reversed"),
             ("t", "Themes"),
-            ("Ctrl-P", "Goto page"),
+            ("Ctrl-p", "Goto page"),
+            ("Ctrl-s", "Select source"),
         ])
     }
 }

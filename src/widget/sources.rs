@@ -5,70 +5,40 @@ use ratatui::{
     widgets::{Row, Table},
     Frame,
 };
-use serde::{Deserialize, Serialize};
 
-use crate::app::{App, LoadType, Mode};
+use crate::{
+    app::{App, LoadType, Mode},
+    source::Sources,
+};
 
 use super::{create_block, EnumIter, StatefulTable, Widget};
 
-#[derive(Clone, Serialize, Deserialize)]
-pub enum Filter {
-    #[allow(clippy::enum_variant_names)]
-    NoFilter = 0,
-    NoRemakes = 1,
-    TrustedOnly = 2,
-    Batches = 3,
-}
-
-impl EnumIter<Filter> for Filter {
-    fn iter() -> std::slice::Iter<'static, Filter> {
-        static FILTERS: &[Filter] = &[
-            Filter::NoFilter,
-            Filter::NoRemakes,
-            Filter::TrustedOnly,
-            Filter::Batches,
-        ];
-        FILTERS.iter()
-    }
-}
-
-impl ToString for Filter {
-    fn to_string(&self) -> String {
-        match self {
-            Filter::NoFilter => "No Filter".to_owned(),
-            Filter::NoRemakes => "No Remakes".to_owned(),
-            Filter::TrustedOnly => "Trusted Only".to_owned(),
-            Filter::Batches => "Batches".to_owned(),
-        }
-    }
-}
-
-pub struct FilterPopup {
+pub struct SourcesPopup {
     pub table: StatefulTable<String>,
-    pub selected: Filter,
 }
 
-impl Default for FilterPopup {
+impl Default for SourcesPopup {
     fn default() -> Self {
-        FilterPopup {
-            table: StatefulTable::with_items(Filter::iter().map(|item| item.to_string()).collect()),
-            selected: Filter::NoFilter,
+        SourcesPopup {
+            table: StatefulTable::with_items(
+                Sources::iter().map(|item| item.to_string()).collect(),
+            ),
         }
     }
 }
 
-impl Widget for FilterPopup {
+impl Widget for SourcesPopup {
     fn draw(&self, f: &mut Frame, app: &App, area: Rect) {
         let center = super::centered_rect(30, self.table.items.len() as u16 + 2, area);
         let clear = super::centered_rect(center.width + 2, center.height, area);
         let items = self.table.items.iter().enumerate().map(|(i, item)| {
-            match i == (self.selected.to_owned() as usize) {
-                true => Row::new(vec![format!("  {}", item.to_owned())]),
-                false => Row::new(vec![format!("   {}", item.to_owned())]),
-            }
+            Row::new(vec![match i == app.src.to_owned() as usize {
+                true => format!("  {}", item.to_owned()),
+                false => format!("   {}", item.to_owned()),
+            }])
         });
         let table = Table::new(items, [Constraint::Percentage(100)])
-            .block(create_block(app.theme, true).title("Filter"))
+            .block(create_block(app.theme, true).title("Sources"))
             .highlight_style(Style::default().bg(app.theme.hl_bg));
         super::clear(f, clear, app.theme.bg);
         f.render_stateful_widget(table, center, &mut self.table.state.to_owned());
@@ -82,7 +52,7 @@ impl Widget for FilterPopup {
         }) = e
         {
             match code {
-                KeyCode::Esc | KeyCode::Char('f') | KeyCode::Char('q') => {
+                KeyCode::Esc | KeyCode::Char('s') | KeyCode::Char('q') => {
                     app.mode = Mode::Normal;
                 }
                 KeyCode::Char('j') | KeyCode::Down => {
@@ -99,10 +69,10 @@ impl Widget for FilterPopup {
                 }
                 KeyCode::Enter => {
                     if let Some(i) =
-                        Filter::iter().nth(self.table.state.selected().unwrap_or_default())
+                        Sources::iter().nth(self.table.state.selected().unwrap_or_default())
                     {
-                        self.selected = i.to_owned();
-                        app.mode = Mode::Loading(LoadType::Filtering);
+                        app.src = i.to_owned();
+                        app.mode = Mode::Loading(LoadType::Searching);
                     }
                 }
                 _ => {}
@@ -113,11 +83,11 @@ impl Widget for FilterPopup {
     fn get_help() -> Option<Vec<(&'static str, &'static str)>> {
         Some(vec![
             ("Enter", "Confirm"),
-            ("Esc, f, q", "Close"),
-            ("g", "Top"),
-            ("G", "Bottom"),
+            ("Esc, Ctrl-s, q", "Close"),
             ("j, ↓", "Down"),
             ("k, ↑", "Up"),
+            ("g", "Top"),
+            ("G", "Bottom"),
         ])
     }
 }

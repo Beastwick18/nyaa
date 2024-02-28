@@ -1,11 +1,7 @@
 use std::cmp::{max, min};
 
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
-use ratatui::{
-    layout::Rect,
-    widgets::{Clear, Paragraph},
-    Frame,
-};
+use ratatui::{layout::Rect, widgets::Paragraph, Frame};
 use unicode_width::UnicodeWidthChar;
 
 use crate::app::App;
@@ -50,7 +46,7 @@ impl super::Widget for InputWidget {
             self.input.to_owned()
         };
         let p = Paragraph::new(visible);
-        f.render_widget(Clear, area);
+        // f.render_widget(Clear, area);
         f.render_widget(p, area);
     }
 

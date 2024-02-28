@@ -7,7 +7,7 @@ use ratatui::{
     Frame,
 };
 
-use crate::app::{App, Mode};
+use crate::app::{App, LoadType, Mode};
 
 use super::{
     create_block,
@@ -67,7 +67,7 @@ impl super::Widget for SearchWidget {
                     app.mode = Mode::Normal;
                 }
                 (Enter, &KeyModifiers::NONE) => {
-                    app.mode = Mode::Loading;
+                    app.mode = Mode::Loading(LoadType::Searching);
                     app.page = 1; // Go back to first page
                 }
                 _ => {

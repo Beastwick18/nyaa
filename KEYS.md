@@ -13,6 +13,8 @@ This mode is entered when the results table is focused.
 | k | ↑ Up |
 | n, l, → | Next Page |
 | p, h, ← | Prev Page |
+| N, L | Last Page |
+| P, H | First Page |
 | r | Reload |
 | /, i | Search |
 | c | Categories |

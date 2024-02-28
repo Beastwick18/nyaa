@@ -1,5 +1,6 @@
 use crate::{
     app::APP_NAME,
+    source::Sources,
     widget::{category::ALL_CATEGORIES, filter::Filter, sort::Sort, theme::THEMES},
 };
 use confy::ConfyError;
@@ -16,6 +17,7 @@ pub struct Config {
     pub default_sort: Sort,
     pub default_theme: String,
     pub default_search: String,
+    pub default_source: Sources,
     pub base_url: String,
     pub timeout: u64,
 }
@@ -27,6 +29,7 @@ impl Default for Config {
             default_category: ALL_CATEGORIES[0].entries[0].cfg.to_owned(),
             default_filter: Filter::NoFilter,
             default_sort: Sort::Date,
+            default_source: Sources::NyaaHtml,
             default_theme: THEMES[0].name.to_owned(),
             default_search: "".to_owned(),
             base_url: "http://nyaa.si/".to_owned(),

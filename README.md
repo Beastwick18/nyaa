@@ -45,15 +45,24 @@ sudo dpkg -i ./nyaa-VERSION-x86_64.deb
 ## ⌨️ Keybinds
 - Like modal text editors such as Vim, there are several modes. Each have their own keybinds, which can be found out by pressing `F1` or `?` while in that mode. For a list of all modes and their respective keybinds, check [KEYS.md](KEYS.md).
 
+## Proxies
+If `nyaa.si` is not accessible in your region, try one of the [proxies](https://nyaatorrents.info/#proxy). Once you find one that works, replace the value for `base_url` in the default config with the working proxy url. I would recommend `nyaa.land`, as it is very compatible, and usually working. Here's what the config for `nyaa.land` would look like:
+```toml
+base_url = 'nyaa.land'
+```
+
 ## ⚙️ Configuration
 The default configuration file looks like:
-```
+```toml
 torrent_client_cmd = 'bash -c "curl {torrent} > ~/torrents/{title}.torrent"'
 default_theme = 'Default'
 default_category = 'AllCategories'
 default_filter = 'NoFilter'
 default_sort = 'Date'
 default_search = ''
+default_source = 'NyaaHtml'
+base_url = 'https://nyaa.si'
+timeout = 30
 ```
 `torrent_client_cmd` is the command that will be run once `Enter` is pressed on a selected torrent. Typically, this is meant to open a torrent client along with the magnet/torrent link passed along as an argument. There are multiple placeholders you can use to fill in information for the command.
   - `{torrent}` - The link to the torrent file hosted on nyaa.si
@@ -71,10 +80,16 @@ default_search = ''
 
 `default_search` refers to the search entered once the app is opened.
 
+`default_source` refers to the source selected by default once the app is opened. Possible values are `NyaaHtml` and `NyaaRss`.
+
+`base_url` refers to the url used to make requests. Change this to any nyaa mirror url in the format: `http(s)://nyaa.si` or `nyaa.si`
+
+`timeout` refers to how long the program will wait for a search request before it times out. This value is measured in seconds. You may want to increase this if your request times are usually long.
+
 ## 🗺️ Planned Features
-- [x] Nyaa proxies/mirrors support
-- [ ] Page navigation
 - [ ] RPM Release
 - [ ] User-defined themes
 - [ ] Sources other than nyaa/Custom user-defined sources
-- [ ] Choice between HTML scraper or RSS feed
+- [x] ~~Nyaa proxies/mirrors support~~
+- [x] ~~Page navigation~~
+- [x] ~~Choice between HTML scraper or RSS feed~~

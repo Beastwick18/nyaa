@@ -2,6 +2,7 @@ use std::{env, io::stdout};
 
 use app::{run_app, App};
 use crossterm::{
+    cursor::SetCursorStyle,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
 };
@@ -9,7 +10,7 @@ use ratatui::{backend::CrosstermBackend, Terminal};
 
 mod app;
 mod config;
-mod nyaa;
+mod source;
 mod widget;
 
 #[tokio::main()]
@@ -27,6 +28,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     enable_raw_mode()?;
     stdout().execute(EnterAlternateScreen)?;
+    stdout().execute(SetCursorStyle::SteadyBar)?;
     let backend = CrosstermBackend::new(stdout());
     let mut terminal = Terminal::new(backend)?;
 
@@ -35,6 +37,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let _ = run_app(&mut terminal, app).await;
 
     disable_raw_mode()?;
+    stdout().execute(SetCursorStyle::DefaultUserShape)?;
     stdout().execute(LeaveAlternateScreen)?;
     terminal.show_cursor()?;
 

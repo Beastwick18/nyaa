@@ -21,6 +21,7 @@ pub mod page;
 pub mod results;
 pub mod search;
 pub mod sort;
+pub mod sources;
 pub mod theme;
 
 pub trait Widget {

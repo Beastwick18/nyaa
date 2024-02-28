@@ -7,7 +7,7 @@ use ratatui::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::app::{App, Mode};
+use crate::app::{App, LoadType, Mode};
 
 use super::{create_block, EnumIter, StatefulTable, Widget};
 
@@ -119,7 +119,7 @@ impl Widget for SortPopup {
                         Sort::iter().nth(self.table.state.selected().unwrap_or_default())
                     {
                         self.selected = i.to_owned();
-                        app.mode = Mode::Loading;
+                        app.mode = Mode::Loading(LoadType::Sorting);
                     }
                 }
                 _ => {}
