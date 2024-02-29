@@ -43,7 +43,15 @@ sudo dpkg -i ./nyaa-VERSION-x86_64.deb
 ```
 
 ## ⌨️ Keybinds
-- Like modal text editors such as Vim, there are several modes. Each have their own keybinds, which can be found out by pressing `F1` or `?` while in that mode. For a list of all modes and their respective keybinds, check [KEYS.md](KEYS.md).
+Like modal text editors such as Vim, there are several modes. Each have their own keybinds, which can be found out by pressing `F1` or `?` while in that mode. Some of the important ones are:
+- `/` or `i` to search
+- `c` to open category popup
+- `s` to open sort popup
+- `f` to open filter popup
+- `t` to open theme popup
+- `n`, `p` or `l`, `h` for next and previous page
+- `q` to quit
+For a list of all modes and their respective keybinds, check [KEYS.md](KEYS.md).
 
 ## Proxies
 If `nyaa.si` is not accessible in your region, try one of the [proxies](https://nyaatorrents.info/#proxy). Once you find one that works, replace the value for `base_url` in the default config with the working proxy url. I would recommend `nyaa.land`, as it is very compatible, and usually working. Here's what the config for `nyaa.land` would look like:

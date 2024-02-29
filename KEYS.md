@@ -23,6 +23,7 @@ This mode is entered when the results table is focused.
 | S | Sort reversed |
 | t | Themes |
 | Ctrl-P | Goto page |
+| Ctrl-s | Sources |
 
 ## Search/Page/Input
 This mode is entered when any input field is focused
@@ -83,6 +84,17 @@ This mode is entered when the theme popup is focused
 | --- | --- |
 | Enter | Confirm |
 | Esc, t, q | Close |
+| j, ↓ | Down |
+| k, ↑ | Up |
+| g | Top |
+| G | Bottom |
+
+## Sources
+This mode is entered when the sort popup is focused
+| Key | Map |
+| --- | --- |
+| Enter | Confirm |
+| Esc, Ctrl-s, q | Close |
 | j, ↓ | Down |
 | k, ↑ | Up |
 | g | Top |
