@@ -199,6 +199,24 @@ pub struct CategoryPopup {
     pub minor: usize,
 }
 
+impl CategoryPopup {
+    fn next_tab(&mut self) {
+        self.major = match self.major + 1 >= ALL_CATEGORIES.len() {
+            true => 0,
+            false => self.major + 1,
+        };
+        self.minor = 0;
+    }
+
+    fn prev_tab(&mut self) {
+        self.major = match self.major == 0 {
+            true => ALL_CATEGORIES.len() - 1,
+            false => self.major - 1,
+        };
+        self.minor = 0;
+    }
+}
+
 impl Widget for CategoryPopup {
     fn draw(&self, f: &mut Frame, app: &App, area: Rect) {
         if let Some(cat) = ALL_CATEGORIES.get(self.major) {
@@ -264,15 +282,24 @@ impl Widget for CategoryPopup {
                 KeyCode::Char('j') | KeyCode::Down => {
                     if let Some(cat) = ALL_CATEGORIES.get(self.major) {
                         self.minor = match self.minor + 1 >= cat.entries.len() {
-                            true => 0,
+                            true => {
+                                self.next_tab();
+                                0
+                            }
                             false => self.minor + 1,
                         };
                     }
                 }
                 KeyCode::Char('k') | KeyCode::Up => {
-                    if let Some(cat) = ALL_CATEGORIES.get(self.major) {
+                    if let Some(_) = ALL_CATEGORIES.get(self.major) {
                         self.minor = match self.minor < 1 {
-                            true => cat.entries.len() - 1,
+                            true => {
+                                self.prev_tab();
+                                match ALL_CATEGORIES.get(self.major) {
+                                    Some(cat) => cat.entries.len() - 1,
+                                    None => 0,
+                                }
+                            }
                             false => self.minor - 1,
                         };
                     }
@@ -286,18 +313,10 @@ impl Widget for CategoryPopup {
                     self.minor = 0;
                 }
                 KeyCode::Tab | KeyCode::Char('J') => {
-                    self.major = match self.major + 1 >= ALL_CATEGORIES.len() {
-                        true => 0,
-                        false => self.major + 1,
-                    };
-                    self.minor = 0;
+                    self.next_tab();
                 }
                 KeyCode::BackTab | KeyCode::Char('K') => {
-                    self.major = match self.major == 0 {
-                        true => ALL_CATEGORIES.len() - 1,
-                        false => self.major - 1,
-                    };
-                    self.minor = 0;
+                    self.prev_tab();
                 }
                 _ => {}
             }
