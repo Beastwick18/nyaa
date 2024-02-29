@@ -79,7 +79,7 @@ timeout = 30
 ```
 and for windows looks like:
 ```toml
-torrent_client_cmd = 'cmd.exe /c "curl {torrent} > %USERPOFILE%/Downloads/{title}.torrent"'
+torrent_client_cmd = 'cmd.exe /c "curl {torrent} > %USERPROFILE%/Downloads/{title}.torrent"'
 default_theme = 'Default'
 default_category = 'AllCategories'
 default_filter = 'NoFilter'
