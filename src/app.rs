@@ -150,7 +150,12 @@ fn download(item: &Item, app: &mut App) {
             return;
         }
     };
+    app.errors.push(cmd_str.to_owned());
     if let [exec, args @ ..] = cmd.as_slice() {
+        // #[cfg(target_os = "windows")]
+        // let shell = ("cmd.exe", "/c");
+        // #[cfg(not(target_os = "windows"))]
+        // let shell = ("bash", "-c");
         let cmd = Command::new(exec)
             .args(args)
             .stdin(Stdio::null())
@@ -257,7 +262,7 @@ fn get_help(app: &mut App, w: &mut Widgets) {
 
 pub async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<()> {
     let mut w = Widgets::default();
-    app.config = match Config::from_file() {
+    app.config = match Config::load() {
         Ok(config) => config,
         Err(e) => {
             app.errors.push(e.to_string());
