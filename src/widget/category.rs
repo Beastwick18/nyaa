@@ -291,7 +291,7 @@ impl Widget for CategoryPopup {
                     }
                 }
                 KeyCode::Char('k') | KeyCode::Up => {
-                    if let Some(_) = ALL_CATEGORIES.get(self.major) {
+                    if ALL_CATEGORIES.get(self.major).is_some() {
                         self.minor = match self.minor < 1 {
                             true => {
                                 self.prev_tab();
