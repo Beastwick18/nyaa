@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 pub static CONFIG_FILE: &str = "config";
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub struct Config {
     pub torrent_client_cmd: String,
@@ -26,25 +26,27 @@ impl Default for Config {
     fn default() -> Config {
         Config {
             #[cfg(target_os = "windows")]
-            torrent_client_cmd:
-                "cmd.exe /c curl {torrent} > \"%USERPROFILE%\\Downloads\\{title}.torrent\""
-                    .to_owned(),
+            torrent_client_cmd: "cmd.exe /c curl {torrent} > \"%USERPROFILE%\\Downloads\\{file}\""
+                .to_owned(),
             #[cfg(not(target_os = "windows"))]
-            torrent_client_cmd: "bash -c 'curl {torrent} > ~/{title}.torrent'".to_owned(),
+            torrent_client_cmd: "bash -c 'curl {torrent} > ~/{file}'".to_owned(),
             default_category: ALL_CATEGORIES[0].entries[0].cfg.to_owned(),
             default_filter: Filter::NoFilter,
             default_sort: Sort::Date,
             default_source: Sources::NyaaHtml,
             default_theme: THEMES[0].name.to_owned(),
             default_search: "".to_owned(),
-            base_url: "http://nyaa.si/".to_owned(),
+            base_url: "https://nyaa.si/".to_owned(),
             timeout: 30,
         }
     }
 }
 
 impl Config {
-    pub fn from_file() -> Result<Config, ConfyError> {
+    pub fn load() -> Result<Config, ConfyError> {
         confy::load::<Config>(APP_NAME, CONFIG_FILE)
+    }
+    pub fn store(self) -> Result<(), ConfyError> {
+        confy::store::<Config>(APP_NAME, CONFIG_FILE, self)
     }
 }
