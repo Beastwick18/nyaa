@@ -25,7 +25,12 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Config {
         Config {
-            torrent_client_cmd: "bash -c 'curl {torrent} > \"{title}.torrent\"'".to_owned(),
+            #[cfg(target_os = "windows")]
+            torrent_client_cmd:
+                "cmd.exe /c curl {torrent} > \"%USERPROFILE%\\Downloads\\{title}.torrent\""
+                    .to_owned(),
+            #[cfg(not(target_os = "windows"))]
+            torrent_client_cmd: "bash -c 'curl {torrent} > \"~/{title}.torrent\"'".to_owned(),
             default_category: ALL_CATEGORIES[0].entries[0].cfg.to_owned(),
             default_filter: Filter::NoFilter,
             default_sort: Sort::Date,
