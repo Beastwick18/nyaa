@@ -1,6 +1,6 @@
 [package]
 name = "nyaa"
-version = "0.6.1"
+version = "0.6.2"
 edition = "2021"
 categories = ["command-line-utilities"]
 keywords = ["tui", "cli", "nyaa", "torrent", "download"]
