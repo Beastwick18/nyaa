@@ -27,7 +27,7 @@ pub fn get_ext_value<T: Default + FromStr>(ext_map: &ExtensionMap, key: &str) ->
         .unwrap_or_default()
 }
 
-fn sort_items(items: &mut Vec<Item>, sort: Sort, reverse: bool) {
+fn sort_items(items: &mut [Item], sort: Sort, reverse: bool) {
     let f: fn(&Item, &Item) -> Ordering = match sort {
         Sort::Date => |a, b| a.index.cmp(&b.index),
         Sort::Downloads => |a, b| b.downloads.cmp(&a.downloads),
