@@ -1,5 +1,6 @@
-use std::{cmp::Ordering, collections::BTreeMap, error::Error, str::FromStr};
+use std::{cmp::Ordering, collections::BTreeMap, error::Error, str::FromStr, time::Duration};
 
+use regex::Regex;
 use rss::{extension::Extension, Channel};
 use urlencoding::encode;
 
@@ -50,11 +51,29 @@ impl Source for NyaaRssSource {
         app.page = 1;
         let (high, low) = (cat / 10, cat % 10);
         let query = encode(&query);
+        let mut base_url = app.config.base_url.clone();
+        let re = Regex::new(r"^https?://.+$").unwrap();
+        if !re.is_match(&base_url) {
+            // Assume https if not present
+            base_url = format!("https://{}", base_url);
+        }
+
         let url = format!(
-            "https://nyaa.si/?page=rss&f={}&c={}_{}&q={}&m",
-            filter, high, low, query
+            "{}/?page=rss&f={}&c={}_{}&q={}&m",
+            base_url, filter, high, low, query
         );
-        let content = reqwest::get(url).await?.bytes().await?;
+        let content = reqwest::get(url.clone()).await?.bytes().await?;
+
+        let client = reqwest::Client::builder()
+            .gzip(true)
+            .timeout(Duration::from_secs(app.config.timeout))
+            .build()?;
+        let response = client.get(url.to_owned()).send().await?;
+        let code = response.status().as_u16();
+        if code != 200 {
+            // Throw error if response code is not OK
+            return Err(format!("{}\nInvalid response code: {}", url, code).into());
+        }
 
         let channel = Channel::read_from(&content[..])?;
 
@@ -88,7 +107,7 @@ impl Source for NyaaRssSource {
                     bytes: to_bytes(&size),
                     size,
                     title: item.title.to_owned().unwrap_or("???".to_owned()),
-                    torrent_link: format!("https://nyaa.si/download/{}.torrent", id),
+                    torrent_link: format!("{}/download/{}.torrent", base_url, id),
                     magnet_link: item.link.to_owned().unwrap_or("???".to_owned()),
                     file_name: format!("{}.torrent", id),
                     trusted: get_ext_value::<String>(ext, "trusted").eq("Yes"),

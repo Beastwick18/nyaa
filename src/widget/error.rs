@@ -46,7 +46,7 @@ impl Widget for ErrorPopup {
             .block(
                 create_block(app.theme, true)
                     .fg(app.theme.remake)
-                    .title("Error"),
+                    .title("Error: Press any key to dismiss"),
             )
             .wrap(Wrap { trim: false });
         super::clear(f, clear, app.theme.bg);

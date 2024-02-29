@@ -132,6 +132,7 @@ fn download(item: &Item, app: &mut App) {
         .replace("{torrent}", &item.torrent_link)
         .replace("{title}", &item.title)
         .replace("{file}", &item.file_name);
+    app.errors.push(item.torrent_link.clone());
     #[cfg(not(target_os = "windows"))]
     let cmd_str = app
         .config
@@ -271,7 +272,7 @@ pub async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io
     app.src = app.config.default_source.to_owned();
     let theme_name = app.config.default_theme.to_lowercase();
     for (i, theme) in THEMES.iter().enumerate() {
-        if theme.name == theme_name {
+        if theme.name.to_lowercase() == theme_name {
             w.theme.selected = i;
             app.theme = theme;
             break;

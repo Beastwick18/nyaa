@@ -197,7 +197,7 @@ impl Source for NyaaHtmlSource {
                 size,
                 bytes,
                 title: title.to_owned(),
-                torrent_link: format!("https://nyaa.si{}", torrent_rel),
+                torrent_link: format!("{}{}", base_url, torrent_rel),
                 magnet_link: magnet_link.to_owned(),
                 file_name: file_name.to_owned(),
                 category,

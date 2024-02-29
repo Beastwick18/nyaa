@@ -44,6 +44,7 @@ sudo dpkg -i ./nyaa-VERSION-x86_64.deb
 
 ## ⌨️ Keybinds
 Like modal text editors such as Vim, there are several modes. Each have their own keybinds, which can be found out by pressing `F1` or `?` while in that mode. Some of the important ones are:
+- `hjkl` or arrow keys for general navigation
 - `/` or `i` to search
 - `c` to open category popup
 - `s` to open sort popup
@@ -78,7 +79,7 @@ timeout = 30
 ```
 and for windows looks like:
 ```toml
-torrnet_client_cmd = 'cmd.exe /c "curl {torrent} > %USERPOFILE%/Downloads/{title}.torrent"'
+torrent_client_cmd = 'cmd.exe /c "curl {torrent} > %USERPOFILE%/Downloads/{title}.torrent"'
 default_theme = 'Default'
 default_category = 'AllCategories'
 default_filter = 'NoFilter'
