@@ -61,7 +61,7 @@ impl Widget for ErrorPopup {
         }) = e
         {
             match code {
-                KeyCode::Esc => {
+                KeyCode::Esc | KeyCode::Char(_) => {
                     if app.errors.is_empty() {
                         app.mode = Mode::Normal;
                     }

@@ -124,31 +124,22 @@ impl Default for App {
 }
 
 fn download(item: &Item, app: &mut App) {
-    // let item = match self
-    //     .table
-    //     .state
-    //     .selected()
-    //     .and_then(|i| self.table.items.get(i))
-    // {
-    //     Some(i) => i,
-    //     None => return,
-    // };
     #[cfg(target_os = "windows")]
     let cmd_str = app
         .config
         .torrent_client_cmd
-        .replace("{magnet}", item.magnet_link.as_str())
-        .replace("{torrent}", item.torrent_link.as_str())
-        .replace("{title}", item.title.as_str())
-        .replace("{file}", item.file_name.as_str());
+        .replace("{magnet}", &item.magnet_link)
+        .replace("{torrent}", &item.torrent_link)
+        .replace("{title}", &item.title)
+        .replace("{file}", &item.file_name);
     #[cfg(not(target_os = "windows"))]
     let cmd_str = app
         .config
         .torrent_client_cmd
-        .replace("{magnet}", &shellwords::escape(item.magnet_link.as_str()))
-        .replace("{torrent}", &shellwords::escape(item.torrent_link.as_str()))
-        .replace("{title}", &shellwords::escape(item.title.as_str()))
-        .replace("{file}", &shellwords::escape(item.file_name.as_str()));
+        .replace("{magnet}", &shellwords::escape(&item.magnet_link))
+        .replace("{torrent}", &shellwords::escape(&item.torrent_link))
+        .replace("{title}", &shellwords::escape(&item.title))
+        .replace("{file}", &shellwords::escape(&item.file_name));
     let cmd = match shellwords::split(&cmd_str) {
         Ok(cmd) => cmd,
         Err(e) => {
