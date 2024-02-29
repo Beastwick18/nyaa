@@ -132,7 +132,6 @@ fn download(item: &Item, app: &mut App) {
         .replace("{torrent}", &item.torrent_link)
         .replace("{title}", &item.title)
         .replace("{file}", &item.file_name);
-    app.errors.push(item.torrent_link.clone());
     #[cfg(not(target_os = "windows"))]
     let cmd_str = app
         .config
