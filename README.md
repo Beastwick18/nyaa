@@ -62,9 +62,13 @@ base_url = 'nyaa.land'
 
 ## ⚙️ Configuration
 The location of the config file for linux is:
+
 `~/.config/nyaa/config.toml`
+
 and on windows is
+
 `C:\Users\brad\AppData\Roaming\nyaa\config\config.toml`
+
 The default configuration file for linux looks like:
 ```toml
 torrent_client_cmd = 'bash -c "curl {torrent} > ~/torrents/{title}.torrent"'
