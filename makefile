@@ -10,12 +10,15 @@ release:
 	@mkdir -p "release/$(VERSION)"
 	cargo build --target $(WINDOWS_TARGET) --release
 	cargo build --target $(LINUX_TARGET) --release
-	cargo deb --profile release
 	cp "target/$(WINDOWS_TARGET)/release/nyaa.exe" "release/$(VERSION)/nyaa-$(VERSION)-$(WINDOWS_TARGET).exe"
 	cp "target/$(LINUX_TARGET)/release/nyaa" "release/$(VERSION)/nyaa-$(VERSION)-$(LINUX_TARGET)"
-	cp "target/debian/nyaa_$(VERSION)-1_amd64.deb" "release/$(VERSION)/nyaa-$(VERSION)-x86_64.deb"
 	@echo "\nCommits since last tag:"
 	@git log $(shell git describe --tags --abbrev=0)..HEAD --oneline
+
+deb:
+	@mkdir -p "release/$(VERSION)"
+	cargo deb --profile release
+	cp "target/debian/nyaa_$(VERSION)-1_amd64.deb" "release/$(VERSION)/nyaa-$(VERSION)-x86_64.deb"
 
 gh:
 	gh release create v$(VERSION) release/$(VERSION)/* --draft
