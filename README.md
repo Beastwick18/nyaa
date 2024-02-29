@@ -52,9 +52,25 @@ base_url = 'nyaa.land'
 ```
 
 ## ⚙️ Configuration
-The default configuration file looks like:
+The location of the config file for linux is:
+`~/.config/nyaa/config.toml`
+and on windows is
+`C:\Users\brad\AppData\Roaming\nyaa\config\config.toml`
+The default configuration file for linux looks like:
 ```toml
 torrent_client_cmd = 'bash -c "curl {torrent} > ~/torrents/{title}.torrent"'
+default_theme = 'Default'
+default_category = 'AllCategories'
+default_filter = 'NoFilter'
+default_sort = 'Date'
+default_search = ''
+default_source = 'NyaaHtml'
+base_url = 'https://nyaa.si'
+timeout = 30
+```
+and for windows looks like:
+```toml
+torrnet_client_cmd = 'cmd.exe /c "curl {torrent} > %USERPOFILE%/Downloads/{title}.torrent"'
 default_theme = 'Default'
 default_category = 'AllCategories'
 default_filter = 'NoFilter'

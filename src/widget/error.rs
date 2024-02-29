@@ -1,6 +1,6 @@
 use std::cmp::{max, min};
 
-use crossterm::event::{Event, KeyEvent, KeyEventKind};
+use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     layout::Rect,
     style::Stylize,
@@ -55,12 +55,18 @@ impl Widget for ErrorPopup {
 
     fn handle_event(&mut self, app: &mut App, e: &Event) {
         if let Event::Key(KeyEvent {
+            code,
             kind: KeyEventKind::Press,
             ..
         }) = e
         {
-            if app.errors.is_empty() {
-                app.mode = Mode::Normal;
+            match code {
+                KeyCode::Esc => {
+                    if app.errors.is_empty() {
+                        app.mode = Mode::Normal;
+                    }
+                }
+                _ => {}
             }
         }
     }

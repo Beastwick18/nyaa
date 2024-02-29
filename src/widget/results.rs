@@ -1,8 +1,4 @@
-use std::{
-    cmp::max,
-    io::{BufReader, Read},
-    process::{Command, Stdio},
-};
+use std::cmp::max;
 
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::{
@@ -243,69 +239,7 @@ impl super::Widget for ResultsWidget {
                     }
                 }
                 (Enter, &KeyModifiers::NONE) => {
-                    let item = match self
-                        .table
-                        .state
-                        .selected()
-                        .and_then(|i| self.table.items.get(i))
-                    {
-                        Some(i) => i,
-                        None => return,
-                    };
-                    let cmd_str = app
-                        .config
-                        .torrent_client_cmd
-                        .replace("{magnet}", &shellwords::escape(item.magnet_link.as_str()))
-                        .replace("{torrent}", &shellwords::escape(item.torrent_link.as_str()))
-                        .replace("{title}", &shellwords::escape(item.title.as_str()))
-                        .replace("{file}", &shellwords::escape(item.file_name.as_str()));
-                    let cmd = match shellwords::split(&cmd_str) {
-                        Ok(cmd) => cmd,
-                        Err(e) => {
-                            app.errors.push(format!(
-                                "{}\n{}:\nfailed to split command:\n{}",
-                                cmd_str, app.config.torrent_client_cmd, e
-                            ));
-                            return;
-                        }
-                    };
-                    if let [exec, args @ ..] = cmd.as_slice() {
-                        let cmd = Command::new(exec)
-                            .args(args)
-                            .stdin(Stdio::null())
-                            .stdout(Stdio::null())
-                            .stderr(Stdio::piped())
-                            .spawn();
-                        let child = match cmd {
-                            Ok(child) => child,
-                            Err(e) => {
-                                app.errors
-                                    .push(format!("{}:\nFailed to run:\n{}", cmd_str, e));
-                                return;
-                            }
-                        };
-                        let output = match child.wait_with_output() {
-                            Ok(output) => output,
-                            Err(e) => {
-                                app.errors
-                                    .push(format!("{}:\nFailed to get output:\n{}", cmd_str, e));
-                                return;
-                            }
-                        };
-
-                        if output.status.code() != Some(0) {
-                            let mut err = BufReader::new(&*output.stderr);
-                            let mut err_str = String::new();
-                            err.read_to_string(&mut err_str).unwrap_or(0);
-                            app.errors.push(format!(
-                                "{}:\nExited with status code {}:\n{}",
-                                cmd_str, output.status, err_str
-                            ));
-                        }
-                    } else {
-                        app.errors
-                            .push(format!("{}:\nThe command is not valid.", cmd_str));
-                    }
+                    app.mode = Mode::Loading(LoadType::Downloading);
                 }
                 (Char('s'), &KeyModifiers::CONTROL) => {
                     app.mode = Mode::Sources;
