@@ -27,20 +27,35 @@ pub fn get_ext_value<T: Default + FromStr>(ext_map: &ExtensionMap, key: &str) ->
         .unwrap_or_default()
 }
 
+fn sort_items(items: &mut Vec<Item>, sort: Sort, reverse: bool) {
+    let f: fn(&Item, &Item) -> Ordering = match sort {
+        Sort::Date => |a, b| a.index.cmp(&b.index),
+        Sort::Downloads => |a, b| b.downloads.cmp(&a.downloads),
+        Sort::Seeders => |a, b| b.seeders.cmp(&a.seeders),
+        Sort::Leechers => |a, b| b.leechers.cmp(&a.leechers),
+        Sort::Size => |a, b| b.bytes.cmp(&a.bytes),
+    };
+    items.sort_by(f);
+    if reverse {
+        items.reverse();
+    }
+}
+
 impl Source for NyaaRssSource {
     async fn sort(app: &mut App, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
         let mut items = w.results.table.items.clone();
-        let f: fn(&Item, &Item) -> Ordering = match w.sort.selected {
-            Sort::Date => |a, b| a.index.cmp(&b.index),
-            Sort::Downloads => |a, b| b.downloads.cmp(&a.downloads),
-            Sort::Seeders => |a, b| b.seeders.cmp(&a.seeders),
-            Sort::Leechers => |a, b| b.leechers.cmp(&a.leechers),
-            Sort::Size => |a, b| b.bytes.cmp(&a.bytes),
-        };
-        items.sort_by(f);
-        if app.reverse {
-            items.reverse();
-        }
+        sort_items(&mut items, w.sort.selected.clone(), app.reverse);
+        // let f: fn(&Item, &Item) -> Ordering = match w.sort.selected {
+        //     Sort::Date => |a, b| a.index.cmp(&b.index),
+        //     Sort::Downloads => |a, b| b.downloads.cmp(&a.downloads),
+        //     Sort::Seeders => |a, b| b.seeders.cmp(&a.seeders),
+        //     Sort::Leechers => |a, b| b.leechers.cmp(&a.leechers),
+        //     Sort::Size => |a, b| b.bytes.cmp(&a.bytes),
+        // };
+        // items.sort_by(f);
+        // if app.reverse {
+        //     items.reverse();
+        // }
         Ok(items)
     }
     async fn search(app: &mut App, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
@@ -77,7 +92,7 @@ impl Source for NyaaRssSource {
 
         let channel = Channel::read_from(&content[..])?;
 
-        let results: Vec<Item> = channel
+        let mut results: Vec<Item> = channel
             .items
             .iter()
             .enumerate()
@@ -118,6 +133,7 @@ impl Source for NyaaRssSource {
             })
             .collect();
         app.total_results = results.len();
+        sort_items(&mut results, w.sort.selected.clone(), app.reverse);
         Ok(results)
     }
 
