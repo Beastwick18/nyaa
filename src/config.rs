@@ -31,10 +31,9 @@ impl Default for Config {
     fn default() -> Config {
         Config {
             #[cfg(windows)]
-            torrent_client_cmd: "cmd.exe /c curl {torrent} > \"%USERPROFILE%\\Downloads\\{file}\""
-                .to_owned(),
+            torrent_client_cmd: "curl {torrent} > ~\\Downloads\\{file}".to_owned(),
             #[cfg(unix)]
-            torrent_client_cmd: "bash -c 'curl {torrent} > ~/{file}'".to_owned(),
+            torrent_client_cmd: "curl {torrent} > ~/{file}".to_owned(),
             default_category: ALL_CATEGORIES[0].entries[0].cfg.to_owned(),
             default_filter: Filter::NoFilter,
             default_sort: Sort::Date,
