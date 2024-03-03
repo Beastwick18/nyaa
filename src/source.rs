@@ -4,16 +4,32 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     app::{App, LoadType, Widgets},
-    widget::EnumIter,
+    widget::{category::CatIcon, EnumIter},
 };
 
-use self::{
-    nyaa_html::{Item, NyaaHtmlSource},
-    nyaa_rss::NyaaRssSource,
-};
+use self::{nyaa_html::NyaaHtmlSource, nyaa_rss::NyaaRssSource};
 
 pub mod nyaa_html;
 pub mod nyaa_rss;
+
+#[derive(Clone)]
+pub struct Item {
+    pub index: usize,
+    pub date: String,
+    pub seeders: u32,
+    pub leechers: u32,
+    pub downloads: u32,
+    pub size: String,
+    pub bytes: usize,
+    pub title: String,
+    pub torrent_link: String,
+    pub magnet_link: String,
+    pub file_name: String,
+    pub category: usize,
+    pub icon: CatIcon,
+    pub trusted: bool,
+    pub remake: bool,
+}
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
 pub enum Sources {

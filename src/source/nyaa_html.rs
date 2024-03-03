@@ -1,33 +1,17 @@
 use std::{error::Error, time::Duration};
 
+use chrono::{DateTime, Local, NaiveDateTime, TimeZone};
 use regex::Regex;
+use reqwest::StatusCode;
 use scraper::{Html, Selector};
 use urlencoding::encode;
 
 use crate::{
     app::{App, Widgets},
-    widget::category::{CatIcon, ALL_CATEGORIES},
+    widget::category::ALL_CATEGORIES,
 };
 
-use super::Source;
-
-#[derive(Clone)]
-pub struct Item {
-    pub index: usize,
-    pub seeders: u32,
-    pub leechers: u32,
-    pub downloads: u32,
-    pub size: String,
-    pub bytes: usize,
-    pub title: String,
-    pub torrent_link: String,
-    pub magnet_link: String,
-    pub file_name: String,
-    pub category: usize,
-    pub icon: CatIcon,
-    pub trusted: bool,
-    pub remake: bool,
-}
+use super::{Item, Source};
 
 pub struct NyaaHtmlSource;
 
@@ -36,14 +20,14 @@ pub fn to_bytes(size: &str) -> usize {
     let b = split.next().unwrap_or("0");
     let unit = split.last().unwrap_or("B");
     let f = b.parse::<f64>().unwrap_or(0.0);
-    let factor: usize = match unit.chars().next().unwrap_or('B') {
-        'T' => 1000000000000,
-        'G' => 1000000000,
-        'M' => 1000000,
-        'K' => 1000,
+    let factor: i32 = match unit.chars().next().unwrap_or('B') {
+        'T' => 12,
+        'G' => 9,
+        'M' => 6,
+        'K' => 3,
         _ => 1,
     };
-    (factor as f64 * f).floor() as usize
+    (f64::powi(10.0, factor) * f).floor() as usize
 }
 
 impl Source for NyaaHtmlSource {
@@ -57,23 +41,21 @@ impl Source for NyaaHtmlSource {
         NyaaHtmlSource::search(app, w).await
     }
     async fn search(app: &mut App, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
-        let mut base_url = app.config.base_url.clone();
         let cat = w.category.category;
-        let query = w.search.input.input.clone();
         let filter = w.filter.selected.clone() as u16;
         let page = app.page;
         let sort = w.sort.selected.to_url();
-        let asc = app.reverse;
         let timeout = app.config.timeout;
 
-        let re = Regex::new(r"^https?://.+$").unwrap();
-        if !re.is_match(&base_url) {
+        let re = Regex::new(r"^https?://.+$")?;
+        let base_url = match !re.is_match(&app.config.base_url) {
             // Assume https if not present
-            base_url = format!("https://{}", base_url);
-        }
+            true => format!("https://{}", app.config.base_url),
+            false => app.config.base_url.to_owned(),
+        };
         let (high, low) = (cat / 10, cat % 10);
-        let query = encode(&query);
-        let ord = match asc {
+        let query = encode(&w.search.input.input);
+        let ord = match app.ascending {
             true => "asc",
             false => "desc",
         };
@@ -87,25 +69,25 @@ impl Source for NyaaHtmlSource {
             .timeout(Duration::from_secs(timeout))
             .build()?;
         let response = client.get(url.to_owned()).send().await?;
-        let code = response.status().as_u16();
-        if code != 200 {
+        if response.status() != StatusCode::OK {
             // Throw error if response code is not OK
+            let code = response.status().as_u16();
             return Err(format!("{}\nInvalid repsponse code: {}", url, code).into());
         }
         let content = response.bytes().await?;
         let doc = Html::parse_document(std::str::from_utf8(&content[..])?);
 
-        let item_sel = &Selector::parse("table.torrent-list > tbody > tr").unwrap();
-        let icon_sel = &Selector::parse("td:first-of-type > a").unwrap();
-        let title_sel = &Selector::parse("td:nth-of-type(2) > a:last-of-type").unwrap();
-        let torrent_sel = &Selector::parse("td:nth-of-type(3) > a:nth-of-type(1)").unwrap();
-        let magnet_sel = &Selector::parse("td:nth-of-type(3) > a:nth-of-type(2)").unwrap();
-        let size_sel = &Selector::parse("td:nth-of-type(4)").unwrap();
-        // let date_sel = &Selector::parse("td:nth-of-type(5)").unwrap();
-        let seeders_sel = &Selector::parse("td:nth-of-type(6)").unwrap();
-        let leechers_sel = &Selector::parse("td:nth-of-type(7)").unwrap();
-        let downloads_sel = &Selector::parse("td:nth-of-type(8)").unwrap();
-        let pagination_sel = &Selector::parse(".pagination-page-info").unwrap();
+        let item_sel = &Selector::parse("table.torrent-list > tbody > tr")?;
+        let icon_sel = &Selector::parse("td:first-of-type > a")?;
+        let title_sel = &Selector::parse("td:nth-of-type(2) > a:last-of-type")?;
+        let torrent_sel = &Selector::parse("td:nth-of-type(3) > a:nth-of-type(1)")?;
+        let magnet_sel = &Selector::parse("td:nth-of-type(3) > a:nth-of-type(2)")?;
+        let size_sel = &Selector::parse("td:nth-of-type(4)")?;
+        let date_sel = &Selector::parse("td:nth-of-type(5)").unwrap();
+        let seeders_sel = &Selector::parse("td:nth-of-type(6)")?;
+        let leechers_sel = &Selector::parse("td:nth-of-type(7)")?;
+        let downloads_sel = &Selector::parse("td:nth-of-type(8)")?;
+        let pagination_sel = &Selector::parse(".pagination-page-info")?;
 
         app.last_page = 100;
         app.total_results = 7500;
@@ -131,8 +113,8 @@ impl Source for NyaaHtmlSource {
                 .and_then(|i| i.split('=').last())
                 .unwrap_or("");
             let split: Vec<&str> = cat_str.split('_').collect();
-            let high = split.first().unwrap_or(&"1").parse::<usize>().unwrap_or(1);
-            let low = split.last().unwrap_or(&"0").parse::<usize>().unwrap_or(0);
+            let high = split.first().unwrap_or(&"1").parse().unwrap_or(1);
+            let low = split.last().unwrap_or(&"0").parse().unwrap_or(0);
             let category = high * 10 + low;
             let title = e
                 .select(title_sel)
@@ -157,11 +139,14 @@ impl Source for NyaaHtmlSource {
                 .replace('i', "")
                 .replace("Bytes", "B");
             let bytes = to_bytes(&size);
-            // let date = e
-            //     .select(date_sel)
-            //     .next()
-            //     .map(|i| i.inner_html())
-            //     .unwrap_or("".to_owned());
+            let date = e
+                .select(date_sel)
+                .next()
+                .map(|i| i.inner_html())
+                .unwrap_or("".to_owned());
+            let naive = NaiveDateTime::parse_from_str(&date, "%Y-%m-%d %H:%M").unwrap_or_default();
+            let date_time: DateTime<Local> = Local.from_utc_datetime(&naive);
+            let date = date_time.format("%m/%d/%y %H:%M").to_string();
             let seeders = e
                 .select(seeders_sel)
                 .next()
@@ -191,6 +176,7 @@ impl Source for NyaaHtmlSource {
                 .unwrap_or_default();
             items.push(Item {
                 index,
+                date,
                 seeders,
                 leechers,
                 downloads,

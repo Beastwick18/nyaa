@@ -1,5 +1,6 @@
 use std::{cmp::Ordering, collections::BTreeMap, error::Error, str::FromStr, time::Duration};
 
+use chrono::{DateTime, Local};
 use regex::Regex;
 use rss::{extension::Extension, Channel};
 use urlencoding::encode;
@@ -9,10 +10,7 @@ use crate::{
     widget::{category::ALL_CATEGORIES, sort::Sort},
 };
 
-use super::{
-    nyaa_html::{to_bytes, Item},
-    Source,
-};
+use super::{nyaa_html::to_bytes, Item, Source};
 
 pub struct NyaaRssSource;
 
@@ -22,8 +20,8 @@ pub fn get_ext_value<T: Default + FromStr>(ext_map: &ExtensionMap, key: &str) ->
     ext_map
         .get(key)
         .and_then(|v| v.first())
-        .and_then(|s| s.value.to_owned())
-        .and_then(|val| val.parse::<T>().ok())
+        .and_then(|s| s.value())
+        .and_then(|val| val.parse().ok())
         .unwrap_or_default()
 }
 
@@ -44,20 +42,10 @@ fn sort_items(items: &mut [Item], sort: Sort, reverse: bool) {
 impl Source for NyaaRssSource {
     async fn sort(app: &mut App, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
         let mut items = w.results.table.items.clone();
-        sort_items(&mut items, w.sort.selected.clone(), app.reverse);
-        // let f: fn(&Item, &Item) -> Ordering = match w.sort.selected {
-        //     Sort::Date => |a, b| a.index.cmp(&b.index),
-        //     Sort::Downloads => |a, b| b.downloads.cmp(&a.downloads),
-        //     Sort::Seeders => |a, b| b.seeders.cmp(&a.seeders),
-        //     Sort::Leechers => |a, b| b.leechers.cmp(&a.leechers),
-        //     Sort::Size => |a, b| b.bytes.cmp(&a.bytes),
-        // };
-        // items.sort_by(f);
-        // if app.reverse {
-        //     items.reverse();
-        // }
+        sort_items(&mut items, w.sort.selected.clone(), app.ascending);
         Ok(items)
     }
+
     async fn search(app: &mut App, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
         let cat = w.category.category;
         let query = w.search.input.input.clone();
@@ -98,13 +86,13 @@ impl Source for NyaaRssSource {
             .enumerate()
             .filter_map(|(index, item)| {
                 let ext = item.extensions().get("nyaa")?;
-                let guid = item.guid.to_owned().unwrap_or_default();
-                let id = guid.value.split('/').last().unwrap_or_default().to_owned(); // Get nyaa id from guid url in format
-                                                                                      // `https://nyaa.si/view/{id}`
+                let guid = item.guid()?;
+                let id = guid.value.rsplitn(2, '/').next().unwrap_or_default(); // Get nyaa id from guid url in format
+                                                                                // `https://nyaa.si/view/{id}`
                 let category_str = get_ext_value::<String>(ext, "categoryId");
-                let split: Vec<&str> = category_str.split('_').collect();
-                let high = split.first().unwrap_or(&"1").parse::<usize>().unwrap_or(1);
-                let low = split.last().unwrap_or(&"0").parse::<usize>().unwrap_or(0);
+                let split: Vec<&str> = category_str.splitn(2, '_').collect();
+                let high: usize = split.first().and_then(|s| s.parse().ok()).unwrap_or(0);
+                let low: usize = split.last().and_then(|s| s.parse().ok()).unwrap_or(0);
                 let category = high * 10 + low;
                 let icon = ALL_CATEGORIES
                     .get(high)
@@ -113,17 +101,21 @@ impl Source for NyaaRssSource {
                 let size = get_ext_value::<String>(ext, "size")
                     .replace('i', "")
                     .replace("Bytes", "B");
+                let pub_date = item.pub_date().unwrap_or("");
+                let date = DateTime::parse_from_rfc2822(pub_date).unwrap_or_default();
+                let date = date.with_timezone(&Local);
 
                 Some(Item {
                     index,
+                    date: date.format("%m/%d/%y %H:%M").to_string(),
                     seeders: get_ext_value(ext, "seeders"),
                     leechers: get_ext_value(ext, "leechers"),
                     downloads: get_ext_value(ext, "downloads"),
                     bytes: to_bytes(&size),
                     size,
-                    title: item.title.to_owned().unwrap_or("???".to_owned()),
+                    title: item.title().unwrap_or("???").to_owned(),
                     torrent_link: format!("{}/download/{}.torrent", base_url, id),
-                    magnet_link: item.link.to_owned().unwrap_or("???".to_owned()),
+                    magnet_link: item.link().unwrap_or("???").to_owned(),
                     file_name: format!("{}.torrent", id),
                     trusted: get_ext_value::<String>(ext, "trusted").eq("Yes"),
                     remake: get_ext_value::<String>(ext, "remake").eq("Yes"),
@@ -133,7 +125,7 @@ impl Source for NyaaRssSource {
             })
             .collect();
         app.total_results = results.len();
-        sort_items(&mut results, w.sort.selected.clone(), app.reverse);
+        sort_items(&mut results, w.sort.selected.clone(), app.ascending);
         Ok(results)
     }
 

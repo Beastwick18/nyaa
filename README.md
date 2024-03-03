@@ -1,10 +1,8 @@
-<h1 align="left">nyaa 🐈‍⬛</h1>
-<h3>A simple tui for browsing and downloading Anime torrents from nyaa.si.</h3>
-<p>
-  <a href="https://github.com/Beastwick18/nyaa/releases/latest"><img src="https://img.shields.io/github/v/release/Beastwick18/nyaa.svg?color=#2ea043" /></a>
-  <a href="https://aur.archlinux.org/packages/nyaa"><img src="https://img.shields.io/aur/version/nyaa?color=blue" /></a>
-  <a href="https://crates.io/crates/nyaa"><img src="https://img.shields.io/crates/v/nyaa" /></a>
-</p>
+# nyaa 🐈‍⬛
+### A simple tui for browsing and downloading Anime torrents from nyaa.si.
+[<img src="https://img.shields.io/github/v/release/Beastwick18/nyaa.svg?color=#2ea043" />](https://github.com/Beastwick18/nyaa/releases/latest)
+[<img src="https://img.shields.io/aur/version/nyaa?color=blue" />](https://aur.archlinux.org/packages/nyaa)
+[<img src="https://img.shields.io/crates/v/nyaa" />](https://crates.io/crates/nyaa)
 
 <p align="center">
   <img src="assets/tty.gif" width="800" alt="animated" />
@@ -12,24 +10,13 @@
 
 ## ⚡ Installation
 ### With cargo
-```
+```sh
 cargo install nyaa
 ```
 
 ### On Arch Linux ([AUR](https://aur.archlinux.org/packages/nyaa))
-```
+```sh
 yay -S nyaa
-```
-
-### Windows/Linux Binaries
-Binaries for Linux and Windows are available on the [releases](https://github.com/Beastwick18/nyaa/releases/latest) page.
-
-### From Source
-To build from source, you must have both `git` and `cargo` installed.
-```
-git clone https://github.com/Beastwick18/nyaa
-cd nyaa
-cargo install --path .
 ```
 
 ### Ubuntu/Debian
@@ -40,6 +27,17 @@ sudo apt install ./nyaa-VERSION-x86_64.deb
 or `dpkg`
 ```sh
 sudo dpkg -i ./nyaa-VERSION-x86_64.deb
+```
+
+### Windows/Linux Binaries
+Binaries for Linux and Windows are available on the [releases](https://github.com/Beastwick18/nyaa/releases/latest) page.
+
+### From Source
+To build from source, you must have both `git` and `cargo` installed.
+```sh
+git clone https://github.com/Beastwick18/nyaa
+cd nyaa
+cargo install --path .
 ```
 
 ## ⌨️ Keybinds
@@ -54,7 +52,7 @@ Like modal text editors such as Vim, there are several modes. Each have their ow
 - `q` to quit
 For a list of all modes and their respective keybinds, check [KEYS.md](KEYS.md).
 
-## Proxies
+## 🌐 Proxies
 If `nyaa.si` is not accessible in your region, try one of the [proxies](https://nyaatorrents.info/#proxy). Once you find one that works, replace the value for `base_url` in the default config with the working proxy url. I would recommend `nyaa.land`, as it is very compatible, and usually working. Here's what the config for `nyaa.land` would look like:
 ```toml
 base_url = 'nyaa.land'
@@ -67,11 +65,11 @@ The location of the config file for linux is:
 
 and on windows is
 
-`C:\Users\brad\AppData\Roaming\nyaa\config\config.toml`
+`C:\Users\%USERNAME%\AppData\Roaming\nyaa\config\config.toml`
 
 The default configuration file for linux looks like:
 ```toml
-torrent_client_cmd = 'bash -c "curl {torrent} > ~/torrents/{title}.torrent"'
+torrent_client_cmd = 'curl {torrent} > ~/torrents/{file}'
 default_theme = 'Default'
 default_category = 'AllCategories'
 default_filter = 'NoFilter'
@@ -83,7 +81,7 @@ timeout = 30
 ```
 and for windows looks like:
 ```toml
-torrent_client_cmd = 'cmd.exe /c "curl {torrent} > %USERPROFILE%/Downloads/{title}.torrent"'
+torrent_client_cmd = 'curl {torrent} > %USERPROFILE%\Downloads\{file}'
 default_theme = 'Default'
 default_category = 'AllCategories'
 default_filter = 'NoFilter'
@@ -97,7 +95,7 @@ timeout = 30
   - `{torrent}` - The link to the torrent file hosted on nyaa.si
   - `{magnet}` - The magnet link associated with the torrent
   - `{title}` - The title of the post on nyaa.si
-  - `{file}` - The name of the torrent file hosted on nyaa.si
+  - `{file}` - The name of the torrent file hosted on nyaa.si. It usually looks like `1783089.torrent`
 
 `default_theme` refers to the theme selected by default when the app is opened. Possible values are `Default`, `Dracula`, `Gruvbox`, or `Catppuccin Macchiato`. Custom themes coming soon!
 

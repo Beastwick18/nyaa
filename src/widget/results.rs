@@ -11,21 +11,24 @@ use ratatui::{
 
 use crate::{
     app::{App, LoadType, Mode},
-    source::nyaa_html::Item,
+    source::Item,
+    widget::sort::SortDir,
 };
 
-use super::{centered_rect, create_block, StatefulTable};
+use super::{centered_rect, create_block, sort::Sort, StatefulTable};
 
 pub struct ResultsWidget {
     pub table: StatefulTable<Item>,
+    sort: Sort,
 }
 
 impl ResultsWidget {
-    pub fn with_items(&mut self, items: Vec<Item>) {
+    pub fn with_items(&mut self, items: Vec<Item>, sort: Sort) {
         let len = items.len();
         self.table.items = items;
         self.table.select(0);
         self.table.scrollbar_state = self.table.scrollbar_state.content_length(len);
+        self.sort = sort;
     }
 }
 
@@ -33,6 +36,7 @@ impl Default for ResultsWidget {
     fn default() -> Self {
         ResultsWidget {
             table: StatefulTable::with_items(vec![]),
+            sort: Sort::Date,
         }
     }
 }
@@ -51,20 +55,42 @@ impl super::Widget for ResultsWidget {
             Mode::Normal => app.theme.border_focused_color,
             _ => app.theme.border_color,
         };
-        let binding = Constraint::from_lengths([3, area.width - 32, 9, 4, 4, 5]);
-        let header = Row::new([
+        let binding = Constraint::from_lengths([3, area.width - 48, 9, 14, 4, 4, 5]);
+        let header_slice = &mut [
             "Cat".to_owned(),
             "Name".to_owned(),
             format!("{:^9}", " Size"),
+            format!("{:^15}", "Date"),
             format!("{:^4}", ""),
             format!("{:^4}", ""),
             format!("{:^4}", ""),
-        ])
-        .add_modifier(Modifier::BOLD)
-        .add_modifier(Modifier::UNDERLINED)
-        .fg(focus_color)
-        .height(1)
-        .bottom_margin(0);
+        ];
+        let direction = match app.ascending {
+            true => "▲",
+            false => "▼",
+        };
+        let sort_idx = match self.sort {
+            Sort::Date => 3,
+            Sort::Size => 2,
+            Sort::Seeders => 4,
+            Sort::Leechers => 5,
+            Sort::Downloads => 6,
+        };
+        let sort_text = format!("{} {}", header_slice[sort_idx].trim(), direction);
+        let sort_fmt = match self.sort {
+            Sort::Size => format!("  {:^8}", sort_text),
+            Sort::Date => format!("  {:^13}", sort_text),
+            Sort::Seeders => format!("{:>4}", sort_text),
+            Sort::Leechers => format!("{:>4}", sort_text),
+            Sort::Downloads => format!("{:>4}", sort_text),
+        };
+        header_slice[sort_idx] = sort_fmt;
+        let header = Row::new(header_slice.to_owned())
+            .add_modifier(Modifier::BOLD)
+            .add_modifier(Modifier::UNDERLINED)
+            .fg(focus_color)
+            .height(1)
+            .bottom_margin(0);
 
         f.render_widget(Clear, area);
         let items: Vec<Row> = match app.mode {
@@ -91,6 +117,7 @@ impl super::Widget for ResultsWidget {
                             }),
                         ),
                         Text::raw(format!("{:>9}", item.size)),
+                        Text::raw(format!("{:<14}", item.date)),
                         Text::styled(
                             format!("{:>4}", item.seeders),
                             Style::new().fg(app.theme.trusted),
@@ -171,12 +198,10 @@ impl super::Widget for ResultsWidget {
                     app.mode = Mode::Category;
                 }
                 (Char('s'), &KeyModifiers::NONE) => {
-                    app.mode = Mode::Sort;
-                    app.reverse = false;
+                    app.mode = Mode::Sort(SortDir::Desc);
                 }
                 (Char('S'), &KeyModifiers::SHIFT) => {
-                    app.mode = Mode::Sort;
-                    app.reverse = true;
+                    app.mode = Mode::Sort(SortDir::Asc);
                 }
                 (Char('f'), &KeyModifiers::NONE) => {
                     app.mode = Mode::Filter;
@@ -259,8 +284,8 @@ impl super::Widget for ResultsWidget {
             ("k, ↑", "Up"),
             ("n, l, →", "Next Page"),
             ("p, h, ←", "Prev Page"),
-            ("N, L, →", "Last Page"),
-            ("P, H, ←", "First Page"),
+            ("N, L", "Last Page"),
+            ("P, H", "First Page"),
             ("r", "Reload"),
             ("/, i", "Search"),
             ("c", "Categories"),

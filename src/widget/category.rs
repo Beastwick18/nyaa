@@ -126,7 +126,7 @@ pub static LITERATURE: CatStruct = CatStruct {
         ),
         CatEntry::new(
             "Non-English Translated",
-            "LitEnglishTranslated",
+            "LitNonEnglishTranslated",
             32,
             "Lit",
             Color::Yellow,
@@ -191,6 +191,16 @@ pub static ALL_CATEGORIES: &[&CatStruct] = &[
     &PICTURES,
     &SOFTWARE,
 ];
+
+pub fn find_category<S: Into<String>>(name: S) -> Option<&'static CatEntry> {
+    let name = name.into();
+    for cat in ALL_CATEGORIES {
+        if let Some(ent) = cat.entries.iter().find(|ent| ent.cfg == name) {
+            return Some(ent);
+        }
+    }
+    None
+}
 
 #[derive(Default)]
 pub struct CategoryPopup {

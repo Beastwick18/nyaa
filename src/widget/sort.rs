@@ -20,6 +20,12 @@ pub enum Sort {
     Size,
 }
 
+#[derive(PartialEq, Clone)]
+pub enum SortDir {
+    Desc,
+    Asc,
+}
+
 impl EnumIter<Sort> for Sort {
     fn iter() -> std::slice::Iter<'static, Sort> {
         static SORTS: &[Sort] = &[
@@ -82,10 +88,12 @@ impl Widget for SortPopup {
             }])
         });
         let table = Table::new(items, [Constraint::Percentage(100)])
-            .block(create_block(app.theme, true).title(match app.reverse {
-                true => "Sort Ascending",
-                false => "Sort Descending",
-            }))
+            .block(create_block(app.theme, true).title(
+                match app.mode == Mode::Sort(SortDir::Asc) {
+                    true => "Sort Ascending",
+                    false => "Sort Descending",
+                },
+            ))
             .highlight_style(Style::default().bg(app.theme.hl_bg));
         super::clear(f, clear, app.theme.bg);
         f.render_stateful_widget(table, center, &mut self.table.state.to_owned());
@@ -115,10 +123,9 @@ impl Widget for SortPopup {
                     self.table.select(0);
                 }
                 KeyCode::Enter => {
-                    if let Some(i) =
-                        Sort::iter().nth(self.table.state.selected().unwrap_or_default())
-                    {
+                    if let Some(i) = Sort::iter().nth(self.table.state.selected().unwrap_or(0)) {
                         self.selected = i.to_owned();
+                        app.ascending = app.mode == Mode::Sort(SortDir::Asc);
                         app.mode = Mode::Loading(LoadType::Sorting);
                     }
                 }

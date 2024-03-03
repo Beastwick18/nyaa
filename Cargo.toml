@@ -1,6 +1,6 @@
 [package]
 name = "nyaa"
-version = "0.6.2"
+version = "0.6.3"
 edition = "2021"
 categories = ["command-line-utilities"]
 keywords = ["tui", "cli", "nyaa", "torrent", "download"]
@@ -24,6 +24,7 @@ serde = { version = "1.0.152", features = ["derive"] }
 scraper = "0.18.1"
 regex = "1.10.3"
 rss = "2.0.1"
+chrono = "0.4.34"
 
 [package.metadata.deb]
 maintainer = "Steven Culwell <bradculwell@pm.me>"

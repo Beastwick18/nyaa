@@ -81,6 +81,19 @@ pub static THEMES: &[&Theme] = &[
     },
 ];
 
+pub fn find_theme<S: Into<String>>(name: S) -> Option<(usize, &'static Theme)> {
+    let name = name.into();
+    for (i, theme) in THEMES.iter().enumerate() {
+        if theme.name.to_lowercase() == name {
+            // w.theme.selected = i;
+            // app.theme = theme;
+            return Some((i, theme));
+            // break;
+        }
+    }
+    None
+}
+
 pub struct ThemePopup {
     pub table: StatefulTable<String>,
     pub selected: usize,
@@ -132,7 +145,7 @@ impl Widget for ThemePopup {
         }
     }
 
-    fn handle_event(&mut self, app: &mut crate::app::App, e: &crossterm::event::Event) {
+    fn handle_event(&mut self, app: &mut App, e: &Event) {
         if let Event::Key(KeyEvent {
             code,
             kind: KeyEventKind::Press,
@@ -159,6 +172,13 @@ impl Widget for ThemePopup {
                     if let Some(theme) = THEMES.get(self.table.state.selected().unwrap_or(0)) {
                         self.selected = self.table.state.selected().unwrap_or(0);
                         app.theme = theme;
+                        app.config.default_theme = theme.name.to_owned();
+                        if let Err(e) = app.config.clone().store() {
+                            app.errors.push(format!(
+                                "Failed to update default theme in config file:\n{}",
+                                e
+                            ));
+                        }
                     }
                 }
                 _ => {}

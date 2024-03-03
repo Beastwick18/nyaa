@@ -1,7 +1,12 @@
 use crate::{
-    app::APP_NAME,
+    app::{App, Widgets, APP_NAME},
     source::Sources,
-    widget::{category::ALL_CATEGORIES, filter::Filter, sort::Sort, theme::THEMES},
+    widget::{
+        category::{self, ALL_CATEGORIES},
+        filter::Filter,
+        sort::Sort,
+        theme::{self, THEMES},
+    },
 };
 use confy::ConfyError;
 use serde::{Deserialize, Serialize};
@@ -25,10 +30,10 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Config {
         Config {
-            #[cfg(target_os = "windows")]
+            #[cfg(windows)]
             torrent_client_cmd: "cmd.exe /c curl {torrent} > \"%USERPROFILE%\\Downloads\\{file}\""
                 .to_owned(),
-            #[cfg(not(target_os = "windows"))]
+            #[cfg(unix)]
             torrent_client_cmd: "bash -c 'curl {torrent} > ~/{file}'".to_owned(),
             default_category: ALL_CATEGORIES[0].entries[0].cfg.to_owned(),
             default_filter: Filter::NoFilter,
@@ -48,5 +53,19 @@ impl Config {
     }
     pub fn store(self) -> Result<(), ConfyError> {
         confy::store::<Config>(APP_NAME, CONFIG_FILE, self)
+    }
+    pub fn apply(&self, app: &mut App, w: &mut Widgets) {
+        w.search.input.input = self.default_search.to_owned();
+        w.search.input.cursor = w.search.input.input.len();
+        w.sort.selected = self.default_sort.to_owned();
+        w.filter.selected = self.default_filter.to_owned();
+        app.src = self.default_source.to_owned();
+        if let Some((i, theme)) = theme::find_theme(self.default_theme.to_lowercase()) {
+            w.theme.selected = i;
+            app.theme = theme;
+        }
+        if let Some(ent) = category::find_category(self.default_category.to_lowercase()) {
+            w.category.category = ent.id;
+        }
     }
 }

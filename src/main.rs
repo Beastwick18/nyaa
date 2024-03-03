@@ -32,9 +32,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let backend = CrosstermBackend::new(stdout());
     let mut terminal = Terminal::new(backend)?;
 
-    let app = App::default();
+    let mut app = App::default();
 
-    let _ = run_app(&mut terminal, app).await;
+    run_app(&mut terminal, &mut app).await?;
 
     disable_raw_mode()?;
     stdout().execute(SetCursorStyle::DefaultUserShape)?;

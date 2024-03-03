@@ -1,7 +1,11 @@
 use std::{
-    io::{self, BufReader, Read as _},
+    error::Error,
+    io::{BufReader, Read as _},
     process::{Command, Stdio},
 };
+
+// #[cfg(target_os = "windows")]
+// use std::os::windows::process::CommandExt;
 
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
@@ -12,19 +16,19 @@ use ratatui::{
 
 use crate::{
     config::Config,
-    source::{self, nyaa_html::Item, Sources},
+    source::{self, Item, Sources},
     widget::{
         self,
-        category::{CategoryPopup, ALL_CATEGORIES},
+        category::CategoryPopup,
         error::ErrorPopup,
         filter::FilterPopup,
         help::HelpPopup,
         page::PagePopup,
         results::ResultsWidget,
         search::SearchWidget,
-        sort::SortPopup,
+        sort::{SortDir, SortPopup},
         sources::SourcesPopup,
-        theme::{Theme, ThemePopup, THEMES},
+        theme::{Theme, ThemePopup},
         Widget,
     },
 };
@@ -45,7 +49,7 @@ pub enum Mode {
     Normal,
     Search,
     Category,
-    Sort,
+    Sort(SortDir),
     Filter,
     Theme,
     Sources,
@@ -61,7 +65,7 @@ impl ToString for Mode {
             Mode::Normal => "Normal".to_string(),
             Mode::Search => "Search".to_string(),
             Mode::Category => "Category".to_string(),
-            Mode::Sort => "Sort".to_string(),
+            Mode::Sort(_) => "Sort".to_string(),
             Mode::Filter => "Filter".to_string(),
             Mode::Theme => "Theme".to_string(),
             Mode::Sources => "Sources".to_string(),
@@ -78,7 +82,7 @@ pub struct App {
     pub theme: &'static Theme,
     pub config: Config,
     pub errors: Vec<String>,
-    pub reverse: bool,
+    pub ascending: bool,
     pub page: usize,
     pub last_page: usize,
     pub total_results: usize,
@@ -113,7 +117,7 @@ impl Default for App {
             theme: widget::theme::THEMES[0],
             config: Config::default(),
             errors: vec![],
-            reverse: false,
+            ascending: false,
             page: 1,
             last_page: 1,
             total_results: 0,
@@ -125,72 +129,68 @@ impl Default for App {
 
 fn download(item: &Item, app: &mut App) {
     #[cfg(target_os = "windows")]
-    let cmd_str = app
-        .config
-        .torrent_client_cmd
-        .replace("{magnet}", &item.magnet_link)
-        .replace("{torrent}", &item.torrent_link)
-        .replace("{title}", &item.title)
-        .replace("{file}", &item.file_name);
-    #[cfg(not(target_os = "windows"))]
-    let cmd_str = app
-        .config
-        .torrent_client_cmd
-        .replace("{magnet}", &shellwords::escape(&item.magnet_link))
-        .replace("{torrent}", &shellwords::escape(&item.torrent_link))
-        .replace("{title}", &shellwords::escape(&item.title))
-        .replace("{file}", &shellwords::escape(&item.file_name));
-    let cmd = match shellwords::split(&cmd_str) {
-        Ok(cmd) => cmd,
-        Err(e) => {
-            app.errors.push(format!(
-                "{}\n{}:\nfailed to split command:\n{}",
-                cmd_str, app.config.torrent_client_cmd, e
-            ));
-            return;
-        }
-    };
-    app.errors.push(cmd_str.to_owned());
-    if let [exec, args @ ..] = cmd.as_slice() {
-        // #[cfg(target_os = "windows")]
-        // let shell = ("cmd.exe", "/c");
-        // #[cfg(not(target_os = "windows"))]
-        // let shell = ("bash", "-c");
-        let cmd = Command::new(exec)
-            .args(args)
+    let (cmd_str, cmd) = {
+        let cmd_str = app
+            .config
+            .torrent_client_cmd
+            .replace("{magnet}", &item.magnet_link)
+            .replace("{torrent}", &item.torrent_link)
+            .replace("{title}", &item.title)
+            .replace("{file}", &item.file_name);
+
+        let cmd = Command::new("powershell.exe")
+            .arg("-Command")
+            .arg(&cmd_str)
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::piped())
             .spawn();
-        let child = match cmd {
-            Ok(child) => child,
-            Err(e) => {
-                app.errors
-                    .push(format!("{}:\nFailed to run:\n{}", cmd_str, e));
-                return;
-            }
-        };
-        let output = match child.wait_with_output() {
-            Ok(output) => output,
-            Err(e) => {
-                app.errors
-                    .push(format!("{}:\nFailed to get output:\n{}", cmd_str, e));
-                return;
-            }
-        };
+        (cmd_str, cmd)
+    };
+    #[cfg(not(target_os = "windows"))]
+    let (cmd_str, cmd) = {
+        let cmd_str = app
+            .config
+            .torrent_client_cmd
+            .replace("{magnet}", &shellwords::escape(&item.magnet_link))
+            .replace("{torrent}", &shellwords::escape(&item.torrent_link))
+            .replace("{title}", &shellwords::escape(&item.title))
+            .replace("{file}", &shellwords::escape(&item.file_name));
 
-        if output.status.code() != Some(0) {
-            let mut err = BufReader::new(&*output.stderr);
-            let mut err_str = String::new();
-            err.read_to_string(&mut err_str).unwrap_or(0);
-            app.errors.push(format!(
-                "{}:\nExited with status code {}:\n{}",
-                cmd_str, output.status, err_str
-            ));
+        let cmd = Command::new("sh")
+            .arg("-c")
+            .arg(&cmd_str)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::piped())
+            .spawn();
+        (cmd_str, cmd)
+    };
+    let child = match cmd {
+        Ok(child) => child,
+        Err(e) => {
+            app.errors
+                .push(format!("{}:\nFailed to run:\n{}", cmd_str, e));
+            return;
         }
-    } else {
-        app.errors
-            .push(format!("{}:\nThe command is not valid.", cmd_str));
+    };
+    let output = match child.wait_with_output() {
+        Ok(output) => output,
+        Err(e) => {
+            app.errors
+                .push(format!("{}:\nFailed to get output:\n{}", cmd_str, e));
+            return;
+        }
+    };
+
+    if output.status.code() != Some(0) {
+        let mut err = BufReader::new(&*output.stderr);
+        let mut err_str = String::new();
+        err.read_to_string(&mut err_str).unwrap_or(0);
+        app.errors.push(format!(
+            "{}:\nExited with status code {}:\n{}",
+            cmd_str, output.status, err_str
+        ));
     }
 }
 
@@ -224,7 +224,7 @@ pub fn draw(widgets: &mut Widgets, app: &mut App, f: &mut Frame) {
     widgets.results.draw(f, app, layout[1]);
     match app.mode {
         Mode::Category => widgets.category.draw(f, app, f.size()),
-        Mode::Sort => widgets.sort.draw(f, app, f.size()),
+        Mode::Sort(_) => widgets.sort.draw(f, app, f.size()),
         Mode::Filter => widgets.filter.draw(f, app, f.size()),
         Mode::Theme => widgets.theme.draw(f, app, f.size()),
         Mode::Error => {
@@ -243,7 +243,7 @@ pub fn draw(widgets: &mut Widgets, app: &mut App, f: &mut Frame) {
 fn get_help(app: &mut App, w: &mut Widgets) {
     let help = match app.mode {
         Mode::Category => CategoryPopup::get_help(),
-        Mode::Sort => SortPopup::get_help(),
+        Mode::Sort(_) => SortPopup::get_help(),
         Mode::Normal => ResultsWidget::get_help(),
         Mode::Search => SearchWidget::get_help(),
         Mode::Filter => FilterPopup::get_help(),
@@ -260,38 +260,20 @@ fn get_help(app: &mut App, w: &mut Widgets) {
     }
 }
 
-pub async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<()> {
-    let mut w = Widgets::default();
-    app.config = match Config::load() {
+pub async fn run_app<B: Backend>(
+    terminal: &mut Terminal<B>,
+    app: &mut App,
+) -> Result<(), Box<dyn Error>> {
+    let w = &mut Widgets::default();
+    let config = match Config::load() {
         Ok(config) => config,
         Err(e) => {
             app.errors.push(e.to_string());
-            app.config
+            app.config.clone()
         }
     };
-    w.search.input.input = app.config.default_search.to_owned();
-    w.search.input.cursor = w.search.input.input.len();
-    w.sort.selected = app.config.default_sort.to_owned();
-    w.filter.selected = app.config.default_filter.to_owned();
-    app.src = app.config.default_source.to_owned();
-    let theme_name = app.config.default_theme.to_lowercase();
-    for (i, theme) in THEMES.iter().enumerate() {
-        if theme.name.to_lowercase() == theme_name {
-            w.theme.selected = i;
-            app.theme = theme;
-            break;
-        }
-    }
-    for cat in ALL_CATEGORIES {
-        if let Some(ent) = cat
-            .entries
-            .iter()
-            .find(|ent| ent.cfg == app.config.default_category)
-        {
-            w.category.category = ent.id;
-            break;
-        }
-    }
+    config.apply(app, w);
+    app.config = config;
     loop {
         if app.should_quit {
             return Ok(());
@@ -300,8 +282,8 @@ pub async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io
             app.mode = Mode::Error;
         }
 
-        get_help(&mut app, &mut w);
-        terminal.draw(|f| draw(&mut w, &mut app, f))?;
+        get_help(app, w);
+        terminal.draw(|f| draw(w, app, f))?;
         if let Mode::Loading(load_type) = app.mode {
             app.mode = Mode::Normal;
             if load_type == LoadType::Downloading {
@@ -315,15 +297,15 @@ pub async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io
                     Some(i) => i,
                     None => continue,
                 };
-                download(item, &mut app);
+                download(item, app);
                 continue;
             }
 
-            let result = source::load(app.src, load_type, &mut app, &w).await;
+            let result = source::load(app.src, load_type, app, w).await;
 
             match result {
                 Ok(items) => {
-                    w.results.with_items(items);
+                    w.results.with_items(items, w.sort.selected.clone());
                 }
                 Err(e) => {
                     app.errors.push(e.to_string());
@@ -335,39 +317,39 @@ pub async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io
         let evt = event::read()?;
         match app.mode {
             Mode::Category => {
-                w.category.handle_event(&mut app, &evt);
+                w.category.handle_event(app, &evt);
             }
-            Mode::Sort => {
-                w.sort.handle_event(&mut app, &evt);
+            Mode::Sort(_) => {
+                w.sort.handle_event(app, &evt);
             }
             Mode::Normal => {
-                w.results.handle_event(&mut app, &evt);
+                w.results.handle_event(app, &evt);
             }
             Mode::Search => {
-                w.search.handle_event(&mut app, &evt);
+                w.search.handle_event(app, &evt);
             }
             Mode::Filter => {
-                w.filter.handle_event(&mut app, &evt);
+                w.filter.handle_event(app, &evt);
             }
             Mode::Theme => {
-                w.theme.handle_event(&mut app, &evt);
+                w.theme.handle_event(app, &evt);
             }
             Mode::Error => {
-                w.error.handle_event(&mut app, &evt);
+                w.error.handle_event(app, &evt);
             }
             Mode::Page => {
-                w.page.handle_event(&mut app, &evt);
+                w.page.handle_event(app, &evt);
             }
             Mode::Help => {
-                w.help.handle_event(&mut app, &evt);
+                w.help.handle_event(app, &evt);
             }
             Mode::Sources => {
-                w.sources.handle_event(&mut app, &evt);
+                w.sources.handle_event(app, &evt);
             }
             Mode::Loading(_) => {}
         }
         if app.mode != Mode::Help {
-            help_event(&mut app, &evt);
+            help_event(app, &evt);
         }
     }
 }
