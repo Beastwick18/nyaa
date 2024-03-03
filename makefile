@@ -2,23 +2,28 @@ WINDOWS_TARGET := x86_64-pc-windows-msvc
 LINUX_TARGET := x86_64-unknown-linux-gnu
 VERSION := $(shell sed -nE 's/^version\s?=\s?"(.*)"/\1/p' Cargo.toml)
 
-.PHONY: release none publish
+.PHONY: none release win linux deb gh publish
 none:
 	@echo 'Explictly select "release" option'
 
-release:
+release: win linux
 	@mkdir -p "release/$(VERSION)"
-	cargo build --target $(WINDOWS_TARGET) --release
-	cargo build --target $(LINUX_TARGET) --release
 	cp "target/$(WINDOWS_TARGET)/release/nyaa.exe" "release/$(VERSION)/nyaa-$(VERSION)-$(WINDOWS_TARGET).exe"
 	cp "target/$(LINUX_TARGET)/release/nyaa" "release/$(VERSION)/nyaa-$(VERSION)-$(LINUX_TARGET)"
 	@echo "\nCommits since last tag:"
 	@git log $(shell git describe --tags --abbrev=0)..HEAD --oneline
 
+win:
+	cargo build --target $(WINDOWS_TARGET) --release
+
+linux:
+	cargo build --target $(LINUX_TARGET) --release
+
 deb:
-	@mkdir -p "release/$(VERSION)"
-	cargo deb --profile release
-	cp "target/debian/nyaa_$(VERSION)-1_amd64.deb" "release/$(VERSION)/nyaa-$(VERSION)-x86_64.deb"
+	docker stop nyaa-deb || true
+	docker rm nyaa-deb || true
+	docker compose up
+	cp "docker-deb/nyaa-$(VERSION)-x86_64.deb" "release/$(VERSION)"
 
 gh:
 	gh release create v$(VERSION) release/$(VERSION)/* --draft
