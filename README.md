@@ -91,6 +91,7 @@ default_filter = 'NoFilter'
 default_sort = 'Date'
 default_search = ''
 default_source = 'NyaaHtml'
+date_format = '%Y-%m-%d %H:%M'
 base_url = 'https://nyaa.si'
 timeout = 30
 ```
@@ -111,6 +112,8 @@ timeout = 30
 `default_search` refers to the search entered once the app is opened.
 
 `default_source` refers to the source selected by default once the app is opened. Possible values are `NyaaHtml` and `NyaaRss`.
+
+`date_format` refers to the formatting of the dates in the Date column of the results table. Refer to [chrono's documentation](https://docs.rs/chrono/latest/chrono/format/strftime/index.html) for information on how to format the date.
 
 `base_url` refers to the url used to make requests. Change this to any nyaa mirror url in the format: `http(s)://nyaa.si` or `nyaa.si`
 
