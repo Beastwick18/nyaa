@@ -78,6 +78,7 @@ default_filter = 'NoFilter'
 default_sort = 'Date'
 default_search = ''
 default_source = 'NyaaHtml'
+date_format = '%Y-%m-%d %H:%M'
 base_url = 'https://nyaa.si'
 timeout = 30
 ```
