@@ -21,7 +21,7 @@ Sleep 1s
 
 Hide
 Ctrl+C
-Type "cargo run && clear"
+Type "clear && cargo run && clear"
 Enter
 Sleep 1s
 Show
