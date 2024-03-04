@@ -9,5 +9,6 @@ services:
     command: /bin/bash -c "/root/docker/init.sh"
     environment:
       - GITREPO=https://github.com/Beastwick18/nyaa
+      - VERSION
     volumes:
       - ./docker-deb:/root/docker

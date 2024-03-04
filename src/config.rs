@@ -61,11 +61,11 @@ impl Config {
         w.sort.selected = self.default_sort.to_owned();
         w.filter.selected = self.default_filter.to_owned();
         app.src = self.default_source.to_owned();
-        if let Some((i, theme)) = theme::find_theme(self.default_theme.to_lowercase()) {
+        if let Some((i, theme)) = theme::find_theme(self.default_theme.to_owned()) {
             w.theme.selected = i;
             app.theme = theme;
         }
-        if let Some(ent) = category::find_category(self.default_category.to_lowercase()) {
+        if let Some(ent) = category::find_category(self.default_category.to_owned()) {
             w.category.category = ent.id;
         }
     }

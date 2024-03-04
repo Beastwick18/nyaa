@@ -20,14 +20,15 @@ linux:
 	cargo build --target $(LINUX_TARGET) --release
 
 deb:
+	@mkdir -p "release/$(VERSION)"
 	@echo Go grab a coffee...
 	docker stop nyaa-deb || true
 	docker rm nyaa-deb || true
-	docker compose up
+	VERSION=$(VERSION) docker compose up
 	cp "docker-deb/nyaa-$(VERSION)-x86_64.deb" "release/$(VERSION)"
 
 gh:
-	gh release create v$(VERSION) release/$(VERSION)/* --draft
+	gh release create v$(VERSION) release/$(VERSION)/* --draft --title v$(VERSION) --latest
 
 publish:
 	python3 publish.py

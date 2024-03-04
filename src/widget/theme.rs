@@ -84,11 +84,8 @@ pub static THEMES: &[&Theme] = &[
 pub fn find_theme<S: Into<String>>(name: S) -> Option<(usize, &'static Theme)> {
     let name = name.into();
     for (i, theme) in THEMES.iter().enumerate() {
-        if theme.name.to_lowercase() == name {
-            // w.theme.selected = i;
-            // app.theme = theme;
+        if theme.name.eq_ignore_ascii_case(&name) {
             return Some((i, theme));
-            // break;
         }
     }
     None
