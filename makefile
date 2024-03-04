@@ -20,6 +20,7 @@ linux:
 	cargo build --target $(LINUX_TARGET) --release
 
 deb:
+	@echo Go grab a coffee...
 	docker stop nyaa-deb || true
 	docker rm nyaa-deb || true
 	docker compose up

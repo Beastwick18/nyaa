@@ -7,7 +7,7 @@ use urlencoding::encode;
 
 use crate::{
     app::{App, Widgets},
-    widget::{category::ALL_CATEGORIES, sort::Sort},
+    widget::{category::CatEntry, sort::Sort},
 };
 
 use super::{nyaa_html::to_bytes, Item, Source};
@@ -25,7 +25,7 @@ pub fn get_ext_value<T: Default + FromStr>(ext_map: &ExtensionMap, key: &str) ->
         .unwrap_or_default()
 }
 
-fn sort_items(items: &mut [Item], sort: Sort, reverse: bool) {
+fn sort_items(items: &mut [Item], sort: Sort, ascending: bool) {
     let f: fn(&Item, &Item) -> Ordering = match sort {
         Sort::Date => |a, b| a.index.cmp(&b.index),
         Sort::Downloads => |a, b| b.downloads.cmp(&a.downloads),
@@ -34,7 +34,7 @@ fn sort_items(items: &mut [Item], sort: Sort, reverse: bool) {
         Sort::Size => |a, b| b.bytes.cmp(&a.bytes),
     };
     items.sort_by(f);
-    if reverse {
+    if ascending {
         items.reverse();
     }
 }
@@ -87,17 +87,12 @@ impl Source for NyaaRssSource {
             .filter_map(|(index, item)| {
                 let ext = item.extensions().get("nyaa")?;
                 let guid = item.guid()?;
-                let id = guid.value.rsplitn(2, '/').next().unwrap_or_default(); // Get nyaa id from guid url in format
-                                                                                // `https://nyaa.si/view/{id}`
+                let id = guid.value.rsplit('/').next().unwrap_or_default(); // Get nyaa id from guid url in format
+                                                                            // `https://nyaa.si/view/{id}`
                 let category_str = get_ext_value::<String>(ext, "categoryId");
-                let split: Vec<&str> = category_str.splitn(2, '_').collect();
-                let high: usize = split.first().and_then(|s| s.parse().ok()).unwrap_or(0);
-                let low: usize = split.last().and_then(|s| s.parse().ok()).unwrap_or(0);
-                let category = high * 10 + low;
-                let icon = ALL_CATEGORIES
-                    .get(high)
-                    .and_then(|c| c.find(category))
-                    .unwrap_or_default();
+                let cat = CatEntry::from_str(&category_str);
+                let category = cat.id;
+                let icon = cat.icon.clone();
                 let size = get_ext_value::<String>(ext, "size")
                     .replace('i', "")
                     .replace("Bytes", "B");
@@ -107,7 +102,7 @@ impl Source for NyaaRssSource {
 
                 Some(Item {
                     index,
-                    date: date.format("%m/%d/%y %H:%M").to_string(),
+                    date: date.format(&app.config.date_format).to_string(),
                     seeders: get_ext_value(ext, "seeders"),
                     leechers: get_ext_value(ext, "leechers"),
                     downloads: get_ext_value(ext, "downloads"),

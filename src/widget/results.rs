@@ -55,15 +55,22 @@ impl super::Widget for ResultsWidget {
             Mode::Normal => app.theme.border_focused_color,
             _ => app.theme.border_color,
         };
-        let binding = Constraint::from_lengths([3, area.width - 48, 9, 14, 4, 4, 5]);
+        let raw_date_width = self.table.items.get(0).map(|i| i.date.len()).unwrap_or(10) as u16;
+        let date_width = max(raw_date_width, 6);
+        let binding =
+            Constraint::from_lengths([3, area.width - 32 - date_width, 9, date_width, 4, 4, 5]);
         let header_slice = &mut [
             "Cat".to_owned(),
             "Name".to_owned(),
-            format!("{:^9}", " Size"),
-            format!("{:^15}", "Date"),
-            format!("{:^4}", ""),
-            format!("{:^4}", ""),
-            format!("{:^4}", ""),
+            format!(" {:<9}", " Size"),
+            format!(
+                "{:^width$}",
+                "Date  ",
+                width = max(raw_date_width, 4) as usize + 2
+            ),
+            format!(" {:<3}", ""),
+            format!(" {:<3}", ""),
+            format!(" {:<3}", ""),
         ];
         let direction = match app.ascending {
             true => "▲",
@@ -78,11 +85,15 @@ impl super::Widget for ResultsWidget {
         };
         let sort_text = format!("{} {}", header_slice[sort_idx].trim(), direction);
         let sort_fmt = match self.sort {
-            Sort::Size => format!("  {:^8}", sort_text),
-            Sort::Date => format!("  {:^13}", sort_text),
-            Sort::Seeders => format!("{:>4}", sort_text),
-            Sort::Leechers => format!("{:>4}", sort_text),
-            Sort::Downloads => format!("{:>4}", sort_text),
+            Sort::Size => format!("  {:<8}", sort_text),
+            Sort::Date => format!(
+                "{:^width$}",
+                sort_text,
+                width = max(raw_date_width, 4) as usize + 2
+            ),
+            Sort::Seeders => format!(" {:<3}", sort_text),
+            Sort::Leechers => format!(" {:<3}", sort_text),
+            Sort::Downloads => format!(" {:<3}", sort_text),
         };
         header_slice[sort_idx] = sort_fmt;
         let header = Row::new(header_slice.to_owned())

@@ -38,7 +38,7 @@ impl Widget for SourcesPopup {
             }])
         });
         let table = Table::new(items, [Constraint::Percentage(100)])
-            .block(create_block(app.theme, true).title("Sources"))
+            .block(create_block(app.theme, true).title("Source"))
             .highlight_style(Style::default().bg(app.theme.hl_bg));
         super::clear(f, clear, app.theme.bg);
         f.render_stateful_widget(table, center, &mut self.table.state.to_owned());
@@ -68,10 +68,8 @@ impl Widget for SourcesPopup {
                     self.table.select(0);
                 }
                 KeyCode::Enter => {
-                    if let Some(i) =
-                        Sources::iter().nth(self.table.state.selected().unwrap_or_default())
-                    {
-                        app.src = i.to_owned();
+                    if let Some(i) = Sources::iter().nth(self.table.state.selected().unwrap_or(0)) {
+                        app.src = *i;
                         app.mode = Mode::Loading(LoadType::Searching);
                     }
                 }

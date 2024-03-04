@@ -50,6 +50,7 @@ Like modal text editors such as Vim, there are several modes. Each have their ow
 - `t` to open theme popup
 - `n`, `p` or `l`, `h` for next and previous page
 - `q` to quit
+
 For a list of all modes and their respective keybinds, check [KEYS.md](KEYS.md).
 
 ## 🌐 Proxies
@@ -69,6 +70,7 @@ and on windows is
 
 The default configuration file for linux looks like:
 ```toml
+# Runs a command with `sh -c`
 torrent_client_cmd = 'curl {torrent} > ~/torrents/{file}'
 default_theme = 'Default'
 default_category = 'AllCategories'
@@ -81,7 +83,8 @@ timeout = 30
 ```
 and for windows looks like:
 ```toml
-torrent_client_cmd = 'curl {torrent} > %USERPROFILE%\Downloads\{file}'
+# Runs a command with `powershell.exe -Command`
+torrent_client_cmd = 'curl {torrent} > ~\Downloads\{file}'
 default_theme = 'Default'
 default_category = 'AllCategories'
 default_filter = 'NoFilter'

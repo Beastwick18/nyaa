@@ -23,6 +23,7 @@ pub struct Config {
     pub default_theme: String,
     pub default_search: String,
     pub default_source: Sources,
+    pub date_format: String,
     pub base_url: String,
     pub timeout: u64,
 }
@@ -40,6 +41,7 @@ impl Default for Config {
             default_source: Sources::NyaaHtml,
             default_theme: THEMES[0].name.to_owned(),
             default_search: "".to_owned(),
+            date_format: "%Y-%m-%d %H:%M".to_owned(),
             base_url: "https://nyaa.si/".to_owned(),
             timeout: 30,
         }

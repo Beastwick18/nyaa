@@ -3,12 +3,12 @@ use std::{error::Error, time::Duration};
 use chrono::{DateTime, Local, NaiveDateTime, TimeZone};
 use regex::Regex;
 use reqwest::StatusCode;
-use scraper::{Html, Selector};
+use scraper::{ElementRef, Html, Selector};
 use urlencoding::encode;
 
 use crate::{
     app::{App, Widgets},
-    widget::category::ALL_CATEGORIES,
+    widget::category::CatEntry,
 };
 
 use super::{Item, Source};
@@ -20,14 +20,29 @@ pub fn to_bytes(size: &str) -> usize {
     let b = split.next().unwrap_or("0");
     let unit = split.last().unwrap_or("B");
     let f = b.parse::<f64>().unwrap_or(0.0);
-    let factor: i32 = match unit.chars().next().unwrap_or('B') {
+    let power = match unit.chars().next().unwrap_or('B') {
         'T' => 12,
         'G' => 9,
         'M' => 6,
         'K' => 3,
         _ => 1,
     };
-    (f64::powi(10.0, factor) * f).floor() as usize
+    (f64::powi(10.0, power) * f) as usize
+}
+
+fn inner(e: ElementRef, s: &Selector, default: &str) -> String {
+    e.select(s)
+        .next()
+        .map(|i| i.inner_html())
+        .unwrap_or(default.to_owned())
+}
+
+fn attr(e: ElementRef, s: &Selector, attr: &str) -> String {
+    e.select(s)
+        .next()
+        .and_then(|i| i.value().attr(attr))
+        .unwrap_or("")
+        .to_owned()
 }
 
 impl Source for NyaaHtmlSource {
@@ -48,10 +63,10 @@ impl Source for NyaaHtmlSource {
         let timeout = app.config.timeout;
 
         let re = Regex::new(r"^https?://.+$")?;
-        let base_url = match !re.is_match(&app.config.base_url) {
+        let base_url = match re.is_match(&app.config.base_url) {
+            true => app.config.base_url.to_owned(),
             // Assume https if not present
-            true => format!("https://{}", app.config.base_url),
-            false => app.config.base_url.to_owned(),
+            false => format!("https://{}", app.config.base_url),
         };
         let (high, low) = (cat / 10, cat % 10);
         let query = encode(&w.search.input.input);
@@ -84,9 +99,9 @@ impl Source for NyaaHtmlSource {
         let magnet_sel = &Selector::parse("td:nth-of-type(3) > a:nth-of-type(2)")?;
         let size_sel = &Selector::parse("td:nth-of-type(4)")?;
         let date_sel = &Selector::parse("td:nth-of-type(5)").unwrap();
-        let seeders_sel = &Selector::parse("td:nth-of-type(6)")?;
-        let leechers_sel = &Selector::parse("td:nth-of-type(7)")?;
-        let downloads_sel = &Selector::parse("td:nth-of-type(8)")?;
+        let seed_sel = &Selector::parse("td:nth-of-type(6)")?;
+        let leech_sel = &Selector::parse("td:nth-of-type(7)")?;
+        let dl_sel = &Selector::parse("td:nth-of-type(8)")?;
         let pagination_sel = &Selector::parse(".pagination-page-info")?;
 
         app.last_page = 100;
@@ -102,96 +117,52 @@ impl Source for NyaaHtmlSource {
             }
         }
 
-        let mut items: Vec<Item> = vec![];
-        for (index, e) in doc.select(item_sel).enumerate() {
-            let trusted = e.value().classes().any(|e| e == "success");
-            let remake = e.value().classes().any(|e| e == "danger");
-            let cat_str = e
-                .select(icon_sel)
-                .next()
-                .and_then(|i| i.value().attr("href"))
-                .and_then(|i| i.split('=').last())
-                .unwrap_or("");
-            let split: Vec<&str> = cat_str.split('_').collect();
-            let high = split.first().unwrap_or(&"1").parse().unwrap_or(1);
-            let low = split.last().unwrap_or(&"0").parse().unwrap_or(0);
-            let category = high * 10 + low;
-            let title = e
-                .select(title_sel)
-                .next()
-                .and_then(|i| i.value().attr("title"))
-                .unwrap_or("");
-            let torrent_rel = e
-                .select(torrent_sel)
-                .next()
-                .and_then(|i| i.value().attr("href"))
-                .unwrap_or("");
-            let magnet_link = e
-                .select(magnet_sel)
-                .next()
-                .and_then(|i| i.value().attr("href"))
-                .unwrap_or("");
-            let size = e
-                .select(size_sel)
-                .next()
-                .map(|i| i.inner_html())
-                .unwrap_or("0 Bytes".to_owned())
-                .replace('i', "")
-                .replace("Bytes", "B");
-            let bytes = to_bytes(&size);
-            let date = e
-                .select(date_sel)
-                .next()
-                .map(|i| i.inner_html())
-                .unwrap_or("".to_owned());
-            let naive = NaiveDateTime::parse_from_str(&date, "%Y-%m-%d %H:%M").unwrap_or_default();
-            let date_time: DateTime<Local> = Local.from_utc_datetime(&naive);
-            let date = date_time.format("%m/%d/%y %H:%M").to_string();
-            let seeders = e
-                .select(seeders_sel)
-                .next()
-                .map(|i| i.inner_html())
-                .unwrap_or("0".to_owned())
-                .parse::<u32>()
-                .unwrap_or(0);
-            let leechers = e
-                .select(leechers_sel)
-                .next()
-                .map(|i| i.inner_html())
-                .unwrap_or("0".to_owned())
-                .parse::<u32>()
-                .unwrap_or(0);
-            let downloads = e
-                .select(downloads_sel)
-                .next()
-                .map(|i| i.inner_html())
-                .unwrap_or("0".to_owned())
-                .parse::<u32>()
-                .unwrap_or(0);
-            let file_name = torrent_rel.split('/').last().unwrap_or("nyaa.torrent");
+        Ok(doc
+            .select(item_sel)
+            .enumerate()
+            .map(|(index, e)| {
+                let cat_str = attr(e, icon_sel, "href");
+                let cat_str = cat_str.split('=').last().unwrap_or("");
+                let cat = CatEntry::from_str(cat_str);
+                let category = cat.id;
+                let icon = cat.icon.clone();
 
-            let icon = ALL_CATEGORIES
-                .get(high)
-                .and_then(|c| c.find(category))
-                .unwrap_or_default();
-            items.push(Item {
-                index,
-                date,
-                seeders,
-                leechers,
-                downloads,
-                size,
-                bytes,
-                title: title.to_owned(),
-                torrent_link: format!("{}{}", base_url, torrent_rel),
-                magnet_link: magnet_link.to_owned(),
-                file_name: file_name.to_owned(),
-                category,
-                icon,
-                trusted,
-                remake,
-            });
-        }
-        Ok(items)
+                let torrent = attr(e, torrent_sel, "href");
+                let file_name = torrent.split('/').last().unwrap_or("nyaa.torrent");
+
+                let size = inner(e, size_sel, "0 bytes")
+                    .replace('i', "")
+                    .replace("Bytes", "B");
+                let bytes = to_bytes(&size);
+
+                let date = inner(e, date_sel, "");
+                let naive =
+                    NaiveDateTime::parse_from_str(&date, "%Y-%m-%d %H:%M").unwrap_or_default();
+                let date_time: DateTime<Local> = Local.from_utc_datetime(&naive);
+                let date = date_time.format(&app.config.date_format).to_string();
+
+                let seeders = inner(e, seed_sel, "0").parse().unwrap_or(0);
+                let leechers = inner(e, leech_sel, "0").parse().unwrap_or(0);
+                let downloads = inner(e, dl_sel, "0").parse().unwrap_or(0);
+
+                Item {
+                    index,
+                    date,
+                    seeders,
+                    leechers,
+                    downloads,
+                    size,
+                    bytes,
+                    title: attr(e, title_sel, "title"),
+                    torrent_link: format!("{}{}", base_url, torrent),
+                    magnet_link: attr(e, magnet_sel, "href"),
+                    file_name: file_name.to_owned(),
+                    category,
+                    icon,
+                    trusted: e.value().classes().any(|e| e == "success"),
+                    remake: e.value().classes().any(|e| e == "danger"),
+                }
+            })
+            .collect())
     }
 }

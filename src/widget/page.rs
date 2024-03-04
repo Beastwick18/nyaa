@@ -66,6 +66,10 @@ impl Widget for PagePopup {
                 KeyCode::Enter => {
                     app.page = max(min(self.input.input.parse().unwrap_or(1), 100), 1);
                     app.mode = Mode::Loading(LoadType::Searching);
+
+                    // Clear input on enter
+                    self.input.input = "".to_owned();
+                    self.input.cursor = 0;
                 }
                 _ => {
                     self.input.handle_event(app, e);

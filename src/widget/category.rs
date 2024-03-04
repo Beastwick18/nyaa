@@ -34,6 +34,21 @@ impl Default for CatIcon {
 }
 
 impl CatEntry {
+    pub fn from_str(s: &str) -> &Self {
+        let split: Vec<&str> = s.split('_').collect();
+        let high = split.first().unwrap_or(&"1").parse().unwrap_or(1);
+        let low = split.last().unwrap_or(&"0").parse().unwrap_or(0);
+        let id = high * 10 + low;
+        for cat in ALL_CATEGORIES {
+            if let Some(ent) = cat.entries.iter().find(|ent| ent.id == id) {
+                return ent;
+            }
+        }
+        &ALL_CATEGORIES[0].entries[0]
+    }
+}
+
+impl CatEntry {
     const fn new(
         name: &'static str,
         cfg: &'static str,
@@ -53,15 +68,6 @@ impl CatEntry {
 pub struct CatStruct {
     name: &'static str,
     pub entries: &'static [CatEntry],
-}
-
-impl CatStruct {
-    pub fn find(&self, category: usize) -> Option<CatIcon> {
-        self.entries
-            .iter()
-            .find(|e| e.id == category)
-            .map(|e| e.icon.clone())
-    }
 }
 
 pub static ALL: CatStruct = CatStruct {
