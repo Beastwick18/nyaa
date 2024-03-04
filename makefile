@@ -6,9 +6,9 @@ VERSION := $(shell sed -nE 's/^version\s?=\s?"(.*)"/\1/p' Cargo.toml)
 none:
 	@echo 'Explictly select "release" option'
 
-release: win linux
+release: linux
 	@mkdir -p "release/$(VERSION)"
-	cp "target/$(WINDOWS_TARGET)/release/nyaa.exe" "release/$(VERSION)/nyaa-$(VERSION)-$(WINDOWS_TARGET).exe"
+	# cp "target/$(WINDOWS_TARGET)/release/nyaa.exe" "release/$(VERSION)/nyaa-$(VERSION)-$(WINDOWS_TARGET).exe"
 	cp "target/$(LINUX_TARGET)/release/nyaa" "release/$(VERSION)/nyaa-$(VERSION)-$(LINUX_TARGET)"
 	@echo "\nCommits since last tag:"
 	@git log $(shell git describe --tags --abbrev=0)..HEAD --oneline
