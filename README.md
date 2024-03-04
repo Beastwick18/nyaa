@@ -85,7 +85,7 @@ timeout = 30
 and for windows looks like:
 ```toml
 # Runs a command with `powershell.exe -Command`
-torrent_client_cmd = 'curl {torrent} > ~\Downloads\{file}'
+torrent_client_cmd = 'curl {torrent} -o ~\Downloads\{file}'
 default_theme = 'Default'
 default_category = 'AllCategories'
 default_filter = 'NoFilter'
