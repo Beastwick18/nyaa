@@ -1,5 +1,5 @@
 # nyaa 🐈‍⬛
-### A simple tui for browsing and downloading Anime torrents from nyaa.si.
+### A simple TUI for browsing and downloading anime torrents from nyaa.si.
 [<img src="https://img.shields.io/github/v/release/Beastwick18/nyaa.svg?color=#2ea043" />](https://github.com/Beastwick18/nyaa/releases/latest)
 [<img src="https://img.shields.io/aur/version/nyaa?color=blue" />](https://aur.archlinux.org/packages/nyaa)
 [<img src="https://img.shields.io/crates/v/nyaa" />](https://crates.io/crates/nyaa)
@@ -121,6 +121,7 @@ timeout = 30
 `timeout` refers to how long the program will wait for a search request before it times out. This value is measured in seconds. You may want to increase this if your request times are usually long.
 
 ## 🗺️ Planned Features
+- [ ] Integration with torrent clients
 - [ ] RPM Release
 - [ ] User-defined themes
 - [ ] Sources other than nyaa/Custom user-defined sources
