@@ -2,14 +2,14 @@ use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     layout::{Constraint, Rect},
     style::Style,
-    widgets::{Row, Table},
+    widgets::{Row, StatefulWidget as _, Table},
     Frame,
 };
 use serde::{Deserialize, Serialize};
 
 use crate::app::{App, LoadType, Mode};
 
-use super::{create_block, EnumIter, StatefulTable, Widget};
+use super::{border_block, EnumIter, StatefulTable, Widget};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub enum Sort {
@@ -79,6 +79,7 @@ impl Default for SortPopup {
 
 impl Widget for SortPopup {
     fn draw(&self, f: &mut Frame, app: &App, area: Rect) {
+        let buf = f.buffer_mut();
         let center = super::centered_rect(30, self.table.items.len() as u16 + 2, area);
         let clear = super::centered_rect(center.width + 2, center.height, area);
         let items = self.table.items.iter().enumerate().map(|(i, item)| {
@@ -88,15 +89,15 @@ impl Widget for SortPopup {
             }])
         });
         let table = Table::new(items, [Constraint::Percentage(100)])
-            .block(create_block(app.theme, true).title(
+            .block(border_block(app.theme, true).title(
                 match app.mode == Mode::Sort(SortDir::Asc) {
                     true => "Sort Ascending",
                     false => "Sort Descending",
                 },
             ))
             .highlight_style(Style::default().bg(app.theme.hl_bg));
-        super::clear(f, clear, app.theme.bg);
-        f.render_stateful_widget(table, center, &mut self.table.state.to_owned());
+        super::clear(clear, buf, app.theme.bg);
+        table.render(center, buf, &mut self.table.state.to_owned());
     }
 
     fn handle_event(&mut self, app: &mut crate::app::App, e: &crossterm::event::Event) {

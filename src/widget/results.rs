@@ -5,7 +5,9 @@ use ratatui::{
     layout::{Constraint, Margin, Rect},
     style::{Modifier, Style, Stylize},
     text::Text,
-    widgets::{Clear, Paragraph, Row, Scrollbar, ScrollbarOrientation, Table},
+    widgets::{
+        Clear, Paragraph, Row, Scrollbar, ScrollbarOrientation, StatefulWidget, Table, Widget,
+    },
     Frame,
 };
 
@@ -15,7 +17,7 @@ use crate::{
     widget::sort::SortDir,
 };
 
-use super::{centered_rect, create_block, sort::Sort, StatefulTable};
+use super::{border_block, centered_rect, sort::Sort, StatefulTable};
 
 pub struct ResultsWidget {
     pub table: StatefulTable<Item>,
@@ -51,6 +53,8 @@ fn shorten_number(mut n: u32) -> String {
 
 impl super::Widget for ResultsWidget {
     fn draw(&self, f: &mut Frame, app: &App, area: Rect) {
+        let size = f.size();
+        let buf = f.buffer_mut();
         let focus_color = match app.mode {
             Mode::Normal => app.theme.border_focused_color,
             _ => app.theme.border_color,
@@ -103,11 +107,11 @@ impl super::Widget for ResultsWidget {
             .height(1)
             .bottom_margin(0);
 
-        f.render_widget(Clear, area);
+        Clear.render(area, buf);
         let items: Vec<Row> = match app.mode {
             Mode::Loading(_) => {
-                let area = centered_rect(8, 1, f.size());
-                f.render_widget(Paragraph::new("Loading…"), area);
+                let area = centered_rect(8, 1, size);
+                Paragraph::new("Loading…").render(area, buf);
                 vec![]
             }
             _ => self
@@ -160,7 +164,7 @@ impl super::Widget for ResultsWidget {
         let table = Table::new(items, [Constraint::Percentage(100)])
             .header(header)
             .block(
-                create_block(app.theme, app.mode == Mode::Normal).title(format!(
+                border_block(app.theme, app.mode == Mode::Normal).title(format!(
                     "Results {}-{} ({} total): Page {}/{}",
                     first_item + 1,
                     num_items + first_item,
@@ -171,8 +175,8 @@ impl super::Widget for ResultsWidget {
             )
             .highlight_style(Style::default().bg(app.theme.hl_bg))
             .widths(&binding);
-        f.render_stateful_widget(table, area, &mut self.table.state.to_owned());
-        f.render_stateful_widget(sb, sb_area, &mut self.table.scrollbar_state.to_owned());
+        StatefulWidget::render(table, area, buf, &mut self.table.state.to_owned());
+        StatefulWidget::render(sb, sb_area, buf, &mut self.table.scrollbar_state.to_owned());
 
         let source_str = format!("Source: {}", app.src.to_string());
         let text = Paragraph::new(source_str.clone());

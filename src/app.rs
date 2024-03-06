@@ -4,9 +4,6 @@ use std::{
     process::{Command, Stdio},
 };
 
-// #[cfg(target_os = "windows")]
-// use std::os::windows::process::CommandExt;
-
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     backend::Backend,

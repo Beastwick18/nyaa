@@ -4,13 +4,13 @@ use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     layout::{Constraint, Margin, Rect},
     style::{Color, Style},
-    widgets::{BorderType, Row, Scrollbar, ScrollbarOrientation, Table},
+    widgets::{BorderType, Row, Scrollbar, ScrollbarOrientation, StatefulWidget as _, Table},
     Frame,
 };
 
 use crate::app::{App, Mode};
 
-use super::{create_block, StatefulTable, Widget};
+use super::{border_block, StatefulTable, Widget};
 
 pub struct Theme {
     pub name: &'static str,
@@ -109,6 +109,7 @@ impl Default for ThemePopup {
 
 impl Widget for ThemePopup {
     fn draw(&self, f: &mut Frame, app: &App, area: Rect) {
+        let buf = f.buffer_mut();
         let height = min(min(THEMES.len() as u16 + 2, 10), area.height);
         let center = super::centered_rect(30, height, area);
         let clear = super::centered_rect(center.width + 2, center.height, area);
@@ -122,10 +123,10 @@ impl Widget for ThemePopup {
             ])
         });
         let table = Table::new(items, [Constraint::Percentage(100)])
-            .block(create_block(app.theme, true).title("Theme"))
+            .block(border_block(app.theme, true).title("Theme"))
             .highlight_style(Style::default().bg(app.theme.hl_bg));
-        super::clear(f, clear, app.theme.bg);
-        f.render_stateful_widget(table, center, &mut self.table.state.to_owned());
+        super::clear(clear, buf, app.theme.bg);
+        table.render(center, buf, &mut self.table.state.to_owned());
 
         // Only show scrollbar if content overflows
         if self.table.items.len() as u16 + 1 >= center.height {
@@ -138,7 +139,7 @@ impl Widget for ThemePopup {
                 vertical: 1,
                 horizontal: 0,
             });
-            f.render_stateful_widget(sb, sb_area, &mut self.table.scrollbar_state.to_owned());
+            sb.render(sb_area, buf, &mut self.table.scrollbar_state.to_owned());
         }
     }
 

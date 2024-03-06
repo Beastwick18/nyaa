@@ -2,9 +2,10 @@ use std::{cmp::min, slice::Iter};
 
 use crossterm::event::Event;
 use ratatui::{
+    buffer::Buffer,
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Style, Stylize as _},
-    widgets::{Block, Borders, Clear, ScrollbarState, TableState},
+    widgets::{Block, Borders, Clear, ScrollbarState, TableState, Widget as _},
     Frame,
 };
 
@@ -25,7 +26,7 @@ pub mod sources;
 pub mod theme;
 
 pub trait Widget {
-    fn draw(&self, f: &mut Frame, app: &App, area: Rect);
+    fn draw(&self, buf: &mut Frame, app: &App, area: Rect);
     fn handle_event(&mut self, app: &mut App, e: &Event);
     fn get_help() -> Option<Vec<(&'static str, &'static str)>>;
 }
@@ -58,7 +59,7 @@ pub fn centered_rect(mut x_len: u16, mut y_len: u16, r: Rect) -> Rect {
     .split(popup_layout[1])[1]
 }
 
-pub fn create_block<'a>(theme: &Theme, focused: bool) -> Block<'a> {
+pub fn border_block(theme: &Theme, focused: bool) -> Block {
     Block::new()
         .border_style(match focused {
             true => Style::new().fg(theme.border_focused_color),
@@ -70,9 +71,9 @@ pub fn create_block<'a>(theme: &Theme, focused: bool) -> Block<'a> {
         .border_type(theme.border)
 }
 
-pub fn clear(f: &mut Frame, area: Rect, fill: Color) {
-    f.render_widget(Clear, area);
-    f.render_widget(Block::new().bg(fill), area);
+pub fn clear(area: Rect, buf: &mut Buffer, fill: Color) {
+    Clear.render(area, buf);
+    Block::new().bg(fill).render(area, buf);
 }
 
 pub struct StatefulTable<T> {

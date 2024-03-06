@@ -3,13 +3,13 @@ use ratatui::{
     layout::{Constraint, Rect},
     style::{Color, Stylize as _},
     text::{Line, Span, Text},
-    widgets::{Row, Table},
+    widgets::{Row, Table, Widget as _},
     Frame,
 };
 
 use crate::app::{App, LoadType, Mode};
 
-use super::{create_block, Widget};
+use super::{border_block, Widget};
 
 pub struct CatEntry {
     name: &'static str,
@@ -271,12 +271,10 @@ impl Widget for CategoryPopup {
 
             let center = super::centered_rect(33, 14, area);
             let clear = super::centered_rect(center.width + 2, center.height, area);
-            super::clear(f, clear, app.theme.bg);
-            f.render_widget(
-                Table::new(tbl, [Constraint::Percentage(100)])
-                    .block(create_block(app.theme, true).title("Category")),
-                center,
-            );
+            super::clear(clear, f.buffer_mut(), app.theme.bg);
+            Table::new(tbl, [Constraint::Percentage(100)])
+                .block(border_block(app.theme, true).title("Category"))
+                .render(center, f.buffer_mut());
         }
     }
 

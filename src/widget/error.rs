@@ -4,13 +4,13 @@ use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     layout::Rect,
     style::Stylize,
-    widgets::{Paragraph, Wrap},
+    widgets::{Paragraph, Widget as _, Wrap},
     Frame,
 };
 
 use crate::app::{App, Mode};
 
-use super::{create_block, Widget};
+use super::{border_block, Widget};
 
 pub struct ErrorPopup {
     pub error: String,
@@ -44,13 +44,13 @@ impl Widget for ErrorPopup {
         let clear = super::centered_rect(center.width + 2, center.height, area);
         let p = Paragraph::new(self.error.to_owned())
             .block(
-                create_block(app.theme, true)
+                border_block(app.theme, true)
                     .fg(app.theme.remake)
                     .title("Error: Press any key to dismiss"),
             )
             .wrap(Wrap { trim: false });
-        super::clear(f, clear, app.theme.bg);
-        f.render_widget(p, center);
+        super::clear(clear, f.buffer_mut(), app.theme.bg);
+        p.render(center, f.buffer_mut());
     }
 
     fn handle_event(&mut self, app: &mut App, e: &Event) {

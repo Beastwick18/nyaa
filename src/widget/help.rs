@@ -5,13 +5,13 @@ use ratatui::{
     layout::{Alignment, Constraint, Margin, Rect},
     style::{Modifier, Style, Stylize},
     text::Line,
-    widgets::{Row, Scrollbar, ScrollbarOrientation, Table},
+    widgets::{Row, Scrollbar, ScrollbarOrientation, StatefulWidget as _, Table},
     Frame,
 };
 
 use crate::app::{App, Mode};
 
-use super::{create_block, StatefulTable, Widget};
+use super::{border_block, StatefulTable, Widget};
 
 pub struct HelpPopup {
     pub table: StatefulTable<(&'static str, &'static str)>,
@@ -37,6 +37,7 @@ impl HelpPopup {
 
 impl Widget for HelpPopup {
     fn draw(&self, f: &mut Frame, app: &App, area: Rect) {
+        let buf = f.buffer_mut();
         let iter = self.table.items.iter();
         let key_min = iter.clone().fold(15, |acc, e| max(acc, e.0.len())) as u16;
         let map_min = iter.fold(15, |acc, e| max(acc, e.1.len())) as u16;
@@ -65,15 +66,15 @@ impl Widget for HelpPopup {
         .bottom_margin(0);
         let table = Table::new(items, [Constraint::Percentage(100)])
             .block(
-                create_block(app.theme, true)
+                border_block(app.theme, true)
                     .title(format!("Help: {}", self.prev_mode.to_string())),
             )
             .header(header)
             .widths(Constraint::from_lengths([key_min, 1, map_min]))
             .highlight_style(Style::default().bg(app.theme.hl_bg));
 
-        super::clear(f, clear, app.theme.bg);
-        f.render_stateful_widget(table, center, &mut self.table.state.to_owned());
+        super::clear(clear, buf, app.theme.bg);
+        table.render(center, buf, &mut self.table.state.to_owned());
 
         // Only show scrollbar if content overflows
         if self.table.items.len() as u16 + 2 >= center.height {
@@ -86,7 +87,7 @@ impl Widget for HelpPopup {
                 vertical: 1,
                 horizontal: 0,
             });
-            f.render_stateful_widget(sb, sb_area, &mut self.table.scrollbar_state.to_owned());
+            sb.render(sb_area, buf, &mut self.table.scrollbar_state.to_owned());
         }
     }
 

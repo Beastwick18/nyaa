@@ -4,12 +4,12 @@ use crate::app::{App, LoadType, Mode};
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     layout::{Margin, Rect},
-    widgets::Paragraph,
+    widgets::{Paragraph, Widget as _},
     Frame,
 };
 
 use super::{
-    create_block,
+    border_block,
     input::{self, InputWidget},
     Widget,
 };
@@ -28,12 +28,13 @@ impl Default for PagePopup {
 
 impl Widget for PagePopup {
     fn draw(&self, f: &mut Frame, app: &App, area: Rect) {
+        let buf = f.buffer_mut();
         let center = super::centered_rect(13, 3, area);
         let clear = super::centered_rect(center.width + 2, center.height, area);
         let page_p = Paragraph::new(self.input.input.clone());
-        let indicator = Paragraph::new(">").block(create_block(app.theme, true).title("Goto Page"));
-        super::clear(f, clear, app.theme.bg);
-        f.render_widget(indicator, center);
+        let indicator = Paragraph::new(">").block(border_block(app.theme, true).title("Goto Page"));
+        super::clear(clear, buf, app.theme.bg);
+        indicator.render(center, buf);
 
         let input_area = center.inner(&Margin {
             vertical: 1,
@@ -45,7 +46,7 @@ impl Widget for PagePopup {
             input_area.width,
             input_area.height,
         );
-        f.render_widget(page_p, input_area);
+        page_p.render(input_area, buf);
 
         if app.mode == Mode::Page {
             self.input.show_cursor(f, input_area);
@@ -64,7 +65,7 @@ impl Widget for PagePopup {
                     app.mode = Mode::Normal;
                 }
                 KeyCode::Enter => {
-                    app.page = max(min(self.input.input.parse().unwrap_or(1), 100), 1);
+                    app.page = max(min(self.input.input.parse().unwrap_or(1), app.last_page), 1);
                     app.mode = Mode::Loading(LoadType::Searching);
 
                     // Clear input on enter

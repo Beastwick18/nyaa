@@ -44,6 +44,8 @@ impl Default for Config {
             date_format: "%Y-%m-%d %H:%M".to_owned(),
             base_url: "https://nyaa.si/".to_owned(),
             timeout: 30,
+            // TODO: Tables for each torrent client, with an `enabled` flag, as well as
+            // any client related settings.
         }
     }
 }

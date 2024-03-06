@@ -3,14 +3,14 @@ use ratatui::{
     layout::{Margin, Rect},
     style::{Style, Stylize},
     text::{Line, Span},
-    widgets::{Clear, Paragraph},
+    widgets::{Clear, Paragraph, Widget},
     Frame,
 };
 
 use crate::app::{App, LoadType, Mode};
 
 use super::{
-    create_block,
+    border_block,
     input::{self, InputWidget},
 };
 
@@ -28,19 +28,14 @@ impl Default for SearchWidget {
 
 impl super::Widget for SearchWidget {
     fn draw(&self, f: &mut Frame, app: &App, area: Rect) {
-        // let fwidth = f.size().width as usize - 2;
-        // Try to insert ellipsis if input is too long (visual only)
-        let block = create_block(app.theme, app.mode == Mode::Search).title("Search");
-        f.render_widget(Clear, area);
-        f.render_widget(block, area);
+        let buf = f.buffer_mut();
+        let block = border_block(app.theme, app.mode == Mode::Search).title("Search");
+        Clear.render(area, buf);
+        block.render(area, buf);
         let input_area = area.inner(&Margin {
             vertical: 1,
             horizontal: 1,
         });
-        self.input.draw(f, app, input_area);
-        if app.mode == Mode::Search {
-            self.input.show_cursor(f, input_area);
-        }
 
         let text = Paragraph::new(Line::from(vec![
             Span::raw("Press "),
@@ -50,7 +45,12 @@ impl super::Widget for SearchWidget {
             Span::raw(" for help"),
         ]));
         let right = Rect::new(area.right() - 23, area.top(), 23, 1);
-        f.render_widget(text, right);
+        text.render(right, buf);
+
+        self.input.draw(f, app, input_area);
+        if app.mode == Mode::Search {
+            self.input.show_cursor(f, input_area);
+        }
     }
 
     fn handle_event(&mut self, app: &mut crate::app::App, evt: &Event) {
