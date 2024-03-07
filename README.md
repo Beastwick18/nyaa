@@ -18,8 +18,8 @@
   - [From Source](#from-source)
 - [Keybinds](#-keybinds)
 - [Proxies](#-proxies)
-- [Configuration](#-configuration)
-- [Planned Features](#-planned-features)
+- [Configuration](#%EF%B8%8F-configuration)
+- [Planned Features](#%EF%B8%8F-planned-features)
 
 ## ⚡ Installation
 ### With cargo
