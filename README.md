@@ -8,6 +8,19 @@
   <img src="assets/tty.gif" width="800" alt="animated" />
 </p>
 
+## Table of Contents
+
+- [Installation](#-installation)
+  - [With cargo](#with-cargo)
+  - [On Arch Linux](#on-arch-linux-aur)
+  - [Ubuntu/Debian](#ubuntudebian)
+  - [Windows/Linux Binaries](#windowslinux-binaries)
+  - [From Source](#from-source)
+- [Keybinds](#-keybinds)
+- [Proxies](#-proxies)
+- [Configuration](#-configuration)
+- [Planned Features](#-planned-features)
+
 ## ⚡ Installation
 ### With cargo
 ```sh
