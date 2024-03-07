@@ -16,7 +16,7 @@
   - [Ubuntu/Debian](#ubuntudebian)
   - [Windows/Linux Binaries](#windowslinux-binaries)
   - [From Source](#from-source)
-- [Keybinds](#-keybinds)
+- [Keybinds](#%EF%B8%8F-keybinds)
 - [Proxies](#-proxies)
 - [Configuration](#%EF%B8%8F-configuration)
 - [Planned Features](#%EF%B8%8F-planned-features)
