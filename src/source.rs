@@ -1,5 +1,6 @@
 use std::error::Error;
 
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -11,6 +12,20 @@ use self::{nyaa_html::NyaaHtmlSource, nyaa_rss::NyaaRssSource};
 
 pub mod nyaa_html;
 pub mod nyaa_rss;
+
+pub fn add_protocol<S: Into<String>>(url: S, default_https: bool) -> String {
+    let protocol = match default_https {
+        true => "https",
+        false => "http",
+    };
+    let url = url.into();
+    let re = Regex::new(r"^https?://.+$").unwrap();
+    match re.is_match(&url) {
+        true => url,
+        // Assume http(s) if not present
+        false => format!("{}://{}", protocol, url),
+    }
+}
 
 #[derive(Clone)]
 pub struct Item {

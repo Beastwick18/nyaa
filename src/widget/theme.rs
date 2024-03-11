@@ -172,7 +172,7 @@ impl Widget for ThemePopup {
                         app.theme = theme;
                         app.config.default_theme = theme.name.to_owned();
                         if let Err(e) = app.config.clone().store() {
-                            app.errors.push(format!(
+                            app.show_error(format!(
                                 "Failed to update default theme in config file:\n{}",
                                 e
                             ));

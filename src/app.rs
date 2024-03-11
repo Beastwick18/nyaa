@@ -1,8 +1,4 @@
-use std::{
-    error::Error,
-    io::{BufReader, Read as _},
-    process::{Command, Stdio},
-};
+use std::{collections::VecDeque, error::Error};
 
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
@@ -12,11 +8,13 @@ use ratatui::{
 };
 
 use crate::{
+    client::Client,
     config::Config,
-    source::{self, Item, Sources},
+    source::{self, Sources},
     widget::{
         self,
         category::CategoryPopup,
+        clients::ClientsPopup,
         error::ErrorPopup,
         filter::FilterPopup,
         help::HelpPopup,
@@ -50,6 +48,7 @@ pub enum Mode {
     Filter,
     Theme,
     Sources,
+    Clients,
     Loading(LoadType),
     Error,
     Page,
@@ -66,6 +65,7 @@ impl ToString for Mode {
             Mode::Filter => "Filter".to_string(),
             Mode::Theme => "Theme".to_string(),
             Mode::Sources => "Sources".to_string(),
+            Mode::Clients => "Clients".to_string(),
             Mode::Loading(_) => "Loading".to_string(),
             Mode::Error => "Error".to_string(),
             Mode::Page => "Page".to_owned(),
@@ -78,18 +78,22 @@ pub struct App {
     pub mode: Mode,
     pub theme: &'static Theme,
     pub config: Config,
-    pub errors: Vec<String>,
+    pub errors: VecDeque<String>,
     pub ascending: bool,
     pub page: usize,
     pub last_page: usize,
     pub total_results: usize,
     pub src: Sources,
+    pub client: Client,
     should_quit: bool,
 }
 
 impl App {
     pub fn quit(&mut self) {
         self.should_quit = true;
+    }
+    pub fn show_error<S: ToString>(&mut self, error: S) {
+        self.errors.push_back(error.to_string());
     }
 }
 
@@ -100,6 +104,7 @@ pub struct Widgets {
     pub filter: FilterPopup,
     pub theme: ThemePopup,
     pub sources: SourcesPopup,
+    pub clients: ClientsPopup,
     pub search: SearchWidget,
     pub results: ResultsWidget,
     pub error: ErrorPopup,
@@ -113,81 +118,15 @@ impl Default for App {
             mode: Mode::Loading(LoadType::Searching),
             theme: widget::theme::THEMES[0],
             config: Config::default(),
-            errors: vec![],
+            errors: VecDeque::new(),
             ascending: false,
             page: 1,
             last_page: 1,
             total_results: 0,
             src: Sources::NyaaHtml,
+            client: Client::Cmd,
             should_quit: false,
         }
-    }
-}
-
-fn download(item: &Item, app: &mut App) {
-    #[cfg(target_os = "windows")]
-    let (cmd_str, cmd) = {
-        let cmd_str = app
-            .config
-            .torrent_client_cmd
-            .replace("{magnet}", &item.magnet_link)
-            .replace("{torrent}", &item.torrent_link)
-            .replace("{title}", &item.title)
-            .replace("{file}", &item.file_name);
-
-        let cmd = Command::new("powershell.exe")
-            .arg("-Command")
-            .arg(&cmd_str)
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::piped())
-            .spawn();
-        (cmd_str, cmd)
-    };
-    #[cfg(not(target_os = "windows"))]
-    let (cmd_str, cmd) = {
-        let cmd_str = app
-            .config
-            .torrent_client_cmd
-            .replace("{magnet}", &shellwords::escape(&item.magnet_link))
-            .replace("{torrent}", &shellwords::escape(&item.torrent_link))
-            .replace("{title}", &shellwords::escape(&item.title))
-            .replace("{file}", &shellwords::escape(&item.file_name));
-
-        let cmd = Command::new("sh")
-            .arg("-c")
-            .arg(&cmd_str)
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::piped())
-            .spawn();
-        (cmd_str, cmd)
-    };
-    let child = match cmd {
-        Ok(child) => child,
-        Err(e) => {
-            app.errors
-                .push(format!("{}:\nFailed to run:\n{}", cmd_str, e));
-            return;
-        }
-    };
-    let output = match child.wait_with_output() {
-        Ok(output) => output,
-        Err(e) => {
-            app.errors
-                .push(format!("{}:\nFailed to get output:\n{}", cmd_str, e));
-            return;
-        }
-    };
-
-    if output.status.code() != Some(0) {
-        let mut err = BufReader::new(&*output.stderr);
-        let mut err_str = String::new();
-        err.read_to_string(&mut err_str).unwrap_or(0);
-        app.errors.push(format!(
-            "{}:\nExited with status code {}:\n{}",
-            cmd_str, output.status, err_str
-        ));
     }
 }
 
@@ -225,7 +164,8 @@ pub fn draw(widgets: &mut Widgets, app: &mut App, f: &mut Frame) {
         Mode::Filter => widgets.filter.draw(f, app, f.size()),
         Mode::Theme => widgets.theme.draw(f, app, f.size()),
         Mode::Error => {
-            if let Some(error) = app.errors.pop() {
+            // Get the oldest error first
+            if let Some(error) = app.errors.pop_front() {
                 widgets.error.with_error(error);
             }
             widgets.error.draw(f, app, f.size());
@@ -233,6 +173,7 @@ pub fn draw(widgets: &mut Widgets, app: &mut App, f: &mut Frame) {
         Mode::Help => widgets.help.draw(f, app, f.size()),
         Mode::Page => widgets.page.draw(f, app, f.size()),
         Mode::Sources => widgets.sources.draw(f, app, f.size()),
+        Mode::Clients => widgets.clients.draw(f, app, f.size()),
         Mode::Normal | Mode::Search | Mode::Loading(_) => {}
     }
 }
@@ -247,6 +188,7 @@ fn get_help(app: &mut App, w: &mut Widgets) {
         Mode::Theme => ThemePopup::get_help(),
         Mode::Page => PagePopup::get_help(),
         Mode::Sources => SourcesPopup::get_help(),
+        Mode::Clients => ClientsPopup::get_help(),
         Mode::Error => None,
         Mode::Help => None,
         Mode::Loading(_) => None,
@@ -265,12 +207,11 @@ pub async fn run_app<B: Backend>(
     let config = match Config::load() {
         Ok(config) => config,
         Err(e) => {
-            app.errors.push(e.to_string());
+            app.show_error(e);
             app.config.clone()
         }
     };
     config.apply(app, w);
-    app.config = config;
     loop {
         if app.should_quit {
             return Ok(());
@@ -294,55 +235,32 @@ pub async fn run_app<B: Backend>(
                     Some(i) => i,
                     None => continue,
                 };
-                download(item, app);
+                app.client.clone().download(item, app).await; // TODO: Use user selected client
                 continue;
             }
 
             let result = source::load(app.src, load_type, app, w).await;
 
             match result {
-                Ok(items) => {
-                    w.results.with_items(items, w.sort.selected.clone());
-                }
-                Err(e) => {
-                    app.errors.push(e.to_string());
-                }
+                Ok(items) => w.results.with_items(items, w.sort.selected.clone()),
+                Err(e) => app.show_error(e),
             }
             continue; // Redraw
         }
 
         let evt = event::read()?;
         match app.mode {
-            Mode::Category => {
-                w.category.handle_event(app, &evt);
-            }
-            Mode::Sort(_) => {
-                w.sort.handle_event(app, &evt);
-            }
-            Mode::Normal => {
-                w.results.handle_event(app, &evt);
-            }
-            Mode::Search => {
-                w.search.handle_event(app, &evt);
-            }
-            Mode::Filter => {
-                w.filter.handle_event(app, &evt);
-            }
-            Mode::Theme => {
-                w.theme.handle_event(app, &evt);
-            }
-            Mode::Error => {
-                w.error.handle_event(app, &evt);
-            }
-            Mode::Page => {
-                w.page.handle_event(app, &evt);
-            }
-            Mode::Help => {
-                w.help.handle_event(app, &evt);
-            }
-            Mode::Sources => {
-                w.sources.handle_event(app, &evt);
-            }
+            Mode::Category => w.category.handle_event(app, &evt),
+            Mode::Sort(_) => w.sort.handle_event(app, &evt),
+            Mode::Normal => w.results.handle_event(app, &evt),
+            Mode::Search => w.search.handle_event(app, &evt),
+            Mode::Filter => w.filter.handle_event(app, &evt),
+            Mode::Theme => w.theme.handle_event(app, &evt),
+            Mode::Error => w.error.handle_event(app, &evt),
+            Mode::Page => w.page.handle_event(app, &evt),
+            Mode::Help => w.help.handle_event(app, &evt),
+            Mode::Sources => w.sources.handle_event(app, &evt),
+            Mode::Clients => w.clients.handle_event(app, &evt),
             Mode::Loading(_) => {}
         }
         if app.mode != Mode::Help {

@@ -59,22 +59,22 @@ impl super::Widget for ResultsWidget {
             Mode::Normal => app.theme.border_focused_color,
             _ => app.theme.border_color,
         };
-        let raw_date_width = self.table.items.get(0).map(|i| i.date.len()).unwrap_or(10) as u16;
+        let raw_date_width = self.table.items.first().map(|i| i.date.len()).unwrap_or(10) as u16;
         let date_width = max(raw_date_width, 6);
         let binding =
             Constraint::from_lengths([3, area.width - 32 - date_width, 9, date_width, 4, 4, 5]);
         let header_slice = &mut [
             "Cat".to_owned(),
             "Name".to_owned(),
-            format!(" {:<9}", " Size"),
+            format!("  {}", "Size"),
             format!(
                 "{:^width$}",
                 "Date  ",
                 width = max(raw_date_width, 4) as usize + 2
             ),
-            format!(" {:<3}", ""),
-            format!(" {:<3}", ""),
-            format!(" {:<3}", ""),
+            format!(" {}", ""),
+            format!(" {}", ""),
+            format!(" {}", ""),
         ];
         let direction = match app.ascending {
             true => "▲",
@@ -284,6 +284,9 @@ impl super::Widget for ResultsWidget {
                 (Char('s'), &KeyModifiers::CONTROL) => {
                     app.mode = Mode::Sources;
                 }
+                (Char('d'), &KeyModifiers::NONE) => {
+                    app.mode = Mode::Clients;
+                }
                 _ => {}
             }
         }
@@ -308,6 +311,7 @@ impl super::Widget for ResultsWidget {
             ("s", "Sort"),
             ("S", "Sort reversed"),
             ("t", "Themes"),
+            ("d", "Select download client"),
             ("Ctrl-p", "Goto page"),
             ("Ctrl-s", "Select source"),
         ])

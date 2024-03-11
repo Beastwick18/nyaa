@@ -14,6 +14,7 @@ use crate::app::App;
 use self::theme::Theme;
 
 pub mod category;
+pub mod clients;
 pub mod error;
 pub mod filter;
 pub mod help;

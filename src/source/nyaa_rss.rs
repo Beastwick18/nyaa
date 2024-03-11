@@ -1,7 +1,6 @@
 use std::{cmp::Ordering, collections::BTreeMap, error::Error, str::FromStr, time::Duration};
 
 use chrono::{DateTime, Local};
-use regex::Regex;
 use rss::{extension::Extension, Channel};
 use urlencoding::encode;
 
@@ -10,7 +9,7 @@ use crate::{
     widget::{category::CatEntry, sort::Sort},
 };
 
-use super::{nyaa_html::to_bytes, Item, Source};
+use super::{add_protocol, nyaa_html::to_bytes, Item, Source};
 
 pub struct NyaaRssSource;
 
@@ -54,12 +53,7 @@ impl Source for NyaaRssSource {
         app.page = 1;
         let (high, low) = (cat / 10, cat % 10);
         let query = encode(&query);
-        let mut base_url = app.config.base_url.clone();
-        let re = Regex::new(r"^https?://.+$").unwrap();
-        if !re.is_match(&base_url) {
-            // Assume https if not present
-            base_url = format!("https://{}", base_url);
-        }
+        let base_url = add_protocol(app.config.base_url.clone(), true);
 
         let url = format!(
             "{}/?page=rss&f={}&c={}_{}&q={}&m",

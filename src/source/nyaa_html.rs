@@ -1,7 +1,6 @@
 use std::{error::Error, time::Duration};
 
 use chrono::{DateTime, Local, NaiveDateTime, TimeZone};
-use regex::Regex;
 use reqwest::StatusCode;
 use scraper::{ElementRef, Html, Selector};
 use urlencoding::encode;
@@ -11,7 +10,7 @@ use crate::{
     widget::category::CatEntry,
 };
 
-use super::{Item, Source};
+use super::{add_protocol, Item, Source};
 
 pub struct NyaaHtmlSource;
 
@@ -62,12 +61,7 @@ impl Source for NyaaHtmlSource {
         let sort = w.sort.selected.to_url();
         let timeout = app.config.timeout;
 
-        let re = Regex::new(r"^https?://.+$")?;
-        let base_url = match re.is_match(&app.config.base_url) {
-            true => app.config.base_url.to_owned(),
-            // Assume https if not present
-            false => format!("https://{}", app.config.base_url),
-        };
+        let base_url = add_protocol(app.config.base_url.clone(), true);
         let (high, low) = (cat / 10, cat % 10);
         let query = encode(&w.search.input.input);
         let ord = match app.ascending {

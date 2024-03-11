@@ -25,7 +25,7 @@ deb:
 	docker stop nyaa-deb || true
 	docker rm nyaa-deb || true
 	VERSION=$(VERSION) docker compose up
-	cp "docker-deb/nyaa-$(VERSION)-x86_64.deb" "release/$(VERSION)"
+	cp "docker-deb/nyaa-$(VERSION)-x86_64.deb" "release/$(VERSION)/"
 
 gh:
 	gh release create v$(VERSION) release/$(VERSION)/* --draft --title v$(VERSION) --latest
