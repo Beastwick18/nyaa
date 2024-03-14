@@ -1,6 +1,9 @@
-use std::{collections::HashMap, error::Error, time::Duration};
+use std::{collections::HashMap, time::Duration};
 
-use reqwest::{header::SET_COOKIE, Response, StatusCode};
+use reqwest::{
+    header::{COOKIE, REFERER, SET_COOKIE},
+    Response, StatusCode,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -15,6 +18,47 @@ pub struct QbitConfig {
     pub username: String,
     pub password: String,
     pub use_magnet: bool,
+    pub savepath: Option<String>,
+    pub category: Option<String>, // Single category
+    pub tags: Option<String>,     // Comma seperated
+    pub skip_checking: Option<bool>,
+    pub paused: Option<bool>,
+    pub create_root_folder: Option<bool>, // root_folder: String
+    pub up_limit: Option<i32>,
+    pub dl_limit: Option<i32>,
+    pub ratio_limit: Option<f32>,
+    pub seeding_time_limit: Option<i32>,
+    pub auto_tmm: Option<bool>,
+    pub sequential_download: Option<bool>,          // String
+    pub prioritize_first_last_pieces: Option<bool>, // String
+}
+
+fn bool_str(b: Option<bool>) -> Option<String> {
+    b.map(|x| match x {
+        true => "true".to_owned(),
+        false => "false".to_owned(),
+    })
+}
+
+impl QbitConfig {
+    fn to_form(&self, url: String) -> QbitForm {
+        QbitForm {
+            urls: url,
+            savepath: self.savepath.to_owned(),
+            category: self.category.to_owned(),
+            tags: self.tags.to_owned(),
+            skip_checking: bool_str(self.skip_checking),
+            paused: bool_str(self.paused),
+            root_folder: bool_str(self.create_root_folder),
+            up_limit: self.up_limit,
+            dl_limit: self.dl_limit,
+            ratio_limit: self.ratio_limit,
+            seeding_time_limit: self.seeding_time_limit,
+            auto_tmm: self.auto_tmm,
+            sequential_download: bool_str(self.sequential_download),
+            first_last_piece_prio: bool_str(self.prioritize_first_last_pieces),
+        }
+    }
 }
 
 impl Default for QbitConfig {
@@ -24,52 +68,81 @@ impl Default for QbitConfig {
             username: "admin".to_owned(),
             password: "adminadmin".to_owned(),
             use_magnet: true,
+            savepath: None,
+            category: None,
+            tags: None,
+            skip_checking: None,
+            paused: None,
+            create_root_folder: None,
+            up_limit: None,
+            dl_limit: None,
+            ratio_limit: None,
+            seeding_time_limit: None,
+            auto_tmm: None,
+            sequential_download: None,
+            prioritize_first_last_pieces: None,
         }
     }
 }
 
-async fn login(qbit: &QbitConfig, timeout: Duration) -> Result<String, Box<dyn Error>> {
+#[derive(Serialize, Deserialize, Clone)]
+struct QbitForm {
+    #[serde(rename = "urls")]
+    urls: String,
+    #[serde(rename = "savepath")]
+    savepath: Option<String>,
+    #[serde(rename = "category")]
+    category: Option<String>,
+    #[serde(rename = "tags")]
+    tags: Option<String>,
+    #[serde(rename = "skip_checking")]
+    skip_checking: Option<String>,
+    #[serde(rename = "paused")]
+    paused: Option<String>,
+    #[serde(rename = "root_folder")]
+    root_folder: Option<String>,
+    #[serde(rename = "upLimit")]
+    up_limit: Option<i32>,
+    #[serde(rename = "dlLimit")]
+    dl_limit: Option<i32>,
+    #[serde(rename = "ratioLimit")]
+    ratio_limit: Option<f32>,
+    #[serde(rename = "seedingTimeLimit")]
+    seeding_time_limit: Option<i32>,
+    #[serde(rename = "autoTMM")]
+    auto_tmm: Option<bool>,
+    #[serde(rename = "sequentialDownload")]
+    sequential_download: Option<String>,
+    #[serde(rename = "firstLastPiecePrio")]
+    first_last_piece_prio: Option<String>,
+    // torrents: Raw  // Disabled
+    // cookie: String // Disabled
+    // rename: String // Disabled
+}
+
+async fn login(qbit: &QbitConfig, timeout: Duration) -> Result<String, String> {
     let client = reqwest::Client::new();
     let base_url = add_protocol(qbit.base_url.clone(), false);
     let url = format!("{}/api/v2/auth/login", base_url);
     let mut params = HashMap::new();
     params.insert("username", qbit.username.to_owned());
     params.insert("password", qbit.password.to_owned());
-    let res = client
-        .post(url)
-        .header("Referer", base_url)
-        .form(&params)
-        .timeout(timeout)
-        .send()
-        .await;
-    if let Err(e) = res {
-        return Err(format!("Failed to send data to qBittorrent\n{}", e).into());
-    }
-    let res = res.unwrap();
-    let cookie = res.headers().get(SET_COOKIE);
-    if cookie.is_none() {
-        let headers = res.headers().clone();
-        return Err(format!(
-            "Failed to get cookie from qBittorrent:\n{:?}\n{}",
-            headers.keys(),
-            res.text().await.unwrap_or_default()
-        )
-        .into());
-    }
-    let cookie = cookie.unwrap().to_str();
-    if let Err(e) = cookie {
-        return Err(format!("Failed to parse cookie\n{}", e).into());
-    }
-    let cookie = cookie.unwrap().to_string();
-    for c in cookie.split(';') {
-        let split = c.trim().split_once('=');
-        if let Some((name, value)) = split {
-            if name == "SID" {
-                return Ok(format!("SID={}", value));
-            }
-        }
-    }
-    Err("No cookie returned by qBittorrent".into())
+    let res = client.post(url).form(&params).timeout(timeout).send().await;
+    let res = res.map_err(|e| format!("Failed to send data to qBittorrent\n{}", e))?;
+    let headers = res.headers().clone();
+    let cookie = headers.get(SET_COOKIE).ok_or(format!(
+        "Failed to get cookie from qBittorrent:\n{}",
+        res.text().await.unwrap_or_default()
+    ))?;
+
+    let cookie = cookie
+        .to_str()
+        .map_err(|e| format!("Failed to parse cookie\n{}", e))?;
+    cookie
+        .split(';')
+        .find(|c| c.split_once('=').is_some_and(|s| s.0 == "SID"))
+        .ok_or("No cookie returned by qBittorrent".to_owned())
+        .map(|s| s.to_owned())
 }
 
 async fn logout(qbit: &QbitConfig, sid: String, timeout: Duration) {
@@ -77,8 +150,8 @@ async fn logout(qbit: &QbitConfig, sid: String, timeout: Duration) {
     let base_url = add_protocol(qbit.base_url.clone(), false);
     let _ = client
         .get(format!("{}/api/v2/auth/logout", base_url))
-        .header("Referer", base_url)
-        .header("Cookie", sid)
+        .header(REFERER, base_url)
+        .header(COOKIE, sid)
         .timeout(timeout)
         .send()
         .await;
@@ -93,14 +166,16 @@ async fn add_torrent(
     let client = reqwest::Client::new();
     let base_url = add_protocol(qbit.base_url.clone(), false);
     let url = format!("{}/api/v2/torrents/add", base_url);
-    let mut params = HashMap::new();
-    params.insert("urls", link);
+    // let mut params = HashMap::new();
+    // params.insert("urls", link);
+    // params.insert("category", "Test category".to_owned());
+    // params.insert("test", 0.2);
 
     client
         .post(url)
-        .header("Referer", base_url)
-        .header("Cookie", sid)
-        .form(&params)
+        .header(REFERER, base_url)
+        .header(COOKIE, sid)
+        .form(&qbit.to_form(link))
         .timeout(timeout)
         .send()
         .await

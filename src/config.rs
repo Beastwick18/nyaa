@@ -60,7 +60,7 @@ impl Config {
         confy::store::<Config>(APP_NAME, CONFIG_FILE, self)
     }
     pub fn apply(&self, app: &mut App, w: &mut Widgets) {
-        app.config = self.clone();
+        app.config = self.to_owned();
         w.search.input.input = app.config.default_search.to_owned();
         w.search.input.cursor = w.search.input.input.len();
         w.sort.selected = app.config.default_sort.to_owned();
