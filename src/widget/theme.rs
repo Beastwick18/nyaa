@@ -154,10 +154,10 @@ impl Widget for ThemePopup {
                 KeyCode::Esc | KeyCode::Char('t') | KeyCode::Char('q') => {
                     app.mode = Mode::Normal;
                 }
-                KeyCode::Char('j') => {
+                KeyCode::Char('j') | KeyCode::Down => {
                     self.table.next_wrap(1);
                 }
-                KeyCode::Char('k') => {
+                KeyCode::Char('k') | KeyCode::Up => {
                     self.table.next_wrap(-1);
                 }
                 KeyCode::Char('G') => {
