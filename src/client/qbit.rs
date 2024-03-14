@@ -17,7 +17,7 @@ pub struct QbitConfig {
     pub base_url: String,
     pub username: String,
     pub password: String,
-    pub use_magnet: bool,
+    pub use_magnet: Option<bool>,
     pub savepath: Option<String>,
     pub category: Option<String>, // Single category
     pub tags: Option<String>,     // Comma seperated
@@ -67,7 +67,7 @@ impl Default for QbitConfig {
             base_url: "http://localhost:8080".to_owned(),
             username: "admin".to_owned(),
             password: "adminadmin".to_owned(),
-            use_magnet: true,
+            use_magnet: None,
             savepath: None,
             category: None,
             tags: None,
@@ -198,8 +198,8 @@ pub async fn download(item: &Item, app: &mut App) {
         }
     };
     let link = match qbit.use_magnet {
-        true => item.magnet_link.to_owned(),
-        false => item.torrent_link.to_owned(),
+        None | Some(true) => item.magnet_link.to_owned(),
+        Some(false) => item.torrent_link.to_owned(),
     };
     let Ok(res) = add_torrent(&qbit, sid.to_owned(), link, timeout).await else {
         app.show_error("Failed to get response");
