@@ -61,8 +61,8 @@ impl super::Widget for ResultsWidget {
         };
         let raw_date_width = self.table.items.first().map(|i| i.date.len()).unwrap_or(10) as u16;
         let date_width = max(raw_date_width, 6);
-        let binding =
-            Constraint::from_lengths([3, area.width - 32 - date_width, 9, date_width, 4, 4, 5]);
+        let title_width = max(area.width as i32 - 32 - date_width as i32, 5) as u16;
+        let binding = Constraint::from_lengths([3, title_width, 9, date_width, 4, 4, 5]);
         let header_slice = &mut [
             "Cat".to_owned(),
             "Name".to_owned(),
