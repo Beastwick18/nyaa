@@ -3,7 +3,7 @@ use std::{
     process::{Command, Stdio},
 };
 
-use crate::{app::App, catch, source::Item};
+use crate::{app::App, source::Item};
 
 pub fn load_config(app: &mut App) {
     if app.config.torrent_client_cmd.is_none() {
