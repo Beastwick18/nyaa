@@ -178,12 +178,12 @@ impl super::Widget for ResultsWidget {
         StatefulWidget::render(table, area, buf, &mut self.table.state.to_owned());
         StatefulWidget::render(sb, sb_area, buf, &mut self.table.scrollbar_state.to_owned());
 
-        let source_str = format!("Source: {}", app.src.to_string());
-        let text = Paragraph::new(source_str.clone());
+        let right_str = format!("Client: {}", app.client.to_string(),);
+        let text = Paragraph::new(right_str.clone());
         let right = Rect::new(
-            area.right() - 1 - source_str.len() as u16,
+            area.right() - 1 - right_str.len() as u16,
             area.top(),
-            source_str.len() as u16,
+            right_str.len() as u16,
             1,
         );
         f.render_widget(text, right);

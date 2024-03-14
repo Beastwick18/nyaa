@@ -84,8 +84,8 @@ impl Widget for SortPopup {
         let clear = super::centered_rect(center.width + 2, center.height, area);
         let items = self.table.items.iter().enumerate().map(|(i, item)| {
             Row::new(vec![match i == self.selected.to_owned() as usize {
-                true => format!("  {}", item.to_owned()),
-                false => format!("   {}", item.to_owned()),
+                true => format!("  {}", item),
+                false => format!("   {}", item),
             }])
         });
         let table = Table::new(items, [Constraint::Percentage(100)])
