@@ -29,6 +29,7 @@ scraper = "0.18.1"
 regex = "1.10.3"
 rss = "2.0.1"
 chrono = "0.4.34"
+transmission-rpc = "0.4.2"
 
 [package.metadata.deb]
 maintainer = "Steven Culwell <bradculwell@pm.me>"

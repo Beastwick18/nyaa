@@ -10,6 +10,7 @@ use ratatui::{
     },
     Frame,
 };
+use unicode_width::UnicodeWidthStr;
 
 use crate::{
     app::{App, LoadType, Mode},
@@ -178,12 +179,12 @@ impl super::Widget for ResultsWidget {
         StatefulWidget::render(table, area, buf, &mut self.table.state.to_owned());
         StatefulWidget::render(sb, sb_area, buf, &mut self.table.scrollbar_state.to_owned());
 
-        let right_str = format!("Client: {}", app.client.to_string(),);
+        let right_str = format!("C:{}─S:{}", app.client.to_string(), app.src.to_string());
         let text = Paragraph::new(right_str.clone());
         let right = Rect::new(
-            area.right() - 1 - right_str.len() as u16,
+            area.right() - 1 - right_str.width() as u16,
             area.top(),
-            right_str.len() as u16,
+            right_str.width() as u16,
             1,
         );
         f.render_widget(text, right);

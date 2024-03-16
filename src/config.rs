@@ -1,6 +1,6 @@
 use crate::{
     app::{App, Widgets, APP_NAME},
-    client::{qbit::QbitConfig, Client},
+    client::{qbit::QbitConfig, transmission::TransmissionConfig, Client},
     source::Sources,
     widget::{
         category::{self, ALL_CATEGORIES},
@@ -21,16 +21,20 @@ pub struct Config {
     pub default_category: String,
     pub default_filter: Filter,
     pub default_sort: Sort,
-    pub default_theme: String,
     pub default_search: String,
-    pub default_source: Sources,
-    pub default_client: Client,
+    #[serde(alias = "default_theme")]
+    pub theme: String,
+    #[serde(alias = "default_source")]
+    pub source: Sources,
+    pub download_client: Client,
     pub date_format: String,
     pub base_url: String,
     pub timeout: u64,
 
     #[serde(rename = "qBittorrent")]
     pub qbit: Option<QbitConfig>,
+    #[serde(rename = "transmission")]
+    pub transmission: Option<TransmissionConfig>,
 }
 
 impl Default for Config {
@@ -40,14 +44,15 @@ impl Default for Config {
             default_category: ALL_CATEGORIES[0].entries[0].cfg.to_owned(),
             default_filter: Filter::NoFilter,
             default_sort: Sort::Date,
-            default_source: Sources::NyaaHtml,
-            default_client: Client::Cmd,
-            default_theme: THEMES[0].name.to_owned(),
+            source: Sources::NyaaHtml,
+            download_client: Client::Cmd,
+            theme: THEMES[0].name.to_owned(),
             default_search: "".to_owned(),
             date_format: "%Y-%m-%d %H:%M".to_owned(),
             base_url: "https://nyaa.si/".to_owned(),
             timeout: 30,
             qbit: None,
+            transmission: None,
         }
     }
 }
@@ -65,9 +70,9 @@ impl Config {
         w.search.input.cursor = w.search.input.input.len();
         w.sort.selected = app.config.default_sort.to_owned();
         w.filter.selected = app.config.default_filter.to_owned();
-        app.client = app.config.default_client.to_owned();
-        app.src = app.config.default_source.to_owned();
-        if let Some((i, theme)) = theme::find_theme(app.config.default_theme.to_owned()) {
+        app.client = app.config.download_client.to_owned();
+        app.src = app.config.source.to_owned();
+        if let Some((i, theme)) = theme::find_theme(app.config.theme.to_owned()) {
             w.theme.selected = i;
             app.theme = theme;
         }

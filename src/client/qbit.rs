@@ -188,7 +188,14 @@ pub fn load_config(app: &mut App) {
 }
 
 pub async fn download(item: &Item, app: &mut App) {
-    let qbit = app.config.qbit.clone().unwrap();
+    load_config(app);
+    let qbit = match app.config.qbit.clone() {
+        Some(q) => q,
+        None => {
+            app.show_error("Failed to get qBittorrent config");
+            return;
+        }
+    };
     let timeout = Duration::from_secs(app.config.timeout);
     let sid = match login(&qbit, timeout).await {
         Ok(s) => s,
