@@ -1,6 +1,6 @@
 use crate::{
     app::{App, Widgets, APP_NAME},
-    client::{qbit::QbitConfig, transmission::TransmissionConfig, Client},
+    client::{Client, ClientConfig},
     source::Sources,
     widget::{
         category::{self, ALL_CATEGORIES},
@@ -31,10 +31,8 @@ pub struct Config {
     pub base_url: String,
     pub timeout: u64,
 
-    #[serde(rename = "qBittorrent")]
-    pub qbit: Option<QbitConfig>,
-    #[serde(rename = "transmission")]
-    pub transmission: Option<TransmissionConfig>,
+    #[serde(rename = "client")]
+    pub client: ClientConfig,
 }
 
 impl Default for Config {
@@ -51,8 +49,10 @@ impl Default for Config {
             date_format: "%Y-%m-%d %H:%M".to_owned(),
             base_url: "https://nyaa.si/".to_owned(),
             timeout: 30,
-            qbit: None,
-            transmission: None,
+            client: ClientConfig::default(),
+            // cmd: None,
+            // qbit: None,
+            // transmission: None,
         }
     }
 }

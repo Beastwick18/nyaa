@@ -182,14 +182,14 @@ async fn add_torrent(
 }
 
 pub fn load_config(app: &mut App) {
-    if app.config.qbit.is_none() {
-        app.config.qbit = Some(QbitConfig::default());
+    if app.config.client.qbit.is_none() {
+        app.config.client.qbit = Some(QbitConfig::default());
     }
 }
 
 pub async fn download(item: &Item, app: &mut App) {
     load_config(app);
-    let qbit = match app.config.qbit.clone() {
+    let qbit = match app.config.client.qbit.clone() {
         Some(q) => q,
         None => {
             app.show_error("Failed to get qBittorrent config");
@@ -204,9 +204,9 @@ pub async fn download(item: &Item, app: &mut App) {
             return;
         }
     };
-    let link = match qbit.use_magnet {
-        None | Some(true) => item.magnet_link.to_owned(),
-        Some(false) => item.torrent_link.to_owned(),
+    let link = match qbit.use_magnet.unwrap_or(true) {
+        true => item.magnet_link.to_owned(),
+        false => item.torrent_link.to_owned(),
     };
     let Ok(res) = add_torrent(&qbit, sid.to_owned(), link, timeout).await else {
         app.show_error("Failed to get response");

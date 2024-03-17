@@ -49,13 +49,13 @@ async fn add_torrent(conf: &TransmissionConfig, link: String) -> Result<(), Box<
 }
 
 pub fn load_config(app: &mut App) {
-    if app.config.transmission.is_none() {
-        app.config.transmission = Some(TransmissionConfig::default());
+    if app.config.client.transmission.is_none() {
+        app.config.client.transmission = Some(TransmissionConfig::default());
     }
 }
 
 pub async fn download(item: &Item, app: &mut App) {
-    let conf = match app.config.transmission.clone() {
+    let conf = match app.config.client.transmission.clone() {
         Some(c) => c,
         None => {
             app.show_error("Failed to get configuration for transmission");

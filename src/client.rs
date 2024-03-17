@@ -4,7 +4,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::{app::App, source::Item, widget::EnumIter};
 
+use self::{cmd::CmdConfig, qbit::QbitConfig, transmission::TransmissionConfig};
+
 pub mod cmd;
+pub mod default_app;
 pub mod qbit;
 pub mod transmission;
 
@@ -16,6 +19,26 @@ pub enum Client {
     Qbit, // qBittorrent Web API
     #[serde(rename = "transmission")]
     Transmission, // qBittorrent Web API
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+pub struct ClientConfig {
+    #[serde(rename = "command")]
+    pub cmd: Option<CmdConfig>,
+    #[serde(rename = "qBittorrent")]
+    pub qbit: Option<QbitConfig>,
+    #[serde(rename = "transmission")]
+    pub transmission: Option<TransmissionConfig>,
+}
+
+impl Default for ClientConfig {
+    fn default() -> Self {
+        ClientConfig {
+            cmd: None,
+            qbit: None,
+            transmission: None,
+        }
+    }
 }
 
 impl EnumIter<Client> for Client {
