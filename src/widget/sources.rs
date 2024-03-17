@@ -71,7 +71,15 @@ impl Widget for SourcesPopup {
                 KeyCode::Enter => {
                     if let Some(i) = Sources::iter().nth(self.table.state.selected().unwrap_or(0)) {
                         app.src = *i;
+                        app.config.source = *i;
                         app.mode = Mode::Loading(LoadType::Searching);
+                        match app.config.clone().store() {
+                            Ok(_) => app.notify(format!("Updated source to \"{}\"", i.to_string())),
+                            Err(e) => app.show_error(format!(
+                                "Failed to update default source in config file:\n{}",
+                                e
+                            )),
+                        }
                     }
                 }
                 _ => {}

@@ -79,6 +79,7 @@ pub struct App {
     pub theme: &'static Theme,
     pub config: Config,
     pub errors: VecDeque<String>,
+    pub notification: Option<String>,
     pub ascending: bool,
     pub page: usize,
     pub last_page: usize,
@@ -94,6 +95,9 @@ impl App {
     }
     pub fn show_error<S: ToString>(&mut self, error: S) {
         self.errors.push_back(error.to_string());
+    }
+    pub fn notify<S: ToString>(&mut self, notification: S) {
+        self.notification = Some(notification.to_string());
     }
 }
 
@@ -119,6 +123,8 @@ impl Default for App {
             theme: widget::theme::THEMES[0],
             config: Config::default(),
             errors: VecDeque::new(),
+            // notification: Some("Welcome to nyaa!".to_owned()),
+            notification: None,
             ascending: false,
             page: 1,
             last_page: 1,

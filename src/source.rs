@@ -39,6 +39,7 @@ pub struct Item {
     pub title: String,
     pub torrent_link: String,
     pub magnet_link: String,
+    pub post_link: String,
     pub file_name: String,
     pub category: usize,
     pub icon: CatIcon,

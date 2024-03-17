@@ -171,11 +171,12 @@ impl Widget for ThemePopup {
                         self.selected = self.table.state.selected().unwrap_or(0);
                         app.theme = theme;
                         app.config.theme = theme.name.to_owned();
-                        if let Err(e) = app.config.clone().store() {
-                            app.show_error(format!(
+                        match app.config.clone().store() {
+                            Ok(_) => app.notify(format!("Updated theme to \"{}\"", theme.name)),
+                            Err(e) => app.show_error(format!(
                                 "Failed to update default theme in config file:\n{}",
                                 e
-                            ));
+                            )),
                         }
                     }
                 }

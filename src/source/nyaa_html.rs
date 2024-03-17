@@ -1,7 +1,7 @@
 use std::{error::Error, time::Duration};
 
 use chrono::{DateTime, Local, NaiveDateTime, TimeZone};
-use reqwest::StatusCode;
+use reqwest::{StatusCode, Url};
 use scraper::{ElementRef, Html, Selector};
 use urlencoding::encode;
 
@@ -68,20 +68,22 @@ impl Source for NyaaHtmlSource {
             true => "asc",
             false => "desc",
         };
-        let url = format!(
-            "{}/?q={}&c={}_{}&f={}&p={}&s={}&o={}",
-            base_url, query, high, low, filter, page, sort, ord
-        );
+        let url = Url::parse(&base_url)?;
+        let mut url_query = url.clone();
+        url_query.set_query(Some(&format!(
+            "q={}&c={}_{}&f={}&p={}&s={}&o={}",
+            query, high, low, filter, page, sort, ord
+        )));
 
         let client = reqwest::Client::builder()
             .gzip(true)
             .timeout(Duration::from_secs(timeout))
             .build()?;
-        let response = client.get(url.to_owned()).send().await?;
+        let response = client.get(url_query.to_owned()).send().await?;
         if response.status() != StatusCode::OK {
             // Throw error if response code is not OK
             let code = response.status().as_u16();
-            return Err(format!("{}\nInvalid repsponse code: {}", url, code).into());
+            return Err(format!("{}\nInvalid repsponse code: {}", url_query, code).into());
         }
         let content = response.bytes().await?;
         let doc = Html::parse_document(std::str::from_utf8(&content[..])?);
@@ -138,6 +140,14 @@ impl Source for NyaaHtmlSource {
                 let seeders = inner(e, seed_sel, "0").parse().unwrap_or(0);
                 let leechers = inner(e, leech_sel, "0").parse().unwrap_or(0);
                 let downloads = inner(e, dl_sel, "0").parse().unwrap_or(0);
+                let torrent_link = url
+                    .join(&torrent)
+                    .map(|u| u.to_string())
+                    .unwrap_or("null".to_owned());
+                let post_link = url
+                    .join(&attr(e, title_sel, "href"))
+                    .map(|url| url.to_string())
+                    .unwrap_or("null".to_owned());
 
                 Item {
                     index,
@@ -148,8 +158,9 @@ impl Source for NyaaHtmlSource {
                     size,
                     bytes,
                     title: attr(e, title_sel, "title"),
-                    torrent_link: format!("{}{}", base_url, torrent),
+                    torrent_link,
                     magnet_link: attr(e, magnet_sel, "href"),
+                    post_link,
                     file_name: file_name.to_owned(),
                     category,
                     icon,

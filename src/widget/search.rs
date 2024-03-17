@@ -37,15 +37,17 @@ impl super::Widget for SearchWidget {
             horizontal: 1,
         });
 
-        let text = Paragraph::new(Line::from(vec![
-            Span::raw("Press "),
-            Span::styled("F1", Style::new().bold()),
-            Span::raw(" or "),
-            Span::styled("?", Style::new().bold()),
-            Span::raw(" for help"),
-        ]));
-        let right = Rect::new(area.right() - 23, area.top(), 23, 1);
-        text.render(right, buf);
+        if area.right() >= 23 {
+            let text = Paragraph::new(Line::from(vec![
+                Span::raw("Press "),
+                Span::styled("F1", Style::new().bold()),
+                Span::raw(" or "),
+                Span::styled("?", Style::new().bold()),
+                Span::raw(" for help"),
+            ]));
+            let right = Rect::new(area.right() - 23, area.top(), 23, 1);
+            text.render(right, buf);
+        }
 
         self.input.draw(f, app, input_area);
         if app.mode == Mode::Search {

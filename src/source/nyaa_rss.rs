@@ -81,6 +81,7 @@ impl Source for NyaaRssSource {
             .filter_map(|(index, item)| {
                 let ext = item.extensions().get("nyaa")?;
                 let guid = item.guid()?;
+                let post = guid.value.clone();
                 let id = guid.value.rsplit('/').next().unwrap_or_default(); // Get nyaa id from guid url in format
                                                                             // `https://nyaa.si/view/{id}`
                 let category_str = get_ext_value::<String>(ext, "categoryId");
@@ -105,6 +106,7 @@ impl Source for NyaaRssSource {
                     title: item.title().unwrap_or("???").to_owned(),
                     torrent_link: format!("{}/download/{}.torrent", base_url, id),
                     magnet_link: item.link().unwrap_or("???").to_owned(),
+                    post_link: post,
                     file_name: format!("{}.torrent", id),
                     trusted: get_ext_value::<String>(ext, "trusted").eq("Yes"),
                     remake: get_ext_value::<String>(ext, "remake").eq("Yes"),

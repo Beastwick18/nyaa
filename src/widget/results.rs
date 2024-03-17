@@ -1,5 +1,6 @@
 use std::cmp::max;
 
+use cli_clipboard::{ClipboardContext, ClipboardProvider};
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::{
     layout::{Constraint, Margin, Rect},
@@ -179,15 +180,24 @@ impl super::Widget for ResultsWidget {
         StatefulWidget::render(table, area, buf, &mut self.table.state.to_owned());
         StatefulWidget::render(sb, sb_area, buf, &mut self.table.scrollbar_state.to_owned());
 
-        let right_str = format!("C:{}─S:{}", app.client.to_string(), app.src.to_string());
-        let text = Paragraph::new(right_str.clone());
-        let right = Rect::new(
-            area.right() - 1 - right_str.width() as u16,
-            area.top(),
-            right_str.width() as u16,
-            1,
-        );
-        f.render_widget(text, right);
+        let right_str = format!("D:{}─S:{}", app.client.to_string(), app.src.to_string());
+        if area.right() > right_str.width() as u16 {
+            let text = Paragraph::new(right_str.clone());
+            let right = Rect::new(
+                area.right() - 1 - right_str.width() as u16,
+                area.top(),
+                right_str.width() as u16,
+                1,
+            );
+            f.render_widget(text, right);
+        }
+
+        if let Some(bottom_str) = app.notification.clone() {
+            let text = Paragraph::new(bottom_str.clone());
+            let minw = std::cmp::min(area.right() - 2, bottom_str.width() as u16);
+            let bottom = Rect::new(area.left() + 1, area.bottom() - 1, minw, 1);
+            f.render_widget(text, bottom);
+        }
 
         match app.mode {
             Mode::Loading(_) => {}
@@ -288,6 +298,50 @@ impl super::Widget for ResultsWidget {
                 (Char('d'), &KeyModifiers::NONE) => {
                     app.mode = Mode::Clients;
                 }
+                (Char('o'), &KeyModifiers::NONE) => {
+                    let link = self
+                        .table
+                        .items
+                        .get(self.table.state.selected().unwrap_or(0))
+                        .map(|item| item.post_link.clone())
+                        .unwrap_or("https://nyaa.si".to_owned());
+                    let res = open::that_detached(link.clone());
+                    if let Err(e) = res {
+                        app.show_error(format!("Failed to open {}:\n{}", link, e));
+                    } else {
+                        app.notify(format!("Opened {}", link));
+                    }
+                }
+                (Char('y'), &KeyModifiers::NONE) => {
+                    let link = self
+                        .table
+                        .items
+                        .get(self.table.state.selected().unwrap_or(0))
+                        .map(|item| item.torrent_link.clone());
+                    let link = match link {
+                        Some(link) => link,
+                        None => {
+                            app.show_error("Unable to find link for entry");
+                            return;
+                        }
+                    };
+
+                    let mut ctx: ClipboardContext = match ClipboardProvider::new() {
+                        Ok(ctx) => ctx,
+                        Err(e) => {
+                            app.show_error(format!("Failed to copy to clipboard:\n{}", e));
+                            return;
+                        }
+                    };
+                    if let Err(e) = ctx.set_contents(link.clone()) {
+                        app.show_error(format!("Failed to copy to clipboard:\n{}", e));
+                        return;
+                    }
+                    app.notify(format!("Copied \"{}\" to clipboard", link));
+                }
+                (Esc, &KeyModifiers::NONE) => {
+                    app.notification = None;
+                }
                 _ => {}
             }
         }
@@ -306,6 +360,8 @@ impl super::Widget for ResultsWidget {
             ("N, L", "Last Page"),
             ("P, H", "First Page"),
             ("r", "Reload"),
+            ("o", "Open in browser"),
+            ("y", "Copy link to post"),
             ("/, i", "Search"),
             ("c", "Categories"),
             ("f", "Filters"),
