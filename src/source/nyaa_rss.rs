@@ -59,7 +59,7 @@ impl Source for NyaaRssSource {
             "{}/?page=rss&f={}&c={}_{}&q={}&m",
             base_url, filter, high, low, query
         );
-        let content = reqwest::get(url.clone()).await?.bytes().await?;
+        // let content = reqwest::get(url.clone()).await?.bytes().await?;
 
         let client = reqwest::Client::builder()
             .gzip(true)
@@ -72,7 +72,8 @@ impl Source for NyaaRssSource {
             return Err(format!("{}\nInvalid response code: {}", url, code).into());
         }
 
-        let channel = Channel::read_from(&content[..])?;
+        let bytes = response.bytes().await?;
+        let channel = Channel::read_from(&bytes[..])?;
 
         let mut results: Vec<Item> = channel
             .items
