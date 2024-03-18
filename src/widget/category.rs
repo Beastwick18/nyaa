@@ -7,7 +7,10 @@ use ratatui::{
     Frame,
 };
 
-use crate::app::{App, LoadType, Mode};
+use crate::{
+    app::{App, LoadType, Mode},
+    categories,
+};
 
 use super::{border_block, Widget};
 
@@ -70,133 +73,47 @@ pub struct CatStruct {
     pub entries: &'static [CatEntry],
 }
 
-pub static ALL: CatStruct = CatStruct {
-    name: "All Categories",
-    entries: &[CatEntry::new(
-        "All Categories",
-        "AllCategories",
-        0,
-        "---",
-        Color::White,
-    )],
-};
-
-pub static ANIME: CatStruct = CatStruct {
-    name: "Anime",
-    entries: &[
-        CatEntry::new("All Anime", "AllAnime", 10, "Ani", Color::Gray),
-        CatEntry::new(
-            "English Translated",
-            "AnimeEnglishTranslated",
-            12,
-            "Sub",
-            Color::LightMagenta,
-        ),
-        CatEntry::new(
-            "Non-English Translated",
-            "AnimeNonEnglishTranslated",
-            13,
-            "Sub",
-            Color::LightGreen,
-        ),
-        CatEntry::new("Raw", "AnimeRaw", 14, "Raw", Color::Gray),
-        CatEntry::new(
-            "Anime Music Video",
-            "AnimeMusicVideo",
-            11,
-            "AMV",
-            Color::Magenta,
-        ),
-    ],
-};
-
-pub static AUDIO: CatStruct = CatStruct {
-    name: "Audio",
-    entries: &[
-        CatEntry::new("All Audio", "AllAudio", 20, "Aud", Color::Gray),
-        CatEntry::new("Lossless", "AudioLossless", 21, "Aud", Color::Red),
-        CatEntry::new("Lossy", "AudioLossy", 22, "Aud", Color::Yellow),
-    ],
-};
-
-pub static LITERATURE: CatStruct = CatStruct {
-    name: "Literature",
-    entries: &[
-        CatEntry::new("All Literature", "AllLiterature", 30, "Lit", Color::Gray),
-        CatEntry::new(
-            "English-Translated",
-            "LitEnglishTranslated",
-            31,
-            "Lit",
-            Color::LightGreen,
-        ),
-        CatEntry::new(
-            "Non-English Translated",
-            "LitNonEnglishTranslated",
-            32,
-            "Lit",
-            Color::Yellow,
-        ),
-        CatEntry::new("Raw", "LitRaw", 33, "Lit", Color::Green),
-    ],
-};
-
-pub static LIVE_ACTION: CatStruct = CatStruct {
-    name: "Live Action",
-    entries: &[
-        CatEntry::new("All Live Action", "AllLiveAction", 40, "Liv", Color::Gray),
-        CatEntry::new(
-            "English-Translated",
-            "LiveEnglishTranslated",
-            41,
-            "Liv",
-            Color::Yellow,
-        ),
-        CatEntry::new(
-            "Non-English Translated",
-            "LiveNonEnglishTranslated",
-            43,
-            "Liv",
-            Color::LightCyan,
-        ),
-        CatEntry::new(
-            "Idol/Promo Video",
-            "LiveIdolPromoVideo",
-            42,
-            "Liv",
-            Color::LightYellow,
-        ),
-        CatEntry::new("Raw", "LiveRaw", 44, "Liv", Color::Gray),
-    ],
-};
-
-pub static PICTURES: CatStruct = CatStruct {
-    name: "Pictures",
-    entries: &[
-        CatEntry::new("All Pictures", "AllPictures", 50, "Pic", Color::Gray),
-        CatEntry::new("Graphics", "PicGraphics", 51, "Pic", Color::LightMagenta),
-        CatEntry::new("Photos", "PicPhotos", 52, "Pic", Color::Magenta),
-    ],
-};
-
-pub static SOFTWARE: CatStruct = CatStruct {
-    name: "Software",
-    entries: &[
-        CatEntry::new("All Software", "AllSoftware", 60, "Sof", Color::Gray),
-        CatEntry::new("Applications", "SoftApplications", 61, "Sof", Color::Blue),
-        CatEntry::new("Games", "SoftGames", 62, "Sof", Color::LightBlue),
-    ],
-};
-
-pub static ALL_CATEGORIES: &[&CatStruct] = &[
-    &ALL,
-    &ANIME,
-    &AUDIO,
-    &LITERATURE,
-    &LIVE_ACTION,
-    &PICTURES,
-    &SOFTWARE,
-];
+categories! {
+    ALL_CATEGORIES;
+    (ALL: "All Categories") => {
+        0 => ("---", "All Categories", "AllCategories", White);
+    }
+    (ANIME: "Anime") => {
+        10 => ("Ani", "All Anime", "AllAnime", Gray);
+        12 => ("Sub", "English Translated", "AnimeEnglishTranslated", LightMagenta);
+        13 => ("Sub", "Non-English Translated", "AnimeNonEnglishTranslated", LightGreen);
+        14 => ("Raw", "Raw", "AnimeRaw", Gray);
+        11 => ("AMV", "Anime Music Video", "AnimeMusicVideo", Magenta);
+    }
+    (AUDIO: "Audio") => {
+        20 => ("Aud", "All Audio", "AllAudio", Gray);
+        21 => ("Aud", "Lossless", "AudioLossless", Red);
+        22 => ("Aud", "Lossy", "AudioLossy", Yellow);
+    }
+    (LITERATURE: "Literature") => {
+        30 => ("Lit", "All Literature", "AllLiterature", Gray);
+        31 => ("Lit", "English Translated", "LitEnglishTranslated", LightGreen);
+        32 => ("Lit", "Non-English Translated", "LitNonEnglishTranslated", Yellow);
+        33 => ("Lit", "Raw", "LitRaw", Gray);
+    }
+    (LIVE_ACTION: "Live Action") => {
+        40 => ("Liv", "All Live Action", "AllLiveAction", Gray);
+        41 => ("Liv", "English Translated", "LiveEnglishTranslated", Yellow);
+        43 => ("Liv", "Non-English Translated", "LiveNonEnglishTranslated", LightCyan);
+        42 => ("Liv", "Idol/Promo Video", "LiveIdolPromoVideo", LightYellow);
+        44 => ("Liv", "Raw", "LiveRaw", Gray);
+    }
+    (PICTURES: "Pictures") => {
+        50 => ("Pic", "All Pictures", "AllPictures", Gray);
+        51 => ("Pic", "Graphics", "PicGraphics", LightMagenta);
+        52 => ("Pic", "Photos", "PicPhotos", Magenta);
+    }
+    (SOFTWARE: "Software") => {
+        60 => ("Sof", "All Software", "AllSoftware", Gray);
+        61 => ("Sof", "Applications", "SoftApplications", Blue);
+        62 => ("Sof", "Games", "SoftGames", LightBlue);
+    }
+}
 
 pub fn find_category<S: Into<String>>(name: S) -> Option<&'static CatEntry> {
     let name = name.into();

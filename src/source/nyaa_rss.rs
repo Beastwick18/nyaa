@@ -1,6 +1,7 @@
 use std::{cmp::Ordering, collections::BTreeMap, error::Error, str::FromStr, time::Duration};
 
 use chrono::{DateTime, Local};
+use reqwest::StatusCode;
 use rss::{extension::Extension, Channel};
 use urlencoding::encode;
 
@@ -59,7 +60,6 @@ impl Source for NyaaRssSource {
             "{}/?page=rss&f={}&c={}_{}&q={}&m",
             base_url, filter, high, low, query
         );
-        // let content = reqwest::get(url.clone()).await?.bytes().await?;
 
         let client = reqwest::Client::builder()
             .gzip(true)
@@ -67,7 +67,7 @@ impl Source for NyaaRssSource {
             .build()?;
         let response = client.get(url.to_owned()).send().await?;
         let code = response.status().as_u16();
-        if code != 200 {
+        if code != StatusCode::OK {
             // Throw error if response code is not OK
             return Err(format!("{}\nInvalid response code: {}", url, code).into());
         }

@@ -7,48 +7,26 @@ use ratatui::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::app::{App, LoadType, Mode};
+use crate::{
+    app::{App, LoadType, Mode},
+    popup_enum,
+};
 
 use super::{border_block, EnumIter, StatefulTable, Widget};
 
-#[derive(Clone, Serialize, Deserialize)]
-pub enum Sort {
-    Date,
-    Downloads,
-    Seeders,
-    Leechers,
-    Size,
+popup_enum! {
+    Sort;
+    (0, Date, "Date");
+    (1, Downloads, "Downloads");
+    (2, Seeders, "Seeders");
+    (3, Leechers, "Leechers");
+    (4, Size, "Size");
 }
 
 #[derive(PartialEq, Clone)]
 pub enum SortDir {
     Desc,
     Asc,
-}
-
-impl EnumIter<Sort> for Sort {
-    fn iter() -> std::slice::Iter<'static, Sort> {
-        static SORTS: &[Sort] = &[
-            Sort::Date,
-            Sort::Downloads,
-            Sort::Seeders,
-            Sort::Leechers,
-            Sort::Size,
-        ];
-        SORTS.iter()
-    }
-}
-
-impl ToString for Sort {
-    fn to_string(&self) -> String {
-        match self {
-            Sort::Date => "Date".to_owned(),
-            Sort::Downloads => "Downloads".to_owned(),
-            Sort::Seeders => "Seeders".to_owned(),
-            Sort::Leechers => "Leechers".to_owned(),
-            Sort::Size => "Size".to_owned(),
-        }
-    }
 }
 
 impl Sort {

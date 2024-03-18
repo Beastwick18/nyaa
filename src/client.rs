@@ -2,7 +2,7 @@ use std::error::Error;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{app::App, source::Item, widget::EnumIter};
+use crate::{app::App, popup_enum, source::Item, widget::EnumIter};
 
 use self::{cmd::CmdConfig, qbit::QbitConfig, transmission::TransmissionConfig};
 
@@ -11,14 +11,17 @@ pub mod default_app;
 pub mod qbit;
 pub mod transmission;
 
-#[derive(Clone, Copy, Deserialize, Serialize)]
-pub enum Client {
+popup_enum! {
+    Client;
+
     #[serde(rename = "cmd")]
-    Cmd, // torrent_client_cmd
+    (0, Cmd, "cmd");
+
     #[serde(rename = "qBittorrent")]
-    Qbit, // qBittorrent Web API
+    (1, Qbit, "qBittorrent");
+
     #[serde(rename = "transmission")]
-    Transmission, // qBittorrent Web API
+    (2, Transmission, "transmission");
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -37,23 +40,6 @@ impl Default for ClientConfig {
             cmd: None,
             qbit: None,
             transmission: None,
-        }
-    }
-}
-
-impl EnumIter<Client> for Client {
-    fn iter() -> std::slice::Iter<'static, Client> {
-        static CLIENTS: &[Client] = &[Client::Cmd, Client::Qbit, Client::Transmission];
-        CLIENTS.iter()
-    }
-}
-
-impl ToString for Client {
-    fn to_string(&self) -> String {
-        match *self {
-            Self::Cmd => "cmd".to_owned(),
-            Self::Qbit => "qBittorrent".to_owned(),
-            Self::Transmission => "transmission".to_owned(),
         }
     }
 }

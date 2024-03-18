@@ -7,40 +7,19 @@ use ratatui::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::app::{App, LoadType, Mode};
+use crate::{
+    app::{App, LoadType, Mode},
+    popup_enum,
+};
 
 use super::{border_block, EnumIter, StatefulTable, Widget};
 
-#[derive(Clone, Serialize, Deserialize)]
-pub enum Filter {
-    #[allow(clippy::enum_variant_names)]
-    NoFilter = 0,
-    NoRemakes = 1,
-    TrustedOnly = 2,
-    Batches = 3,
-}
-
-impl EnumIter<Filter> for Filter {
-    fn iter() -> std::slice::Iter<'static, Filter> {
-        static FILTERS: &[Filter] = &[
-            Filter::NoFilter,
-            Filter::NoRemakes,
-            Filter::TrustedOnly,
-            Filter::Batches,
-        ];
-        FILTERS.iter()
-    }
-}
-
-impl ToString for Filter {
-    fn to_string(&self) -> String {
-        match self {
-            Filter::NoFilter => "No Filter".to_owned(),
-            Filter::NoRemakes => "No Remakes".to_owned(),
-            Filter::TrustedOnly => "Trusted Only".to_owned(),
-            Filter::Batches => "Batches".to_owned(),
-        }
-    }
+popup_enum! {
+    Filter;
+    (0, NoFilter, "No Filter");
+    (1, NoRemakes, "No Remakes");
+    (2, TrustedOnly, "Trusted Only");
+    (3, Batches, "Batches");
 }
 
 pub struct FilterPopup {
@@ -103,6 +82,7 @@ impl Widget for FilterPopup {
                     {
                         self.selected = i.to_owned();
                         app.mode = Mode::Loading(LoadType::Filtering);
+                        app.notify(format!("Filter by \"{}\"", i.to_string()));
                     }
                 }
                 _ => {}

@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     app::{App, LoadType, Widgets},
+    popup_enum,
     widget::{category::CatIcon, EnumIter},
 };
 
@@ -47,26 +48,10 @@ pub struct Item {
     pub remake: bool,
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
-pub enum Sources {
-    NyaaHtml,
-    NyaaRss,
-}
-
-impl EnumIter<Sources> for Sources {
-    fn iter() -> std::slice::Iter<'static, Sources> {
-        static SORTS: &[Sources] = &[Sources::NyaaHtml, Sources::NyaaRss];
-        SORTS.iter()
-    }
-}
-
-impl ToString for Sources {
-    fn to_string(&self) -> String {
-        match self {
-            Sources::NyaaHtml => "Nyaa HTML".to_owned(),
-            Sources::NyaaRss => "Nyaa RSS".to_owned(),
-        }
-    }
+popup_enum! {
+    Sources;
+    (0, NyaaHtml, "Nyaa HTML");
+    (1, NyaaRss, "Nyaa RSS");
 }
 
 pub trait Source {

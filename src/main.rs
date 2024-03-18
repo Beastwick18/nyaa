@@ -11,6 +11,7 @@ use ratatui::{backend::CrosstermBackend, Terminal};
 mod app;
 mod client;
 mod config;
+mod macros;
 mod source;
 mod widget;
 
