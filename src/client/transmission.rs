@@ -1,5 +1,6 @@
 use std::error::Error;
 
+use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use transmission_rpc::{
     types::{BasicAuth, TorrentAddArgs},
@@ -17,6 +18,12 @@ pub struct TransmissionConfig {
     pub base_url: String,
     pub username: Option<String>,
     pub password: Option<String>,
+    pub use_magnet: Option<bool>,
+    pub labels: Option<Vec<String>>,
+    pub paused: Option<bool>,
+    pub peer_limit: Option<i64>,
+    pub download_dir: Option<String>,
+    pub bandwidth_priority: Option<i64>,
 }
 
 impl Default for TransmissionConfig {
@@ -25,26 +32,47 @@ impl Default for TransmissionConfig {
             base_url: "http://localhost:9091/transmission/rpc".to_owned(),
             username: None,
             password: None,
+            use_magnet: None,
+            labels: None,
+            paused: None,
+            peer_limit: None,
+            download_dir: None,
+            bandwidth_priority: None,
+        }
+    }
+}
+
+impl TransmissionConfig {
+    fn to_form(&self, link: String) -> TorrentAddArgs {
+        TorrentAddArgs {
+            filename: Some(link),
+            labels: self.labels.to_owned(),
+            paused: self.paused,
+            peer_limit: self.peer_limit,
+            download_dir: self.download_dir.to_owned(),
+            bandwidth_priority: self.bandwidth_priority,
+            ..Default::default()
         }
     }
 }
 
 async fn add_torrent(conf: &TransmissionConfig, link: String) -> Result<(), Box<dyn Error>> {
     let base_url = add_protocol(conf.base_url.clone(), false);
+    let url = match base_url.parse::<Url>() {
+        Ok(url) => url,
+        Err(e) => return Err(format!("Failed to parse base_url \"{}\":\n{}", base_url, e).into()),
+    };
     let mut client =
         if let (Some(user), Some(password)) = (conf.username.clone(), conf.password.clone()) {
             let auth = BasicAuth { user, password };
-            TransClient::with_auth(base_url.parse()?, auth)
+            TransClient::with_auth(url, auth)
         } else {
-            TransClient::new(base_url.parse()?)
+            TransClient::new(url)
         };
-    let add = TorrentAddArgs {
-        filename: Some(link.clone()),
-        ..TorrentAddArgs::default() // TODO: Add all options to config
-    };
+    let add = conf.clone().to_form(link);
     match client.torrent_add(add).await {
         Ok(_) => Ok(()),
-        Err(e) => Err(e.to_string().into()),
+        Err(e) => Err(format!("Failed to add torrent:\n{}", e).into()),
     }
 }
 
@@ -62,7 +90,23 @@ pub async fn download(item: &Item, app: &mut App) {
             return;
         }
     };
-    if let Err(e) = add_torrent(&conf, item.magnet_link.clone()).await {
+
+    if let Some(labels) = conf.labels.clone() {
+        if let Some(bad) = labels.iter().find(|l| l.contains(',')) {
+            let bad = format!("\"{}\"", bad);
+            app.show_error(format!(
+                "Transmission labels must not contain commas:\n{}",
+                bad
+            ));
+            return;
+        }
+    }
+
+    let link = match conf.use_magnet {
+        None | Some(true) => item.magnet_link.to_owned(),
+        Some(false) => item.torrent_link.to_owned(),
+    };
+    if let Err(e) = add_torrent(&conf, link).await {
         app.show_error(e);
     }
 }

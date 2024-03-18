@@ -3,8 +3,9 @@
 > [!WARNING]
 > These changes are only present on the up-to-date main branch. The latest release `v0.6.3` does not support download clients.
 
-## Enabling Remote Control
 For nyaa to be able to send requests to Transmission, remote control must be enabled. Depending on which version of Transmission you have installed, the process may be different.
+
+## Enabling Remote Control
 
 For transmission-gtk or transmission-qt, you can enable remote control by going to `Edit > Remote` and enabling `Allow remote access`.
 

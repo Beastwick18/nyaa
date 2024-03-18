@@ -19,8 +19,9 @@ pub struct QbitConfig {
     pub password: String,
     pub use_magnet: Option<bool>,
     pub savepath: Option<String>,
-    pub category: Option<String>, // Single category
-    pub tags: Option<String>,     // Comma seperated
+    pub category: Option<String>,  // Single category
+    pub tags: Option<Vec<String>>, // Comma seperated joined
+    // pub tags: Option<String>,     // Comma seperated
     pub skip_checking: Option<bool>,
     pub paused: Option<bool>,
     pub create_root_folder: Option<bool>, // root_folder: String
@@ -46,7 +47,7 @@ impl QbitConfig {
             urls: url,
             savepath: self.savepath.to_owned(),
             category: self.category.to_owned(),
-            tags: self.tags.to_owned(),
+            tags: self.tags.clone().map(|v| v.join(",")),
             skip_checking: bool_str(self.skip_checking),
             paused: bool_str(self.paused),
             root_folder: bool_str(self.create_root_folder),
