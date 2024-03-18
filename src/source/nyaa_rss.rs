@@ -1,7 +1,7 @@
 use std::{cmp::Ordering, collections::BTreeMap, error::Error, str::FromStr, time::Duration};
 
 use chrono::{DateTime, Local};
-use reqwest::StatusCode;
+use reqwest::{StatusCode, Url};
 use rss::{extension::Extension, Channel};
 use urlencoding::encode;
 
@@ -42,24 +42,24 @@ fn sort_items(items: &mut [Item], sort: Sort, ascending: bool) {
 impl Source for NyaaRssSource {
     async fn sort(app: &mut App, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
         let mut items = w.results.table.items.clone();
-        sort_items(&mut items, w.sort.selected.clone(), app.ascending);
+        sort_items(&mut items, w.sort.selected, app.ascending);
         Ok(items)
     }
 
     async fn search(app: &mut App, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
         let cat = w.category.category;
         let query = w.search.input.input.clone();
-        let filter = w.filter.selected.clone() as usize;
+        let filter = w.filter.selected as usize;
         app.last_page = 1;
         app.page = 1;
         let (high, low) = (cat / 10, cat % 10);
         let query = encode(&query);
         let base_url = add_protocol(app.config.base_url.clone(), true);
+        let base_url = Url::parse(&base_url)?;
 
-        let url = format!(
-            "{}/?page=rss&f={}&c={}_{}&q={}&m",
-            base_url, filter, high, low, query
-        );
+        let mut url = base_url.clone();
+        let query = format!("page=rss&f={}&c={}_{}&q={}&m", filter, high, low, query);
+        url.set_query(Some(&query));
 
         let client = reqwest::Client::builder()
             .gzip(true)
@@ -95,6 +95,10 @@ impl Source for NyaaRssSource {
                 let pub_date = item.pub_date().unwrap_or("");
                 let date = DateTime::parse_from_rfc2822(pub_date).unwrap_or_default();
                 let date = date.with_timezone(&Local);
+                let torrent_link = base_url
+                    .join(&format!("/download/{}.torrent", id))
+                    .map(|u| u.to_string())
+                    .unwrap_or("null".to_owned());
 
                 Some(Item {
                     index,
@@ -105,7 +109,7 @@ impl Source for NyaaRssSource {
                     bytes: to_bytes(&size),
                     size,
                     title: item.title().unwrap_or("???").to_owned(),
-                    torrent_link: format!("{}/download/{}.torrent", base_url, id),
+                    torrent_link,
                     magnet_link: item.link().unwrap_or("???").to_owned(),
                     post_link: post,
                     file_name: format!("{}.torrent", id),
@@ -117,7 +121,7 @@ impl Source for NyaaRssSource {
             })
             .collect();
         app.total_results = results.len();
-        sort_items(&mut results, w.sort.selected.clone(), app.ascending);
+        sort_items(&mut results, w.sort.selected, app.ascending);
         Ok(results)
     }
 

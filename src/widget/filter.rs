@@ -16,6 +16,7 @@ use super::{border_block, EnumIter, StatefulTable, Widget};
 
 popup_enum! {
     Filter;
+    #[allow(clippy::enum_variant_names)]
     (0, NoFilter, "No Filter");
     (1, NoRemakes, "No Remakes");
     (2, TrustedOnly, "Trusted Only");

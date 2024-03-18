@@ -30,7 +30,7 @@ pub enum SortDir {
 }
 
 impl Sort {
-    pub fn to_url(&self) -> String {
+    pub fn to_url(self) -> String {
         match self {
             Sort::Date => "id".to_owned(),
             Sort::Downloads => "downloads".to_owned(),

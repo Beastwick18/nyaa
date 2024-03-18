@@ -56,7 +56,7 @@ impl Source for NyaaHtmlSource {
     }
     async fn search(app: &mut App, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
         let cat = w.category.category;
-        let filter = w.filter.selected.clone() as u16;
+        let filter = w.filter.selected as u16;
         let page = app.page;
         let sort = w.sort.selected.to_url();
         let timeout = app.config.timeout;

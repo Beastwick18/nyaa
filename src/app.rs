@@ -248,7 +248,7 @@ pub async fn run_app<B: Backend>(
             let result = source::load(app.src, load_type, app, w).await;
 
             match result {
-                Ok(items) => w.results.with_items(items, w.sort.selected.clone()),
+                Ok(items) => w.results.with_items(items, w.sort.selected),
                 Err(e) => app.show_error(e),
             }
             continue; // Redraw

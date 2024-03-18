@@ -24,7 +24,7 @@ popup_enum! {
     (2, Transmission, "transmission");
 }
 
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Default, Clone, Deserialize, Serialize)]
 pub struct ClientConfig {
     #[serde(rename = "command")]
     pub cmd: Option<CmdConfig>,
@@ -32,16 +32,6 @@ pub struct ClientConfig {
     pub qbit: Option<QbitConfig>,
     #[serde(rename = "transmission")]
     pub transmission: Option<TransmissionConfig>,
-}
-
-impl Default for ClientConfig {
-    fn default() -> Self {
-        ClientConfig {
-            cmd: None,
-            qbit: None,
-            transmission: None,
-        }
-    }
 }
 
 impl Client {
