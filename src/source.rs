@@ -61,26 +61,28 @@ pub trait Source {
     async fn categorize(app: &mut App, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>>;
 }
 
-pub async fn load(
-    src: Sources,
-    load_type: LoadType,
-    app: &mut App,
-    w: &Widgets,
-) -> Result<Vec<Item>, Box<dyn Error>> {
-    match src {
-        Sources::NyaaHtml => match load_type {
-            LoadType::Searching => NyaaHtmlSource::search(app, w).await,
-            LoadType::Sorting => NyaaHtmlSource::sort(app, w).await,
-            LoadType::Filtering => NyaaHtmlSource::filter(app, w).await,
-            LoadType::Categorizing => NyaaHtmlSource::categorize(app, w).await,
-            LoadType::Downloading => Ok(w.results.table.items.clone()),
-        },
-        Sources::NyaaRss => match load_type {
-            LoadType::Searching => NyaaRssSource::search(app, w).await,
-            LoadType::Sorting => NyaaRssSource::sort(app, w).await,
-            LoadType::Filtering => NyaaRssSource::filter(app, w).await,
-            LoadType::Categorizing => NyaaRssSource::categorize(app, w).await,
-            LoadType::Downloading => Ok(w.results.table.items.clone()),
-        },
+impl Sources {
+    pub async fn load(
+        &self,
+        load_type: LoadType,
+        app: &mut App,
+        w: &Widgets,
+    ) -> Result<Vec<Item>, Box<dyn Error>> {
+        match self {
+            Sources::NyaaHtml => match load_type {
+                LoadType::Searching => NyaaHtmlSource::search(app, w).await,
+                LoadType::Sorting => NyaaHtmlSource::sort(app, w).await,
+                LoadType::Filtering => NyaaHtmlSource::filter(app, w).await,
+                LoadType::Categorizing => NyaaHtmlSource::categorize(app, w).await,
+                LoadType::Downloading => Ok(w.results.table.items.clone()),
+            },
+            Sources::NyaaRss => match load_type {
+                LoadType::Searching => NyaaRssSource::search(app, w).await,
+                LoadType::Sorting => NyaaRssSource::sort(app, w).await,
+                LoadType::Filtering => NyaaRssSource::filter(app, w).await,
+                LoadType::Categorizing => NyaaRssSource::categorize(app, w).await,
+                LoadType::Downloading => Ok(w.results.table.items.clone()),
+            },
+        }
     }
 }

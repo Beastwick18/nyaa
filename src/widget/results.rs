@@ -1,6 +1,5 @@
 use std::cmp::max;
 
-use cli_clipboard::{ClipboardContext, ClipboardProvider};
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::{
     layout::{Constraint, Margin, Rect},
@@ -192,6 +191,24 @@ impl super::Widget for ResultsWidget {
             f.render_widget(text, right);
         }
 
+        if let Mode::KeyCombo(keys) = app.mode.to_owned() {
+            let b_right_str = keys
+                .iter()
+                .map(|c| c.to_string())
+                .collect::<Vec<String>>()
+                .join("");
+            if area.right() > b_right_str.width() as u16 {
+                let text = Paragraph::new(b_right_str.clone());
+                let right = Rect::new(
+                    area.right() - 1 - b_right_str.width() as u16,
+                    area.bottom() - 1,
+                    b_right_str.width() as u16,
+                    1,
+                );
+                f.render_widget(text, right);
+            }
+        }
+
         if let Some(bottom_str) = app.notification.clone() {
             let text = Paragraph::new(bottom_str.clone());
             let minw = std::cmp::min(area.right() - 2, bottom_str.width() as u16);
@@ -312,33 +329,7 @@ impl super::Widget for ResultsWidget {
                         app.notify(format!("Opened {}", link));
                     }
                 }
-                (Char('y'), &KeyModifiers::NONE) => {
-                    let link = self
-                        .table
-                        .items
-                        .get(self.table.state.selected().unwrap_or(0))
-                        .map(|item| item.torrent_link.clone());
-                    let link = match link {
-                        Some(link) => link,
-                        None => {
-                            app.show_error("Unable to find link for entry");
-                            return;
-                        }
-                    };
-
-                    let mut ctx: ClipboardContext = match ClipboardProvider::new() {
-                        Ok(ctx) => ctx,
-                        Err(e) => {
-                            app.show_error(format!("Failed to copy to clipboard:\n{}", e));
-                            return;
-                        }
-                    };
-                    if let Err(e) = ctx.set_contents(link.clone()) {
-                        app.show_error(format!("Failed to copy to clipboard:\n{}", e));
-                        return;
-                    }
-                    app.notify(format!("Copied \"{}\" to clipboard", link));
-                }
+                (Char('y'), &KeyModifiers::NONE) => app.mode = Mode::KeyCombo(vec!['y']),
                 (Esc, &KeyModifiers::NONE) => {
                     app.notification = None;
                 }
@@ -361,7 +352,7 @@ impl super::Widget for ResultsWidget {
             ("P, H", "First Page"),
             ("r", "Reload"),
             ("o", "Open in browser"),
-            ("y", "Copy link to post"),
+            ("yt, ym, yp", "Copy torrent/magnet/post link"),
             ("/, i", "Search"),
             ("c", "Categories"),
             ("f", "Filters"),

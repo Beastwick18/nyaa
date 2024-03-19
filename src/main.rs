@@ -10,6 +10,7 @@ use ratatui::{backend::CrosstermBackend, Terminal};
 
 mod app;
 mod client;
+mod clip;
 mod config;
 mod macros;
 mod source;

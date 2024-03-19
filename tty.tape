@@ -1,4 +1,3 @@
-Require nyaa
 Output assets/tty.gif
 
 Set FontFamily "JetBrainsMono Nerd Font"

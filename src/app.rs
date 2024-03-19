@@ -9,8 +9,9 @@ use ratatui::{
 
 use crate::{
     client::Client,
+    clip,
     config::Config,
-    source::{self, Sources},
+    source::Sources,
     widget::{
         self,
         category::CategoryPopup,
@@ -42,6 +43,7 @@ pub enum LoadType {
 #[derive(PartialEq, Clone)]
 pub enum Mode {
     Normal,
+    KeyCombo(Vec<char>),
     Search,
     Category,
     Sort(SortDir),
@@ -58,7 +60,7 @@ pub enum Mode {
 impl ToString for Mode {
     fn to_string(&self) -> String {
         match self {
-            Mode::Normal => "Normal".to_string(),
+            Mode::Normal | Mode::KeyCombo(_) => "Normal".to_string(),
             Mode::Search => "Search".to_string(),
             Mode::Category => "Category".to_string(),
             Mode::Sort(_) => "Sort".to_string(),
@@ -123,7 +125,6 @@ impl Default for App {
             theme: widget::theme::THEMES[0],
             config: Config::default(),
             errors: VecDeque::new(),
-            // notification: Some("Welcome to nyaa!".to_owned()),
             notification: None,
             ascending: false,
             page: 1,
@@ -180,7 +181,7 @@ pub fn draw(widgets: &mut Widgets, app: &mut App, f: &mut Frame) {
         Mode::Page => widgets.page.draw(f, app, f.size()),
         Mode::Sources => widgets.sources.draw(f, app, f.size()),
         Mode::Clients => widgets.clients.draw(f, app, f.size()),
-        Mode::Normal | Mode::Search | Mode::Loading(_) => {}
+        Mode::KeyCombo(_) | Mode::Normal | Mode::Search | Mode::Loading(_) => {}
     }
 }
 
@@ -197,11 +198,57 @@ fn get_help(app: &mut App, w: &mut Widgets) {
         Mode::Clients => ClientsPopup::get_help(),
         Mode::Error => None,
         Mode::Help => None,
+        Mode::KeyCombo(_) => None,
         Mode::Loading(_) => None,
     };
     if let Some(msg) = help {
         w.help.with_items(msg, app.mode.clone());
         w.help.table.select(0);
+    }
+}
+
+fn handle_combo(app: &mut App, w: &Widgets, mut keys: Vec<char>, e: &Event) {
+    if let Event::Key(KeyEvent {
+        code,
+        kind: KeyEventKind::Press,
+        ..
+    }) = e
+    {
+        match code {
+            // Only handle standard chars for now
+            KeyCode::Char(c) => keys.push(*c),
+            KeyCode::Esc => {
+                // Stop combo if esc
+                app.mode = Mode::Normal;
+                return;
+            }
+            _ => {}
+        }
+    }
+    match keys[..] {
+        ['y', c] => {
+            let s = w.results.table.state.selected().unwrap_or(0);
+            match w.results.table.items.get(s) {
+                Some(item) => {
+                    let link = match c {
+                        't' => item.torrent_link.to_owned(),
+                        'm' => item.magnet_link.to_owned(),
+                        'p' => item.post_link.to_owned(),
+                        _ => return,
+                    };
+                    app.mode = Mode::Normal;
+                    match clip::copy_to_clipboard(link.to_owned()) {
+                        Ok(_) => app.notify(format!("Copied \"{}\" to clipboard", link)),
+                        Err(e) => app.show_error(e),
+                    }
+                    app.notify(format!("Copied \"{}\" to clipboard", link));
+                }
+                None => {
+                    app.show_error("Failed to copy:\nFailed to get torrent link for selected item")
+                }
+            }
+        }
+        _ => app.mode = Mode::KeyCombo(keys),
     }
 }
 
@@ -241,11 +288,11 @@ pub async fn run_app<B: Backend>(
                     Some(i) => i,
                     None => continue,
                 };
-                app.client.clone().download(item, app).await; // TODO: Use user selected client
+                app.client.clone().download(item, app).await;
                 continue;
             }
 
-            let result = source::load(app.src, load_type, app, w).await;
+            let result = app.src.clone().load(load_type, app, w).await;
 
             match result {
                 Ok(items) => w.results.with_items(items, w.sort.selected),
@@ -255,7 +302,7 @@ pub async fn run_app<B: Backend>(
         }
 
         let evt = event::read()?;
-        match app.mode {
+        match app.mode.to_owned() {
             Mode::Category => w.category.handle_event(app, &evt),
             Mode::Sort(_) => w.sort.handle_event(app, &evt),
             Mode::Normal => w.results.handle_event(app, &evt),
@@ -267,6 +314,7 @@ pub async fn run_app<B: Backend>(
             Mode::Help => w.help.handle_event(app, &evt),
             Mode::Sources => w.sources.handle_event(app, &evt),
             Mode::Clients => w.clients.handle_event(app, &evt),
+            Mode::KeyCombo(keys) => handle_combo(app, w, keys, &evt),
             Mode::Loading(_) => {}
         }
         if app.mode != Mode::Help {
