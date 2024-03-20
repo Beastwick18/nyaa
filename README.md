@@ -2,6 +2,7 @@
 ### A simple TUI for browsing and downloading anime torrents from nyaa.si.
 [<img src="https://img.shields.io/github/v/release/Beastwick18/nyaa.svg?color=#2ea043" />](https://github.com/Beastwick18/nyaa/releases/latest)
 [<img src="https://img.shields.io/aur/version/nyaa?color=blue" />](https://aur.archlinux.org/packages/nyaa)
+[<img src="https://img.shields.io/aur/version/nyaa-bin?color=blue&label=aur%20(bin)" />](https://aur.archlinux.org/packages/nyaa-bin)
 [<img src="https://img.shields.io/crates/v/nyaa" />](https://crates.io/crates/nyaa)
 
 <p align="center">
@@ -30,6 +31,10 @@ cargo install nyaa
 ### On Arch Linux ([AUR](https://aur.archlinux.org/packages/nyaa))
 ```sh
 yay -S nyaa
+```
+or
+```sh
+yay -S nyaa-bin
 ```
 
 ### Ubuntu/Debian
