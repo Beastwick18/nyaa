@@ -50,9 +50,6 @@ impl Default for Config {
             base_url: "https://nyaa.si/".to_owned(),
             timeout: 30,
             client: ClientConfig::default(),
-            // cmd: None,
-            // qbit: None,
-            // transmission: None,
         }
     }
 }

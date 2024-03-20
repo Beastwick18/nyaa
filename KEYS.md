@@ -6,24 +6,28 @@ This mode is entered when the results table is focused.
 | Key | Map |
 | --- | --- |
 | Enter | Confirm |
+| Esc | Dismiss notification |
 | q | Exit App |
 | g | Top |
 | G | Bottom |
-| j | ↓ Down |
-| k | ↑ Up |
+| j, ↓ | Down |
+| k, ↑ | Up |
 | n, l, → | Next Page |
 | p, h, ← | Prev Page |
 | N, L | Last Page |
 | P, H | First Page |
 | r | Reload |
+| o | Open in browser |
+| yt, ym, yp | Copy torrent/magnet/post link |
 | /, i | Search |
 | c | Categories |
 | f | Filters |
 | s | Sort |
 | S | Sort reversed |
 | t | Themes |
-| Ctrl-P | Goto page |
-| Ctrl-s | Sources |
+| d | Select download client |
+| Ctrl-p | Goto page |
+| Ctrl-s | Select source |
 
 ## Search/Page/Input
 This mode is entered when any input field is focused
@@ -95,6 +99,16 @@ This mode is entered when the sort popup is focused
 | --- | --- |
 | Enter | Confirm |
 | Esc, Ctrl-s, q | Close |
+| j, ↓ | Down |
+| k, ↑ | Up |
+| g | Top |
+| G | Bottom |
+
+## Clients
+| Key | Map |
+| --- | --- |
+| Enter | Confirm |
+| Esc, d, q | Close |
 | j, ↓ | Down |
 | k, ↑ | Up |
 | g | Top |

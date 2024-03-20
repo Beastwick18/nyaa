@@ -99,15 +99,13 @@ impl super::Widget for InputWidget {
                     self.input.replace_range(self.cursor..new_cursor, "");
                 }
                 (Backspace, &KeyModifiers::CONTROL | &KeyModifiers::ALT) => {
-                    let non_space = self.input[..min(self.cursor, self.input.len())]
-                        .rfind(|item| item != ' ')
-                        .unwrap_or(0);
-                    let prev_cursor = self.cursor;
-                    self.cursor = match self.input[..non_space].rfind(|item| item == ' ') {
+                    let cursor = min(self.cursor, self.input.len());
+                    let non_space = self.input[..cursor].rfind(|i| i != ' ').unwrap_or(0);
+                    self.cursor = match self.input[..non_space].rfind(|i| i == ' ') {
                         Some(pos) => pos + 1,
                         None => 0,
                     };
-                    self.input.replace_range(self.cursor..prev_cursor, "");
+                    self.input.replace_range(self.cursor..cursor, "");
                 }
                 (Backspace, &KeyModifiers::NONE) => {
                     if !self.input.is_empty() && self.cursor > 0 {

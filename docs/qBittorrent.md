@@ -9,7 +9,7 @@ Currently, only the ability to add torrents is implemented. This is also only in
 ## Enabling WebUI
 For this to work, you must have qBittorrents WebUI running. To enable it, go to `Options > Web UI` and check the box labeled `Web User Interface (Remote Control)`
 
-By default, the username and password are `admin` and `adminadmin`. You'll likely want to change this for improved security. You can change these in the `Authentication` field in the `Web UI` options menu in qBittorrent.
+On older versions of qBittorrent, the default username and password are `admin` and `adminadmin`. On newer versions, you must provide a password when enabling Web UI. If you're on a version with this default password, you'll likely want to change this for improved security. You can change these in the `Authentication` field in the `Web UI` options menu in qBittorrent.
 
 After changing these, update the corresponding `username` and `password` fields in the config, which are defined below.
 
@@ -28,7 +28,10 @@ password = "adminadmin"         # required
 use_magnet = true               # optional, will be true by default
 savepath = "testingfolder2"     # all optional with no default here and below...
 category = "Testing Category"
-tags = "Tag one,Tag two"
+tags = [
+  "Tag one",
+  "Tag two",
+]
 skip_checking = false
 paused = false
 create_root_folder = true

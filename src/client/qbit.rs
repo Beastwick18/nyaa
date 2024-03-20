@@ -197,6 +197,16 @@ pub async fn download(item: &Item, app: &mut App) {
             return;
         }
     };
+    if let Some(labels) = qbit.tags.clone() {
+        if let Some(bad) = labels.iter().find(|l| l.contains(',')) {
+            let bad = format!("\"{}\"", bad);
+            app.show_error(format!(
+                "qBittorrent tags must not contain commas:\n{}",
+                bad
+            ));
+            return;
+        }
+    }
     let timeout = Duration::from_secs(app.config.timeout);
     let sid = match login(&qbit, timeout).await {
         Ok(s) => s,
