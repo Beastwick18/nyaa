@@ -138,7 +138,7 @@ async fn login(qbit: &QbitConfig, timeout: Duration) -> Result<String, String> {
 
     let cookie = cookie
         .to_str()
-        .map_err(|e| format!("Failed to parse cookie\n{}", e))?;
+        .map_err(|e| format!("Failed to parse cookie:\n{}", e))?;
     cookie
         .split(';')
         .find(|c| c.split_once('=').is_some_and(|s| s.0 == "SID"))

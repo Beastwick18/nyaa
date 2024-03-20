@@ -1,5 +1,3 @@
-use std::error::Error;
-
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use transmission_rpc::{
@@ -56,19 +54,16 @@ impl TransmissionConfig {
     }
 }
 
-async fn add_torrent(conf: &TransmissionConfig, link: String) -> Result<(), Box<dyn Error>> {
+async fn add_torrent(conf: &TransmissionConfig, link: String) -> Result<(), String> {
     let base_url = add_protocol(conf.base_url.clone(), false);
     let url = match base_url.parse::<Url>() {
         Ok(url) => url,
-        Err(e) => return Err(format!("Failed to parse base_url \"{}\":\n{}", base_url, e).into()),
+        Err(e) => return Err(format!("Failed to parse base_url \"{}\":\n{}", base_url, e)),
     };
-    let mut client =
-        if let (Some(user), Some(password)) = (conf.username.clone(), conf.password.clone()) {
-            let auth = BasicAuth { user, password };
-            TransClient::with_auth(url, auth)
-        } else {
-            TransClient::new(url)
-        };
+    let mut client = match (conf.username.clone(), conf.password.clone()) {
+        (Some(user), Some(password)) => TransClient::with_auth(url, BasicAuth { user, password }),
+        _ => TransClient::new(url),
+    };
     let add = conf.clone().to_form(link);
     match client.torrent_add(add).await {
         Ok(_) => Ok(()),

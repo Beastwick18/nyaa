@@ -49,7 +49,7 @@ async fn download_torrent(
     if response.status() != StatusCode::OK {
         // Throw error if response code is not OK
         let code = response.status().as_u16();
-        return Err(format!("{}\nInvalid repsponse code: {}", torrent_link, code).into());
+        return Err(format!("{}\nInvalid response code: {}", torrent_link, code).into());
     }
     let content = response.bytes().await?;
     let mut buf = PathBuf::from(shellexpand::tilde(&save_dir).to_string());
