@@ -14,4 +14,5 @@ default_client = "default_app"
 # ...
 
 [client.default_app]
+use_magnet = true # optional, true by default
 ```

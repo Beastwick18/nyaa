@@ -45,7 +45,7 @@ async fn add_torrent(
     let mut url = Url::parse(&base_url)?.join("/torrents")?;
     let mut query: Vec<String> = vec![];
     if let Some(ow) = conf.overwrite {
-        query.push(format!("overwrite={}", ow.to_string()));
+        query.push(format!("overwrite={}", ow));
     }
     if let Some(out) = conf.output_folder.to_owned() {
         query.push(format!("output_folder={}", encode(&out)));

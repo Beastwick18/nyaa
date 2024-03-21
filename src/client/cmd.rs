@@ -23,7 +23,7 @@ impl Default for CmdConfig {
             cmd: "curl \"{torrent}\" > ~/{file}".to_owned(),
 
             #[cfg(windows)]
-            shell_cmd: "powershell -Command".to_owned(),
+            shell_cmd: "powershell.exe -Command".to_owned(),
             #[cfg(unix)]
             shell_cmd: "sh -c".to_owned(),
         }

@@ -40,7 +40,7 @@ async fn download_torrent(
     filename: String,
     save_dir: String,
     timeout: u64,
-) -> Result<(), Box<dyn Error>> {
+) -> Result<String, Box<dyn Error>> {
     let client = reqwest::Client::builder()
         .gzip(true)
         .timeout(Duration::from_secs(timeout))
@@ -54,8 +54,8 @@ async fn download_torrent(
     let content = response.bytes().await?;
     let mut buf = PathBuf::from(shellexpand::tilde(&save_dir).to_string());
     buf.push(filename);
-    fs::write(buf, content)?;
-    Ok(())
+    fs::write(buf.clone(), content)?;
+    Ok(buf.to_string_lossy().to_string())
 }
 
 pub async fn download(item: &Item, app: &mut App) {
@@ -69,7 +69,7 @@ pub async fn download(item: &Item, app: &mut App) {
     };
 
     let filename = conf.filename.unwrap_or(item.file_name.to_owned());
-    if let Err(e) = download_torrent(
+    match download_torrent(
         item.torrent_link.to_owned(),
         filename,
         conf.save_dir.clone(),
@@ -77,11 +77,11 @@ pub async fn download(item: &Item, app: &mut App) {
     )
     .await
     {
-        app.show_error(format!(
+        Ok(path) => app.notify(format!("Saved to \"{}\"", path)),
+        Err(e) => app.show_error(format!(
             "Failed to download torrent to {}:\n{}",
             conf.save_dir.to_owned(),
             e
-        ));
+        )),
     }
-    app.notify(conf.save_dir);
 }

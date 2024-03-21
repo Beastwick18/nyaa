@@ -19,23 +19,23 @@ pub mod transmission;
 popup_enum! {
     Client;
 
-    #[serde(rename = "cmd")]
-    (0, Cmd, "cmd");
-
     #[serde(rename = "qBittorrent")]
-    (1, Qbit, "qBittorrent");
+    (0, Qbit, "qBittorrent");
 
     #[serde(rename = "transmission")]
-    (2, Transmission, "transmission");
+    (1, Transmission, "transmission");
 
     #[serde(rename = "rqbit")]
-    (3, Rqbit, "rqbit");
+    (2, Rqbit, "rqbit");
 
     #[serde(rename = "default_app")]
-    (4, DefaultApp, "Default App");
+    (3, DefaultApp, "Default App");
 
     #[serde(rename = "download")]
-    (5, Download, "Download Torrent File");
+    (4, Download, "Download Torrent File");
+
+    #[serde(rename = "command")]
+    (5, Cmd, "Run Command");
 }
 
 #[derive(Default, Clone, Deserialize, Serialize)]
