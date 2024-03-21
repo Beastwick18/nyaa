@@ -45,3 +45,8 @@ assets = [
     ["target/release/nyaa", "usr/bin/", "755"],
     ["README.md", "usr/share/doc/nyaa/README", "644"],
 ]
+
+[package.metadata.generate-rpm]
+assets = [
+    { source = "target/release/nyaa", dest = "/usr/bin/nyaa", mode = "755" }
+]

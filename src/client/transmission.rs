@@ -67,7 +67,7 @@ async fn add_torrent(conf: &TransmissionConfig, link: String) -> Result<(), Stri
     let add = conf.clone().to_form(link);
     match client.torrent_add(add).await {
         Ok(_) => Ok(()),
-        Err(e) => Err(format!("Failed to add torrent:\n{}", e).into()),
+        Err(e) => Err(format!("Failed to add torrent:\n{}", e)),
     }
 }
 

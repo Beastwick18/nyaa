@@ -16,29 +16,29 @@ After changing these, update the corresponding `username` and `password` fields 
 ## Default config
 If you've selected qBittorrent as your default download client, you will find this towards the bottom of your config (with only the required values present).
 ```toml
-# Your config in ~/.config/nyaa/config.toml or ~/AppData/Roaming/nyaa/config/config.toml
-...
+# Your config in ~/.config/nyaa/config.toml or %appdata%\nyaa\config\config.toml
+# ...
 default_client = "qBittorrent"
-...
+# ...
 
-[qBittorrent]
-base_url = "192.168.1.XXX:8080" # required
-username = "admin"              # required
-password = "adminadmin"         # required
-use_magnet = true               # optional, will be true by default
-savepath = "testingfolder2"     # all optional with no default here and below...
-category = "Testing Category"
-tags = [
+[client.qBittorrent]
+base_url = "http://localhost:8080" # required
+username = "admin"        # required
+password = "adminadmin"   # required
+use_magnet = true         # optional, will be true by default
+savepath = "~/Downloads/" # all optional with no default here and below...
+category = "Category Name"
+tags = [ # must not contain commas in any of the tags
   "Tag one",
   "Tag two",
 ]
 skip_checking = false
 paused = false
 create_root_folder = true
-up_limit = 10000
-dl_limit = 20000
+up_limit = -1 # measured in Bytes/Sec
+dl_limit = -1 # measured in Bytes/Sec
 ratio_limit = 0.5
-seeding_time_limit = 456
+seeding_time_limit = -1 # only works if auto_tmm is false, measured in minutes
 auto_tmm = false
 sequential_download = true
 prioritize_first_last_pieces = true

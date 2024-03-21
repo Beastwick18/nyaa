@@ -21,7 +21,6 @@ pub struct QbitConfig {
     pub savepath: Option<String>,
     pub category: Option<String>,  // Single category
     pub tags: Option<Vec<String>>, // Comma seperated joined
-    // pub tags: Option<String>,     // Comma seperated
     pub skip_checking: Option<bool>,
     pub paused: Option<bool>,
     pub create_root_folder: Option<bool>, // root_folder: String
@@ -34,13 +33,6 @@ pub struct QbitConfig {
     pub prioritize_first_last_pieces: Option<bool>, // String
 }
 
-fn bool_str(b: Option<bool>) -> Option<String> {
-    b.map(|x| match x {
-        true => "true".to_owned(),
-        false => "false".to_owned(),
-    })
-}
-
 impl QbitConfig {
     fn to_form(&self, url: String) -> QbitForm {
         QbitForm {
@@ -48,16 +40,16 @@ impl QbitConfig {
             savepath: self.savepath.to_owned(),
             category: self.category.to_owned(),
             tags: self.tags.clone().map(|v| v.join(",")),
-            skip_checking: bool_str(self.skip_checking),
-            paused: bool_str(self.paused),
-            root_folder: bool_str(self.create_root_folder),
+            skip_checking: self.skip_checking.map(|b| b.to_string()),
+            paused: self.paused.map(|b| b.to_string()),
+            root_folder: self.create_root_folder.map(|b| b.to_string()),
             up_limit: self.up_limit,
             dl_limit: self.dl_limit,
             ratio_limit: self.ratio_limit,
             seeding_time_limit: self.seeding_time_limit,
             auto_tmm: self.auto_tmm,
-            sequential_download: bool_str(self.sequential_download),
-            first_last_piece_prio: bool_str(self.prioritize_first_last_pieces),
+            sequential_download: self.sequential_download.map(|b| b.to_string()),
+            first_last_piece_prio: self.prioritize_first_last_pieces.map(|b| b.to_string()),
         }
     }
 }
@@ -167,10 +159,6 @@ async fn add_torrent(
     let client = reqwest::Client::new();
     let base_url = add_protocol(qbit.base_url.clone(), false);
     let url = format!("{}/api/v2/torrents/add", base_url);
-    // let mut params = HashMap::new();
-    // params.insert("urls", link);
-    // params.insert("category", "Test category".to_owned());
-    // params.insert("test", 0.2);
 
     client
         .post(url)

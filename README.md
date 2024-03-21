@@ -139,10 +139,10 @@ timeout = 30
 `timeout` refers to how long the program will wait for a search request before it times out. This value is measured in seconds. You may want to increase this if your request times are usually long.
 
 ## 🗺️ Planned Features
-- [ ] Integration with torrent clients
-- [ ] RPM Release
 - [ ] User-defined themes
 - [ ] Sources other than nyaa/Custom user-defined sources
+- [x] ~~Integration with torrent clients~~
+- [x] ~~RPM Release~~
 - [x] ~~Nyaa proxies/mirrors support~~
 - [x] ~~Page navigation~~
 - [x] ~~Choice between HTML scraper or RSS feed~~

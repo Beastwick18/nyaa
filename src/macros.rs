@@ -21,7 +21,7 @@ macro_rules! categories {
         )+
 
         pub static $name: &[&CatStruct] = &[
-            $(&$cat, )+
+            $(&$cat,)+
         ];
     }
 }
@@ -41,7 +41,6 @@ macro_rules! popup_enum {
             $(#[$docs])*
             $konst = $num,
         )+
-
         }
         impl ToString for $name {
             fn to_string(&self) -> String {
