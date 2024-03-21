@@ -19,6 +19,10 @@ win:
 linux:
 	cargo build --target $(LINUX_TARGET) --release
 
+fedora:
+	cargo generate-rpm
+	cp target/generate-rpm/nyaa-$(VERSION)*.rpm "release/$(VERSION)/"
+
 deb:
 	@mkdir -p "release/$(VERSION)"
 	@echo Go grab a coffee...
