@@ -241,7 +241,6 @@ fn handle_combo(app: &mut App, w: &Widgets, mut keys: Vec<char>, e: &Event) {
                         Ok(_) => app.notify(format!("Copied \"{}\" to clipboard", link)),
                         Err(e) => app.show_error(e),
                     }
-                    app.notify(format!("Copied \"{}\" to clipboard", link));
                 }
                 None => {
                     app.show_error("Failed to copy:\nFailed to get torrent link for selected item")
