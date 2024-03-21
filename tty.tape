@@ -89,7 +89,18 @@ Sleep 1s
 Enter
 Sleep 1s
 Escape
+Sleep 1.5s
+
+Type "d"
+Sleep 1s
+Type "j"
+Sleep 500ms
+Type "j"
+Sleep 500ms
+Type "j"
 Sleep 2s
+Enter
+Sleep 3s
 
 Type "q"
 Sleep 1s
