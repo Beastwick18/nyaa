@@ -91,4 +91,6 @@ pub async fn download(item: &Item, app: &mut App) {
             res.status().as_u16()
         ));
     }
+
+    app.notify("Successfully sent torrent to rqbit");
 }

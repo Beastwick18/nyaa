@@ -28,7 +28,8 @@ pub async fn download(item: &Item, app: &mut App) {
         None | Some(true) => item.magnet_link.to_owned(),
         Some(false) => item.torrent_link.to_owned(),
     };
-    if let Err(e) = open::that_detached(&link) {
-        app.show_error(format!("Unable to open {}:\n{}", link, e));
+    match open::that_detached(&link) {
+        Ok(_) => app.notify("Successfully opened link in default app"),
+        Err(e) => app.show_error(format!("Unable to open {}:\n{}", link, e)),
     }
 }

@@ -101,7 +101,8 @@ pub async fn download(item: &Item, app: &mut App) {
         None | Some(true) => item.magnet_link.to_owned(),
         Some(false) => item.torrent_link.to_owned(),
     };
-    if let Err(e) = add_torrent(&conf, link).await {
-        app.show_error(e);
+    match add_torrent(&conf, link).await {
+        Ok(_) => app.notify("Successfully sent torrent to Transmission"),
+        Err(e) => app.show_error(e),
     }
 }

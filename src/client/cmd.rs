@@ -91,6 +91,8 @@ pub async fn download(item: &Item, app: &mut App) {
                 "{}:\nExited with status code {}:\n{}",
                 cmd_str, output.status, err_str
             ));
+        } else {
+            app.notify("Successfully ran command");
         }
     } else {
         app.show_error(format!(

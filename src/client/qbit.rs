@@ -219,5 +219,7 @@ pub async fn download(item: &Item, app: &mut App) {
         return;
     }
 
+    app.notify("Successfully sent torrent to qBittorrent");
+
     logout(&qbit, sid.clone(), timeout).await;
 }
