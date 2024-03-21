@@ -3,13 +3,15 @@ use std::cmp::{max, min};
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     layout::{Alignment, Constraint, Margin, Rect},
-    style::{Modifier, Style, Stylize},
     text::Line,
     widgets::{Row, Scrollbar, ScrollbarOrientation, StatefulWidget as _, Table},
     Frame,
 };
 
-use crate::app::{App, Mode};
+use crate::{
+    app::{App, Mode},
+    style,
+};
 
 use super::{border_block, StatefulTable, Widget};
 
@@ -61,9 +63,7 @@ impl Widget for HelpPopup {
             Line::from(""),
             Line::from("Action").alignment(Alignment::Center),
         ])
-        .add_modifier(Modifier::BOLD)
-        .add_modifier(Modifier::UNDERLINED)
-        .fg(app.theme.border_focused_color)
+        .style(style!(bold, underlined, fg:app.theme.border_focused_color))
         .height(1)
         .bottom_margin(0);
         let table = Table::new(items, [Constraint::Percentage(100)])
@@ -73,7 +73,7 @@ impl Widget for HelpPopup {
             )
             .header(header)
             .widths(Constraint::from_lengths([key_min, 1, map_min]))
-            .highlight_style(Style::default().bg(app.theme.hl_bg));
+            .highlight_style(style!(bg:app.theme.hl_bg));
 
         super::clear(clear, buf, app.theme.bg);
         table.render(center, buf, &mut self.table.state.to_owned());

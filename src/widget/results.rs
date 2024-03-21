@@ -3,7 +3,7 @@ use std::cmp::max;
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::{
     layout::{Constraint, Margin, Rect},
-    style::{Modifier, Style, Stylize},
+    style::{Style, Stylize},
     text::Text,
     widgets::{
         Clear, Paragraph, Row, Scrollbar, ScrollbarOrientation, StatefulWidget, Table, Widget,
@@ -14,7 +14,9 @@ use unicode_width::UnicodeWidthStr;
 
 use crate::{
     app::{App, LoadType, Mode},
+    raw,
     source::Item,
+    style, styled,
     widget::sort::SortDir,
 };
 
@@ -126,10 +128,9 @@ impl super::Widget for ResultsWidget {
             Sort::Downloads => format!(" {:<3}", sort_text),
         };
         header_slice[sort_idx] = sort_fmt;
+
         let header = Row::new(header_slice.to_owned())
-            .add_modifier(Modifier::BOLD)
-            .add_modifier(Modifier::UNDERLINED)
-            .fg(focus_color)
+            .style(style!(bold, underlined, fg:focus_color))
             .height(1)
             .bottom_margin(0);
 
@@ -145,28 +146,22 @@ impl super::Widget for ResultsWidget {
                 .items
                 .iter()
                 .map(|item| {
-                    Row::new(vec![
-                        Text::styled(item.icon.label, Style::new().fg(item.icon.color)),
-                        Text::styled(
+                    Row::new([
+                        styled!(item.icon.label, fg:item.icon.color),
+                        styled!(
                             item.title.to_owned(),
-                            Style::new().fg(if item.trusted {
+                            fg:{ if item.trusted {
                                 app.theme.trusted
                             } else if item.remake {
                                 app.theme.remake
                             } else {
                                 app.theme.fg
-                            }),
-                        ),
-                        Text::raw(format!("{:>9}", item.size)),
-                        Text::raw(format!("{:<14}", item.date)),
-                        Text::styled(
-                            format!("{:>4}", item.seeders),
-                            Style::new().fg(app.theme.trusted),
-                        ),
-                        Text::styled(
-                            format!("{:>4}", item.leechers),
-                            Style::new().fg(app.theme.remake),
-                        ),
+                            } }),
+                        raw!(format!("{:>9}", item.size)),
+                        raw!(format!("{:<14}", item.date)),
+                        styled!(format!("{:>4}", item.seeders), fg:app.theme.trusted),
+                        // Text::styled(),
+                        styled!(format!("{:>4}", item.leechers), fg:app.theme.remake),
                         Text::raw(shorten_number(item.downloads)),
                     ])
                     .fg(app.theme.fg)
@@ -203,6 +198,12 @@ impl super::Widget for ResultsWidget {
             .widths(&binding);
         StatefulWidget::render(table, area, buf, &mut self.table.state.to_owned());
         StatefulWidget::render(sb, sb_area, buf, &mut self.table.scrollbar_state.to_owned());
+        // Header: styled underline, bold
+        // Items: Vec of rows
+        // let table, sb = tbl! {
+        //     [headers: headersEnabled]: headerStyle;
+        //     {items}
+        // };
 
         let right_str = format!("D:{}─S:{}", app.client.to_string(), app.src.to_string());
         if area.right() > right_str.width() as u16 {

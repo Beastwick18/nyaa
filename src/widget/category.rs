@@ -9,7 +9,7 @@ use ratatui::{
 
 use crate::{
     app::{App, LoadType, Mode},
-    categories,
+    categories, style,
 };
 
 use super::{border_block, Widget};
@@ -163,8 +163,7 @@ impl Widget for CategoryPopup {
                 .map(|(i, e)| match i == self.major {
                     false => Row::new(Text::raw(format!(" ▶ {}", e.name))),
                     true => Row::new(Text::raw(format!(" ▼ {}", e.name)))
-                        .bg(app.theme.solid_bg)
-                        .fg(app.theme.solid_fg),
+                        .style(style!(bg:app.theme.solid_bg, fg:app.theme.solid_fg)),
                 })
                 .collect();
 

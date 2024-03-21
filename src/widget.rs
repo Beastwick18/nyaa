@@ -4,12 +4,12 @@ use crossterm::event::Event;
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Direction, Layout, Rect},
-    style::{Color, Style, Stylize as _},
+    style::{Color, Stylize as _},
     widgets::{Block, Borders, Clear, ScrollbarState, TableState, Widget as _},
     Frame,
 };
 
-use crate::app::App;
+use crate::{app::App, style};
 
 use self::theme::Theme;
 
@@ -63,8 +63,8 @@ pub fn centered_rect(mut x_len: u16, mut y_len: u16, r: Rect) -> Rect {
 pub fn border_block(theme: &Theme, focused: bool) -> Block {
     Block::new()
         .border_style(match focused {
-            true => Style::new().fg(theme.border_focused_color),
-            false => Style::new().fg(theme.border_color),
+            true => style!(fg:theme.border_focused_color),
+            false => style!(fg:theme.border_color),
         })
         .bg(theme.bg)
         .fg(theme.fg)

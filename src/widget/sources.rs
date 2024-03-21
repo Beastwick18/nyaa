@@ -1,7 +1,6 @@
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     layout::{Constraint, Rect},
-    style::Style,
     widgets::{Row, StatefulWidget as _, Table},
     Frame,
 };
@@ -9,6 +8,7 @@ use ratatui::{
 use crate::{
     app::{App, LoadType, Mode},
     source::Sources,
+    style,
 };
 
 use super::{border_block, EnumIter, StatefulTable, Widget};
@@ -41,7 +41,7 @@ impl Widget for SourcesPopup {
         super::clear(clear, buf, app.theme.bg);
         let table = Table::new(items, [Constraint::Percentage(100)])
             .block(border_block(app.theme, true).title("Source"))
-            .highlight_style(Style::default().bg(app.theme.hl_bg));
+            .highlight_style(style!(bg:app.theme.hl_bg));
         table.render(center, buf, &mut self.table.state.to_owned());
     }
 

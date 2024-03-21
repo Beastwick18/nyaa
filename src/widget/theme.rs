@@ -3,12 +3,15 @@ use std::cmp::min;
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     layout::{Constraint, Margin, Rect},
-    style::{Color, Style},
+    style::Color,
     widgets::{BorderType, Row, Scrollbar, ScrollbarOrientation, StatefulWidget as _, Table},
     Frame,
 };
 
-use crate::app::{App, Mode};
+use crate::{
+    app::{App, Mode},
+    style,
+};
 
 use super::{border_block, StatefulTable, Widget};
 
@@ -129,7 +132,7 @@ impl Widget for ThemePopup {
         });
         let table = Table::new(items, [Constraint::Percentage(100)])
             .block(border_block(app.theme, true).title("Theme"))
-            .highlight_style(Style::default().bg(app.theme.hl_bg));
+            .highlight_style(style!(bg:app.theme.hl_bg));
         super::clear(clear, buf, app.theme.bg);
         table.render(center, buf, &mut self.table.state.to_owned());
 

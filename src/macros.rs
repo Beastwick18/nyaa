@@ -68,3 +68,47 @@ macro_rules! popup_enum {
         }
     }
 }
+
+#[macro_export]
+macro_rules! style {
+    (
+        $($method:ident$(:$value:expr)?),* $(,)?
+    ) => {
+        {
+            #[allow(unused_imports)]
+            use ratatui::style::Stylize;
+            let style = ratatui::style::Style::new()
+                $(.$method($($value)?))?;
+            style
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! styled {
+    (
+        $text:expr,
+        $($method:ident:$value:expr),* $(,)?
+    ) => {
+        {
+            let style = Style::new()
+                $(.$method($value))?
+                // $(.add_modifier(Modifier::UNDERLINED))?
+                // $(.add_modifier(Modifier::BOLD))?
+                // $(.add_modifier(Modifier::ITALIC))?
+                ;
+            let text = Text::styled($text, style);
+            text
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! raw {
+    (
+        $text:expr
+    ) => {{
+        let raw = Text::raw($text);
+        raw
+    }};
+}

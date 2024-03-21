@@ -1,7 +1,6 @@
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     layout::{Constraint, Rect},
-    style::Style,
     widgets::{Row, StatefulWidget as _, Table},
     Frame,
 };
@@ -9,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     app::{App, LoadType, Mode},
-    popup_enum,
+    popup_enum, style,
 };
 
 use super::{border_block, EnumIter, StatefulTable, Widget};
@@ -61,7 +60,7 @@ impl Widget for SortPopup {
         let center = super::centered_rect(30, self.table.items.len() as u16 + 2, area);
         let clear = super::centered_rect(center.width + 2, center.height, area);
         let items = self.table.items.iter().enumerate().map(|(i, item)| {
-            Row::new(vec![match i == self.selected.to_owned() as usize {
+            Row::new([match i == self.selected.to_owned() as usize {
                 true => format!("  {}", item),
                 false => format!("   {}", item),
             }])
@@ -73,7 +72,7 @@ impl Widget for SortPopup {
                     false => "Sort Descending",
                 },
             ))
-            .highlight_style(Style::default().bg(app.theme.hl_bg));
+            .highlight_style(style!(bg:app.theme.hl_bg));
         super::clear(clear, buf, app.theme.bg);
         table.render(center, buf, &mut self.table.state.to_owned());
     }

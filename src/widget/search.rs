@@ -1,13 +1,15 @@
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::{
     layout::{Margin, Rect},
-    style::{Style, Stylize},
     text::{Line, Span},
     widgets::{Clear, Paragraph, Widget},
     Frame,
 };
 
-use crate::app::{App, LoadType, Mode};
+use crate::{
+    app::{App, LoadType, Mode},
+    style,
+};
 
 use super::{
     border_block,
@@ -38,11 +40,12 @@ impl super::Widget for SearchWidget {
         });
 
         if area.right() >= 23 {
+            let bold = style!(bold);
             let text = Paragraph::new(Line::from(vec![
                 Span::raw("Press "),
-                Span::styled("F1", Style::new().bold()),
+                Span::styled("F1", bold),
                 Span::raw(" or "),
-                Span::styled("?", Style::new().bold()),
+                Span::styled("?", bold),
                 Span::raw(" for help"),
             ]));
             let right = Rect::new(area.right() - 23, area.top(), 23, 1);
