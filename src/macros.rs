@@ -111,3 +111,25 @@ macro_rules! raw {
         raw
     }};
 }
+
+#[macro_export]
+macro_rules! cond_vec {
+    ($($cond:expr => $x:expr),+ $(,)?) => {
+        {
+            let mut v = vec![];
+            $(if $cond { v.push($x); })*
+            v
+        }
+    };
+    ($cond:expr ; $x:expr) => {
+        {
+            let mut v = vec![];
+            for (c, val) in $cond.iter().zip($x) {
+                if *c {
+                    v.push(val.to_owned());
+                }
+            }
+            v
+        }
+    };
+}

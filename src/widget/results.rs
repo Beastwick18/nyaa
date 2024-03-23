@@ -10,11 +10,12 @@ use ratatui::{
     },
     Frame,
 };
+use serde::{Deserialize, Serialize};
 use unicode_width::UnicodeWidthStr;
 
 use crate::{
     app::{App, LoadType, Mode},
-    raw,
+    cond_vec, raw,
     source::Item,
     style, styled,
     widget::sort::SortDir,
@@ -22,33 +23,50 @@ use crate::{
 
 use super::{border_block, centered_rect, sort::Sort, StatefulTable};
 
-// TODO: Think up a good implementation for enabling/disabling columns without destroying sorting
-// pub struct ColumnsConfig {
-//     category: bool,
-//     title: bool,
-//     size: bool,
-//     date: bool,
-//     seeders: bool,
-//     leechers: bool,
-//     downloads: bool,
-// }
-// impl Default for ColumnsConfig {
-//     fn default() -> Self {
-//         ColumnsConfig {
-//             category: true,
-//             title: true,
-//             size: true,
-//             date: true,
-//             seeders: true,
-//             leechers: true,
-//             downloads: true,
-//         }
-//     }
-// }
+#[derive(Clone, Copy, Serialize, Deserialize)]
+pub struct ColumnsConfig {
+    category: Option<bool>,
+    title: Option<bool>,
+    size: Option<bool>,
+    date: Option<bool>,
+    seeders: Option<bool>,
+    leechers: Option<bool>,
+    downloads: Option<bool>,
+}
+
+impl Default for ColumnsConfig {
+    fn default() -> Self {
+        ColumnsConfig {
+            category: None,
+            title: None,
+            size: None,
+            date: None,
+            seeders: None,
+            leechers: None,
+            downloads: None,
+        }
+    }
+}
+
+impl ColumnsConfig {
+    fn array(self) -> [bool; 7] {
+        [
+            self.category.unwrap_or(true),
+            self.title.unwrap_or(true),
+            self.size.unwrap_or(true),
+            self.date.unwrap_or(true),
+            self.seeders.unwrap_or(true),
+            self.leechers.unwrap_or(true),
+            self.downloads.unwrap_or(true),
+        ]
+    }
+}
 
 pub struct ResultsWidget {
     pub table: StatefulTable<Item>,
     sort: Sort,
+    raw_date_width: u16,
+    date_width: u16,
 }
 
 impl ResultsWidget {
@@ -58,6 +76,8 @@ impl ResultsWidget {
         self.table.select(0);
         self.table.scrollbar_state = self.table.scrollbar_state.content_length(len);
         self.sort = sort;
+        self.raw_date_width = self.table.items.first().map(|i| i.date.len()).unwrap_or(10) as u16;
+        self.date_width = max(self.raw_date_width, 6);
     }
 }
 
@@ -66,6 +86,8 @@ impl Default for ResultsWidget {
         ResultsWidget {
             table: StatefulTable::with_items(vec![]),
             sort: Sort::Date,
+            date_width: 6,
+            raw_date_width: 4,
         }
     }
 }
@@ -86,11 +108,7 @@ impl super::Widget for ResultsWidget {
             Mode::Normal => app.theme.border_focused_color,
             _ => app.theme.border_color,
         };
-        let raw_date_width = self.table.items.first().map(|i| i.date.len()).unwrap_or(10) as u16;
-        let date_width = max(raw_date_width, 6);
-        let title_width = max(area.width as i32 - 32 - date_width as i32, 5) as u16;
         // let binding = Constraint::from_lengths([3, title_width, 9, date_width, 4, 4, 5]);
-        let binding = Constraint::from_lengths([3, title_width, 9, date_width, 4, 4, 5]);
         let header_slice = &mut [
             "Cat".to_owned(),
             "Name".to_owned(),
@@ -98,7 +116,7 @@ impl super::Widget for ResultsWidget {
             format!(
                 "{:^width$}",
                 "Date  ",
-                width = max(raw_date_width, 4) as usize + 2
+                width = max(self.raw_date_width, 4) as usize + 2
             ),
             format!(" {}", ""),
             format!(" {}", ""),
@@ -121,7 +139,7 @@ impl super::Widget for ResultsWidget {
             Sort::Date => format!(
                 "{:^width$}",
                 sort_text,
-                width = max(raw_date_width, 4) as usize + 2
+                width = max(self.raw_date_width, 4) as usize + 2
             ),
             Sort::Seeders => format!(" {:<3}", sort_text),
             Sort::Leechers => format!(" {:<3}", sort_text),
@@ -129,10 +147,17 @@ impl super::Widget for ResultsWidget {
         };
         header_slice[sort_idx] = sort_fmt;
 
-        let header = Row::new(header_slice.to_owned())
+        let cols = app.config.columns.unwrap_or_default().array();
+        let b = cond_vec!(cols ; [3, 0, 9, self.date_width, 4, 4, 5]);
+        let tot = b.iter().sum::<u16>() + cols.iter().map(|b| *b as u16).sum::<u16>();
+        let title_width = max(area.width as i32 - tot as i32, 5) as u16;
+        let b = cond_vec!(cols ; [3, title_width, 9, self.date_width, 4, 4, 5]);
+        let header = Row::new(cond_vec!(cols; header_slice))
             .style(style!(bold, underlined, fg:focus_color))
             .height(1)
             .bottom_margin(0);
+
+        let binding = Constraint::from_lengths(b);
 
         Clear.render(area, buf);
         let items: Vec<Row> = match app.mode {
@@ -146,7 +171,7 @@ impl super::Widget for ResultsWidget {
                 .items
                 .iter()
                 .map(|item| {
-                    Row::new([
+                    Row::new(cond_vec!(cols ; [
                         styled!(item.icon.label, fg:item.icon.color),
                         styled!(
                             item.title.to_owned(),
@@ -160,10 +185,9 @@ impl super::Widget for ResultsWidget {
                         raw!(format!("{:>9}", item.size)),
                         raw!(format!("{:<14}", item.date)),
                         styled!(format!("{:>4}", item.seeders), fg:app.theme.trusted),
-                        // Text::styled(),
                         styled!(format!("{:>4}", item.leechers), fg:app.theme.remake),
                         Text::raw(shorten_number(item.downloads)),
-                    ])
+                    ]))
                     .fg(app.theme.fg)
                     .height(1)
                     .bottom_margin(0)

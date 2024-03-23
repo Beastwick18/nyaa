@@ -5,6 +5,7 @@ use crate::{
     widget::{
         category::{self, ALL_CATEGORIES},
         filter::Filter,
+        results::ColumnsConfig,
         sort::Sort,
         theme::{self, THEMES},
     },
@@ -31,6 +32,8 @@ pub struct Config {
     pub base_url: String,
     pub timeout: u64,
 
+    #[serde(rename = "columns")]
+    pub columns: Option<ColumnsConfig>,
     #[serde(rename = "client")]
     pub client: ClientConfig,
 }
@@ -49,6 +52,7 @@ impl Default for Config {
             date_format: "%Y-%m-%d %H:%M".to_owned(),
             base_url: "https://nyaa.si/".to_owned(),
             timeout: 30,
+            columns: None,
             client: ClientConfig::default(),
         }
     }
