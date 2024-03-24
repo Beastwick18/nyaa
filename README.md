@@ -1,9 +1,15 @@
-# nyaa 🐈‍⬛
-### A simple TUI for browsing and downloading anime torrents from nyaa.si.
-[<img src="https://img.shields.io/github/v/release/Beastwick18/nyaa.svg?color=#2ea043" />](https://github.com/Beastwick18/nyaa/releases/latest)
-[<img src="https://img.shields.io/aur/version/nyaa?color=blue" />](https://aur.archlinux.org/packages/nyaa)
-[<img src="https://img.shields.io/aur/version/nyaa-bin?color=blue&label=aur%20(bin)" />](https://aur.archlinux.org/packages/nyaa-bin)
-[<img src="https://img.shields.io/crates/v/nyaa" />](https://crates.io/crates/nyaa)
+<div align="center">
+  <h1>nyaa 🐈‍⬛</h1>
+  <h3>A simple TUI for browsing and downloading anime torrents from nyaa.si.</h3>
+  <a href="https://github.com/Beastwick18/nyaa/releases/latest"><img src="https://img.shields.io/github/v/release/Beastwick18/nyaa.svg?color=#2ea043" /></a>
+  <a href="https://aur.archlinux.org/packages/nyaa"><img src="https://img.shields.io/aur/version/nyaa?color=blue" /></a>
+  <a href="https://aur.archlinux.org/packages/nyaa-bin"><img src="https://img.shields.io/aur/version/nyaa-bin?color=blue&label=aur%20(bin)" /></a>
+  <a href="https://crates.io/crates/nyaa"><img src="https://img.shields.io/crates/v/nyaa" /></a>
+  <br />
+  <a href="https://crates.io/crates/nyaa"><img src="https://img.shields.io/crates/d/nyaa?label=crates.io%20downloads&color=orange" /></a>
+  <a href="https://github.com/Beastwick18/nyaa/releases/latest"><img src="https://img.shields.io/github/downloads/Beastwick18/nyaa/total?label=github%20downloads&color=#2ea043" /></a>
+</div>
+
 
 <p align="center">
   <img src="assets/tty.gif" width="800" alt="animated" />
