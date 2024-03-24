@@ -105,7 +105,7 @@ impl super::Widget for ResultsWidget {
         let size = f.size();
         let buf = f.buffer_mut();
         let focus_color = match app.mode {
-            Mode::Normal => app.theme.border_focused_color,
+            Mode::Normal | Mode::KeyCombo(_) => app.theme.border_focused_color,
             _ => app.theme.border_color,
         };
         // let binding = Constraint::from_lengths([3, title_width, 9, date_width, 4, 4, 5]);
@@ -206,28 +206,24 @@ impl super::Widget for ResultsWidget {
 
         let num_items = items.len();
         let first_item = (app.page - 1) * 75;
+        let focused = match app.mode {
+            Mode::Normal | Mode::KeyCombo(_) => true,
+            _ => false,
+        };
         let table = Table::new(items, [Constraint::Percentage(100)])
             .header(header)
-            .block(
-                border_block(app.theme, app.mode == Mode::Normal).title(format!(
-                    "Results {}-{} ({} total): Page {}/{}",
-                    first_item + 1,
-                    num_items + first_item,
-                    app.total_results,
-                    app.page,
-                    app.last_page
-                )),
-            )
+            .block(border_block(app.theme, focused).title(format!(
+                "Results {}-{} ({} total): Page {}/{}",
+                first_item + 1,
+                num_items + first_item,
+                app.total_results,
+                app.page,
+                app.last_page
+            )))
             .highlight_style(Style::default().bg(app.theme.hl_bg))
             .widths(&binding);
         StatefulWidget::render(table, area, buf, &mut self.table.state.to_owned());
         StatefulWidget::render(sb, sb_area, buf, &mut self.table.scrollbar_state.to_owned());
-        // Header: styled underline, bold
-        // Items: Vec of rows
-        // let table, sb = tbl! {
-        //     [headers: headersEnabled]: headerStyle;
-        //     {items}
-        // };
 
         let right_str = format!("D:{}─S:{}", app.client.to_string(), app.src.to_string());
         if area.right() > right_str.width() as u16 {
