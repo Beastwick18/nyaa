@@ -55,7 +55,7 @@ impl Default for SortPopup {
 }
 
 impl Widget for SortPopup {
-    fn draw(&self, f: &mut Frame, app: &App, area: Rect) {
+    fn draw(&mut self, f: &mut Frame, app: &App, area: Rect) {
         let buf = f.buffer_mut();
         let center = super::centered_rect(30, self.table.items.len() as u16 + 2, area);
         let clear = super::centered_rect(center.width + 2, center.height, area);
@@ -74,7 +74,7 @@ impl Widget for SortPopup {
             ))
             .highlight_style(style!(bg:app.theme.hl_bg));
         super::clear(clear, buf, app.theme.bg);
-        table.render(center, buf, &mut self.table.state.to_owned());
+        table.render(center, buf, &mut self.table.state);
     }
 
     fn handle_event(&mut self, app: &mut crate::app::App, e: &crossterm::event::Event) {
@@ -105,6 +105,7 @@ impl Widget for SortPopup {
                         self.selected = i.to_owned();
                         app.ascending = app.mode == Mode::Sort(SortDir::Asc);
                         app.mode = Mode::Loading(LoadType::Sorting);
+                        app.notify(format!("Sort by \"{}\"", i.to_string()));
                     }
                 }
                 _ => {}

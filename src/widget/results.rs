@@ -101,7 +101,7 @@ fn shorten_number(mut n: u32) -> String {
 }
 
 impl super::Widget for ResultsWidget {
-    fn draw(&self, f: &mut Frame, app: &App, area: Rect) {
+    fn draw(&mut self, f: &mut Frame, app: &App, area: Rect) {
         let size = f.size();
         let buf = f.buffer_mut();
         let focus_color = match app.mode {
@@ -222,8 +222,9 @@ impl super::Widget for ResultsWidget {
             )))
             .highlight_style(Style::default().bg(app.theme.hl_bg))
             .widths(&binding);
-        StatefulWidget::render(table, area, buf, &mut self.table.state.to_owned());
-        StatefulWidget::render(sb, sb_area, buf, &mut self.table.scrollbar_state.to_owned());
+        // f.render_stateful_widget(table, area, &mut self.table.state);
+        StatefulWidget::render(table, area, buf, &mut self.table.state);
+        StatefulWidget::render(sb, sb_area, buf, &mut self.table.scrollbar_state);
 
         let right_str = format!("D:{}─S:{}", app.client.to_string(), app.src.to_string());
         if area.right() > right_str.width() as u16 {

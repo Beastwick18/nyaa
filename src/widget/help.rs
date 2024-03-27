@@ -38,7 +38,7 @@ impl HelpPopup {
 }
 
 impl Widget for HelpPopup {
-    fn draw(&self, f: &mut Frame, app: &App, area: Rect) {
+    fn draw(&mut self, f: &mut Frame, app: &App, area: Rect) {
         let buf = f.buffer_mut();
         let iter = self.table.items.iter();
 
@@ -76,7 +76,7 @@ impl Widget for HelpPopup {
             .highlight_style(style!(bg:app.theme.hl_bg));
 
         super::clear(clear, buf, app.theme.bg);
-        table.render(center, buf, &mut self.table.state.to_owned());
+        table.render(center, buf, &mut self.table.state);
 
         // Only show scrollbar if content overflows
         if self.table.items.len() as u16 + 2 >= center.height {
@@ -89,7 +89,7 @@ impl Widget for HelpPopup {
                 vertical: 1,
                 horizontal: 0,
             });
-            sb.render(sb_area, buf, &mut self.table.scrollbar_state.to_owned());
+            sb.render(sb_area, buf, &mut self.table.scrollbar_state);
         }
     }
 

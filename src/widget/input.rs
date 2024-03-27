@@ -36,7 +36,7 @@ impl InputWidget {
 }
 
 impl super::Widget for InputWidget {
-    fn draw(&self, f: &mut Frame, _app: &App, area: Rect) {
+    fn draw(&mut self, f: &mut Frame, _app: &App, area: Rect) {
         let width = self.input.len();
         let fwidth = area.width as usize;
         // Try to insert ellipsis if input is too long (visual only)

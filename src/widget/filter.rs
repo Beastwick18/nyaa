@@ -37,7 +37,7 @@ impl Default for FilterPopup {
 }
 
 impl Widget for FilterPopup {
-    fn draw(&self, f: &mut Frame, app: &App, area: Rect) {
+    fn draw(&mut self, f: &mut Frame, app: &App, area: Rect) {
         let center = super::centered_rect(30, self.table.items.len() as u16 + 2, area);
         let clear = super::centered_rect(center.width + 2, center.height, area);
         let items = self.table.items.iter().enumerate().map(|(i, item)| {
@@ -50,7 +50,7 @@ impl Widget for FilterPopup {
         Table::new(items, [Constraint::Percentage(100)])
             .block(border_block(app.theme, true).title("Filter"))
             .highlight_style(style!(bg:app.theme.hl_bg))
-            .render(center, f.buffer_mut(), &mut self.table.state.to_owned());
+            .render(center, f.buffer_mut(), &mut self.table.state);
     }
 
     fn handle_event(&mut self, app: &mut crate::app::App, e: &crossterm::event::Event) {

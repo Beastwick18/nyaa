@@ -116,7 +116,7 @@ impl Default for ThemePopup {
 }
 
 impl Widget for ThemePopup {
-    fn draw(&self, f: &mut Frame, app: &App, area: Rect) {
+    fn draw(&mut self, f: &mut Frame, app: &App, area: Rect) {
         let buf = f.buffer_mut();
         let height = min(min(THEMES.len() as u16 + 2, 10), area.height);
         let center = super::centered_rect(30, height, area);
@@ -134,7 +134,7 @@ impl Widget for ThemePopup {
             .block(border_block(app.theme, true).title("Theme"))
             .highlight_style(style!(bg:app.theme.hl_bg));
         super::clear(clear, buf, app.theme.bg);
-        table.render(center, buf, &mut self.table.state.to_owned());
+        table.render(center, buf, &mut self.table.state);
 
         // Only show scrollbar if content overflows
         if self.table.items.len() as u16 + 1 >= center.height {
@@ -147,7 +147,7 @@ impl Widget for ThemePopup {
                 vertical: 1,
                 horizontal: 0,
             });
-            sb.render(sb_area, buf, &mut self.table.scrollbar_state.to_owned());
+            sb.render(sb_area, buf, &mut self.table.scrollbar_state);
         }
     }
 

@@ -29,7 +29,7 @@ impl Default for SearchWidget {
 }
 
 impl super::Widget for SearchWidget {
-    fn draw(&self, f: &mut Frame, app: &App, area: Rect) {
+    fn draw(&mut self, f: &mut Frame, app: &App, area: Rect) {
         let buf = f.buffer_mut();
         let block = border_block(app.theme, app.mode == Mode::Search).title("Search");
         Clear.render(area, buf);

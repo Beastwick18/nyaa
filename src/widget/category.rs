@@ -155,7 +155,7 @@ impl CategoryPopup {
 }
 
 impl Widget for CategoryPopup {
-    fn draw(&self, f: &mut Frame, app: &App, area: Rect) {
+    fn draw(&mut self, f: &mut Frame, app: &App, area: Rect) {
         if let Some(cat) = ALL_CATEGORIES.get(self.major) {
             let mut tbl: Vec<Row> = ALL_CATEGORIES
                 .iter()
@@ -206,6 +206,7 @@ impl Widget for CategoryPopup {
                     if let Some(cat) = ALL_CATEGORIES.get(self.major) {
                         if let Some(item) = cat.entries.get(self.minor) {
                             self.category = item.id;
+                            app.notify(format!("Category \"{}\"", item.name));
                         }
                     }
                     app.mode = Mode::Loading(LoadType::Categorizing);

@@ -31,7 +31,7 @@ impl Default for ErrorPopup {
 }
 
 impl Widget for ErrorPopup {
-    fn draw(&self, f: &mut Frame, app: &App, area: Rect) {
+    fn draw(&mut self, f: &mut Frame, app: &App, area: Rect) {
         let lines = self.error.split('\n');
         let max_line = lines.clone().fold(30, |acc, e| max(e.len(), acc)) as u16 + 3;
         let x_len = min(max_line, area.width - 4);

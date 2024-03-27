@@ -27,7 +27,7 @@ pub mod sources;
 pub mod theme;
 
 pub trait Widget {
-    fn draw(&self, buf: &mut Frame, app: &App, area: Rect);
+    fn draw(&mut self, buf: &mut Frame, app: &App, area: Rect);
     fn handle_event(&mut self, app: &mut App, e: &Event);
     fn get_help() -> Option<Vec<(&'static str, &'static str)>>;
 }

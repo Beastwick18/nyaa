@@ -27,7 +27,7 @@ impl Default for PagePopup {
 }
 
 impl Widget for PagePopup {
-    fn draw(&self, f: &mut Frame, app: &App, area: Rect) {
+    fn draw(&mut self, f: &mut Frame, app: &App, area: Rect) {
         let buf = f.buffer_mut();
         let center = super::centered_rect(13, 3, area);
         let clear = super::centered_rect(center.width + 2, center.height, area);

@@ -28,7 +28,7 @@ impl Default for SourcesPopup {
 }
 
 impl Widget for SourcesPopup {
-    fn draw(&self, f: &mut Frame, app: &App, area: Rect) {
+    fn draw(&mut self, f: &mut Frame, app: &App, area: Rect) {
         let buf = f.buffer_mut();
         let center = super::centered_rect(30, self.table.items.len() as u16 + 2, area);
         let clear = super::centered_rect(center.width + 2, center.height, area);
@@ -42,7 +42,7 @@ impl Widget for SourcesPopup {
         let table = Table::new(items, [Constraint::Percentage(100)])
             .block(border_block(app.theme, true).title("Source"))
             .highlight_style(style!(bg:app.theme.hl_bg));
-        table.render(center, buf, &mut self.table.state.to_owned());
+        table.render(center, buf, &mut self.table.state);
     }
 
     fn handle_event(&mut self, app: &mut crate::app::App, e: &crossterm::event::Event) {
