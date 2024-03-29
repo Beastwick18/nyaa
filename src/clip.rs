@@ -25,7 +25,7 @@ use cli_clipboard::{
 
 pub fn copy_to_clipboard(
     link: String,
-    conf: Option<ClipboardConfig>,
+    _conf: Option<ClipboardConfig>,
 ) -> Result<(), Box<dyn Error>> {
     #[cfg(target_os = "linux")]
     {
