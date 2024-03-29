@@ -1,8 +1,6 @@
 use std::error::Error;
 
 use cli_clipboard::{
-    linux_clipboard::LinuxClipboardContext,
-    x11_clipboard::{Clipboard, Primary, X11ClipboardContext},
     ClipboardContext, ClipboardProvider,
 };
 use serde::{Deserialize, Serialize};
@@ -19,11 +17,18 @@ pub struct ClipboardConfig {
     pub x11_selection: Option<X11Selection>,
 }
 
+#[cfg(target_os = "linux")]
+use cli_clipboard::{
+    linux_clipboard::LinuxClipboardContext,
+    x11_clipboard::{Clipboard, Primary, X11ClipboardContext},
+};
+
 pub fn copy_to_clipboard(
     link: String,
     conf: Option<ClipboardConfig>,
 ) -> Result<(), Box<dyn Error>> {
-    if cfg!(target_os = "linux") {
+    #[cfg(target_os = "linux")]
+    {
         let sel = conf
             .and_then(|sel| sel.x11_selection)
             .unwrap_or(X11Selection::Clipboard);
@@ -50,7 +55,9 @@ pub fn copy_to_clipboard(
             return Err(format!("Failed to copy to linux clipboard").into());
         }
         return Ok(());
-    } else {
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
         let mut ctx: ClipboardContext = match ClipboardProvider::new() {
             Ok(ctx) => ctx,
             Err(e) => {
