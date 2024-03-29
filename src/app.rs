@@ -237,7 +237,7 @@ fn handle_combo(app: &mut App, w: &Widgets, mut keys: Vec<char>, e: &Event) {
                         _ => return,
                     };
                     app.mode = Mode::Normal;
-                    match clip::copy_to_clipboard(link.to_owned()) {
+                    match clip::copy_to_clipboard(link.to_owned(), app.config.clipboard.clone()) {
                         Ok(_) => app.notify(format!("Copied \"{}\" to clipboard", link)),
                         Err(e) => app.show_error(e),
                     }

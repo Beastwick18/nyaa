@@ -1,6 +1,7 @@
 use crate::{
     app::{App, Widgets, APP_NAME},
     client::{Client, ClientConfig},
+    clip::ClipboardConfig,
     source::Sources,
     widget::{
         category::{self, ALL_CATEGORIES},
@@ -32,6 +33,8 @@ pub struct Config {
     pub base_url: String,
     pub timeout: u64,
 
+    #[serde(rename = "clipboard")]
+    pub clipboard: Option<ClipboardConfig>,
     #[serde(rename = "columns")]
     pub columns: Option<ColumnsConfig>,
     #[serde(rename = "client")]
@@ -52,6 +55,7 @@ impl Default for Config {
             date_format: "%Y-%m-%d %H:%M".to_owned(),
             base_url: "https://nyaa.si/".to_owned(),
             timeout: 30,
+            clipboard: None,
             columns: None,
             client: ClientConfig::default(),
         }
