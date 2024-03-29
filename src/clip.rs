@@ -29,7 +29,7 @@ pub fn copy_to_clipboard(
 ) -> Result<(), Box<dyn Error>> {
     #[cfg(target_os = "linux")]
     {
-        let sel = conf
+        let sel = _conf
             .and_then(|sel| sel.x11_selection)
             .unwrap_or(X11Selection::Clipboard);
         if X11Selection::Clipboard == sel {
