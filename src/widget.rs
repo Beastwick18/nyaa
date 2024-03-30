@@ -26,6 +26,7 @@ pub mod search;
 pub mod sort;
 pub mod sources;
 pub mod theme;
+pub mod user;
 
 pub trait Widget {
     fn draw(&mut self, buf: &mut Frame, ctx: &Context, area: Rect);

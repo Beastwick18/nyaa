@@ -399,6 +399,9 @@ impl super::Widget for ResultsWidget {
                 (Char('d'), &KeyModifiers::NONE) => {
                     ctx.mode = Mode::Clients;
                 }
+                (Char('u'), &KeyModifiers::NONE) => {
+                    ctx.mode = Mode::User;
+                }
                 (Char('o'), &KeyModifiers::NONE) => {
                     let link = self
                         .table
@@ -474,6 +477,7 @@ impl super::Widget for ResultsWidget {
             ("s", "Sort"),
             ("S", "Sort reversed"),
             ("t", "Themes"),
+            ("u", "Filter by User"),
             ("d", "Select download client"),
             ("Ctrl-p", "Goto page"),
             ("Ctrl-s", "Select source"),

@@ -28,6 +28,7 @@ This mode is entered when the results table is focused.
 | s | Sort |
 | S | Sort reversed |
 | t | Themes |
+| u | Filter by User |
 | d | Select download client |
 | Ctrl-p | Goto page |
 | Ctrl-s | Select source |
