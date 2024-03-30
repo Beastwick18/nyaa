@@ -1,7 +1,8 @@
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::{
-    layout::{Constraint, Rect},
-    widgets::{Clear, Row, StatefulWidget, Table, Widget},
+    layout::{Constraint, Margin, Rect},
+    style::Stylize,
+    widgets::{Clear, Row, Scrollbar, ScrollbarOrientation, StatefulWidget, Table, Widget},
     Frame,
 };
 
@@ -28,11 +29,36 @@ impl super::Widget for BatchWidget {
         let rows = ctx
             .batch
             .iter()
-            .map(|i| Row::new([i.title.to_owned()]))
+            .map(|i| {
+                Row::new([i.title.to_owned()]).fg(if i.trusted {
+                    ctx.theme.trusted
+                } else if i.remake {
+                    ctx.theme.remake
+                } else {
+                    ctx.theme.fg
+                })
+            })
             .collect::<Vec<Row>>();
-        let table = Table::new(rows, [Constraint::Percentage(100)]).block(block);
+        let table = Table::new(rows.to_owned(), [Constraint::Percentage(100)]).block(block);
         Clear.render(area, buf);
         StatefulWidget::render(table, area, buf, &mut self.table.state);
+        if ctx.batch.len() + 2 > area.height as usize {
+            let sb = Scrollbar::default()
+                .orientation(ScrollbarOrientation::VerticalRight)
+                .track_symbol(Some("│"))
+                .begin_symbol(None)
+                .end_symbol(None);
+            let sb_area = area.inner(&Margin {
+                vertical: 1,
+                horizontal: 0,
+            });
+            StatefulWidget::render(
+                sb,
+                sb_area,
+                buf,
+                &mut self.table.scrollbar_state.content_length(rows.len()),
+            );
+        }
     }
 
     fn handle_event(&mut self, ctx: &mut Context, evt: &Event) {

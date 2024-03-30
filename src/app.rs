@@ -169,31 +169,19 @@ impl App {
             }
         };
         config.apply(ctx, w);
-        loop {
-            if ctx.should_quit {
-                return Ok(());
-            }
+        while !ctx.should_quit {
             if !ctx.errors.is_empty() {
                 ctx.mode = Mode::Error;
             }
 
             self.get_help(w, ctx);
-            // w.batch.with_items(c.batch.clone()); // TODO: Find a way to not have to pass this around
             terminal.draw(|f| self.draw(w, ctx, f))?;
             if let Mode::Loading(load_type) = ctx.mode {
                 ctx.mode = Mode::Normal;
                 if load_type == LoadType::Downloading {
-                    let item = match w
-                        .results
-                        .table
-                        .state
-                        .selected()
-                        .and_then(|i| w.results.table.items.get(i))
-                    {
-                        Some(i) => i,
-                        None => continue,
-                    };
-                    ctx.client.clone().download(item, ctx).await;
+                    if let Some(i) = w.results.table.selected() {
+                        ctx.client.clone().download(i, ctx).await;
+                    }
                     continue;
                 }
 
@@ -209,6 +197,7 @@ impl App {
             let evt = event::read()?;
             self.on(&evt, w, ctx);
         }
+        Ok(())
     }
 
     pub fn draw(&mut self, widgets: &mut Widgets, ctx: &mut Context, f: &mut Frame) {
@@ -219,17 +208,17 @@ impl App {
         .split(f.size());
         let layout_horizontal = Layout::new(
             Direction::Horizontal,
-            [Constraint::Ratio(1, 5), Constraint::Ratio(4, 5)],
+            [Constraint::Ratio(3, 4), Constraint::Ratio(1, 4)],
         )
         .split(layout_vertical[1]);
 
         widgets.search.draw(f, ctx, layout_vertical[0]);
-        // Dont draw batch pane if none selected
+        // Dont draw batch pane if empty
         match ctx.batch.is_empty() {
             true => widgets.results.draw(f, ctx, layout_vertical[1]),
             false => {
-                widgets.batch.draw(f, ctx, layout_horizontal[0]);
-                widgets.results.draw(f, ctx, layout_horizontal[1]);
+                widgets.results.draw(f, ctx, layout_horizontal[0]);
+                widgets.batch.draw(f, ctx, layout_horizontal[1]);
             }
         }
         match ctx.mode {

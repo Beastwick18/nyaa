@@ -68,6 +68,7 @@ pub struct ResultsWidget {
     sort: Sort,
     raw_date_width: u16,
     date_width: u16,
+    control_space: bool,
 }
 
 impl ResultsWidget {
@@ -76,6 +77,18 @@ impl ResultsWidget {
         self.sort = sort;
         self.raw_date_width = self.table.items.first().map(|i| i.date.len()).unwrap_or(10) as u16;
         self.date_width = max(self.raw_date_width, 6);
+    }
+
+    fn try_select_toggle(&self, ctx: &mut Context) {
+        if let Some(sel) = self.table.state.selected() {
+            if let Some(item) = self.table.items.get(sel) {
+                if let Some(p) = ctx.batch.iter().position(|s| s.id == item.id) {
+                    ctx.batch.remove(p);
+                } else {
+                    ctx.batch.push(item.to_owned());
+                }
+            }
+        }
     }
 }
 
@@ -86,6 +99,7 @@ impl Default for ResultsWidget {
             sort: Sort::Date,
             date_width: 6,
             raw_date_width: 4,
+            control_space: false,
         }
     }
 }
@@ -341,8 +355,14 @@ impl super::Widget for ResultsWidget {
                 }
                 (Char('j') | KeyCode::Down, &KeyModifiers::NONE) => {
                     self.table.next(1);
+                    if self.control_space {
+                        self.try_select_toggle(ctx);
+                    }
                 }
                 (Char('k') | KeyCode::Up, &KeyModifiers::NONE) => {
+                    if self.control_space {
+                        self.try_select_toggle(ctx);
+                    }
                     self.table.next(-1);
                 }
                 (Char('J'), &KeyModifiers::SHIFT) => {
@@ -393,14 +413,20 @@ impl super::Widget for ResultsWidget {
                     }
                 }
                 (Char('y'), &KeyModifiers::NONE) => ctx.mode = Mode::KeyCombo(vec!['y']),
-                (Char(' '), _) => {
+                (Char(' '), &KeyModifiers::CONTROL) => {
+                    self.control_space = !self.control_space;
+                    if self.control_space {
+                        ctx.notify("Entered VISUAL mode");
+                        self.try_select_toggle(ctx);
+                    } else {
+                        ctx.notify("Exited VISUAL mode");
+                    }
+                }
+                (Char(' '), &KeyModifiers::NONE) => {
                     if let Some(sel) = self.table.state.selected() {
                         if let Some(item) = &mut self.table.items.get_mut(sel) {
-                            let selected_ids: Vec<usize> = ctx.batch.iter().map(|i| i.id).collect();
-                            if selected_ids.contains(&item.id) {
-                                if let Some(r) = ctx.batch.iter().position(|i| i.id == item.id) {
-                                    ctx.batch.remove(r);
-                                }
+                            if let Some(p) = ctx.batch.iter().position(|s| s.id == item.id) {
+                                ctx.batch.remove(p);
                             } else {
                                 ctx.batch.push(item.to_owned());
                             }
@@ -409,6 +435,10 @@ impl super::Widget for ResultsWidget {
                 }
                 (Esc, &KeyModifiers::NONE) => {
                     ctx.notification = None;
+                    if self.control_space {
+                        ctx.notify("Exited VISUAL mode");
+                    }
+                    self.control_space = false;
                 }
                 _ => {}
             }
