@@ -4,3 +4,4 @@ assets/*.ttf:Zone.Identifier
 assets/*.cast
 /release
 **/*.deb
+result*
