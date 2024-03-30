@@ -3,7 +3,7 @@ use std::{error::Error, fs, path::PathBuf, time::Duration};
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 
-use crate::{app::App, source::Item};
+use crate::{app::Context, source::Item};
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(default)]
@@ -28,7 +28,7 @@ impl Default for DownloadConfig {
     }
 }
 
-pub fn load_config(app: &mut App) {
+pub fn load_config(app: &mut Context) {
     if app.config.client.download.is_none() {
         let def = DownloadConfig::default();
         app.config.client.download = Some(def);
@@ -58,7 +58,7 @@ async fn download_torrent(
     Ok(buf.to_string_lossy().to_string())
 }
 
-pub async fn download(item: &Item, app: &mut App) {
+pub async fn download(item: &Item, app: &mut Context) {
     load_config(app);
     let conf = match app.config.client.download.to_owned() {
         Some(c) => c,

@@ -9,7 +9,7 @@ use ratatui::{
     Frame,
 };
 
-use crate::{app::App, style};
+use crate::{app::Context, style};
 
 use self::theme::Theme;
 
@@ -28,8 +28,8 @@ pub mod sources;
 pub mod theme;
 
 pub trait Widget {
-    fn draw(&mut self, buf: &mut Frame, app: &App, area: Rect);
-    fn handle_event(&mut self, app: &mut App, e: &Event);
+    fn draw(&mut self, buf: &mut Frame, ctx: &Context, area: Rect);
+    fn handle_event(&mut self, app: &mut Context, e: &Event);
     fn get_help() -> Option<Vec<(&'static str, &'static str)>>;
 }
 
@@ -87,7 +87,7 @@ pub struct StatefulTable<T> {
 impl<T> StatefulTable<T> {
     pub fn new(items: Vec<T>) -> StatefulTable<T> {
         StatefulTable {
-            state: TableState::default(),
+            state: TableState::default().with_selected(0),
             scrollbar_state: ScrollbarState::default(),
             items,
         }
@@ -95,7 +95,7 @@ impl<T> StatefulTable<T> {
 
     pub fn empty() -> StatefulTable<T> {
         StatefulTable {
-            state: TableState::default(),
+            state: TableState::default().with_selected(0),
             scrollbar_state: ScrollbarState::default(),
             items: vec![],
         }
@@ -129,6 +129,50 @@ impl<T> StatefulTable<T> {
             None => 0,
         };
         let idx = i.max(0).min(self.items.len() as isize - 1) as usize;
+        self.state.select(Some(idx));
+        self.scrollbar_state = self.scrollbar_state.position(idx);
+    }
+
+    pub fn select(&mut self, idx: usize) {
+        self.state.select(Some(idx));
+        self.scrollbar_state = self.scrollbar_state.position(idx);
+    }
+}
+
+pub struct VirtualStatefulTable {
+    pub state: TableState,
+    pub scrollbar_state: ScrollbarState,
+}
+
+impl VirtualStatefulTable {
+    pub fn new() -> VirtualStatefulTable {
+        VirtualStatefulTable {
+            state: TableState::default().with_selected(0),
+            scrollbar_state: ScrollbarState::default(),
+        }
+    }
+
+    pub fn next_wrap(&mut self, length: usize, amt: isize) {
+        if length == 0 {
+            return;
+        }
+        let i = match self.state.selected() {
+            Some(i) => (i as isize + amt).rem_euclid(length as isize),
+            None => 0,
+        };
+        self.state.select(Some(i as usize));
+        self.scrollbar_state = self.scrollbar_state.position(i as usize);
+    }
+
+    pub fn next(&mut self, length: usize, amt: isize) {
+        if length == 0 {
+            return;
+        }
+        let i = match self.state.selected() {
+            Some(i) => i as isize + amt,
+            None => 0,
+        };
+        let idx = i.max(0).min(length as isize - 1) as usize;
         self.state.select(Some(idx));
         self.scrollbar_state = self.scrollbar_state.position(idx);
     }

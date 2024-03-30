@@ -78,6 +78,10 @@ impl ToString for Mode {
 }
 
 pub struct App {
+    pub widgets: Widgets,
+}
+
+pub struct Context {
     pub mode: Mode,
     pub theme: &'static Theme,
     pub config: Config,
@@ -93,26 +97,36 @@ pub struct App {
     should_quit: bool,
 }
 
-// pub struct Context {
-//     pub errors: VecDeque<String>,
-//     pub theme: &'static Theme,
-//     pub config: Config,
-//     pub notification: Option<String>,
-//     pub sort_ascending: bool,
-//     pub page: usize,
-//     pub last_page: usize,
-//     pub total_results: usize,
-// }
-
-impl App {
-    pub fn quit(&mut self) {
-        self.should_quit = true;
-    }
+impl Context {
     pub fn show_error<S: ToString>(&mut self, error: S) {
         self.errors.push_back(error.to_string());
     }
     pub fn notify<S: ToString>(&mut self, notification: S) {
         self.notification = Some(notification.to_string());
+    }
+
+    pub fn quit(&mut self) {
+        self.should_quit = true;
+    }
+}
+
+impl Default for Context {
+    fn default() -> Self {
+        Context {
+            mode: Mode::Loading(LoadType::Searching),
+            theme: widget::theme::THEMES[0],
+            config: Config::default(),
+            errors: VecDeque::new(),
+            notification: None,
+            ascending: false,
+            page: 1,
+            last_page: 1,
+            total_results: 0,
+            src: Sources::NyaaHtml,
+            client: Client::Cmd,
+            batch: vec![],
+            should_quit: false,
+        }
     }
 }
 
@@ -135,217 +149,213 @@ pub struct Widgets {
 impl Default for App {
     fn default() -> Self {
         App {
-            mode: Mode::Loading(LoadType::Searching),
-            theme: widget::theme::THEMES[0],
-            config: Config::default(),
-            errors: VecDeque::new(),
-            notification: None,
-            ascending: false,
-            page: 1,
-            last_page: 1,
-            total_results: 0,
-            src: Sources::NyaaHtml,
-            client: Client::Cmd,
-            batch: vec![],
-            should_quit: false,
+            widgets: Widgets::default(),
         }
     }
 }
 
-fn help_event(app: &mut App, e: &Event) {
-    if let Event::Key(KeyEvent {
-        code,
-        kind: KeyEventKind::Press,
-        ..
-    }) = e
-    {
-        match code {
-            KeyCode::Char('?') if app.mode != Mode::Search => {
-                app.mode = Mode::Help;
+impl App {
+    pub async fn run_app<B: Backend>(
+        &mut self,
+        terminal: &mut Terminal<B>,
+    ) -> Result<(), Box<dyn Error>> {
+        let w = &mut Widgets::default();
+        let ctx = &mut Context::default();
+        let config = match Config::load() {
+            Ok(config) => config,
+            Err(e) => {
+                ctx.show_error(e);
+                ctx.config.clone()
             }
-            KeyCode::F(1) => {
-                app.mode = Mode::Help;
+        };
+        config.apply(ctx, w);
+        loop {
+            if ctx.should_quit {
+                return Ok(());
             }
-            _ => {}
-        }
-    }
-}
-
-pub fn draw(widgets: &mut Widgets, app: &mut App, f: &mut Frame) {
-    let layout_vertical = Layout::new(
-        Direction::Vertical,
-        [Constraint::Length(3), Constraint::Min(1)],
-    )
-    .split(f.size());
-    let layout_horizontal = Layout::new(
-        Direction::Horizontal,
-        [Constraint::Ratio(1, 5), Constraint::Ratio(4, 5)],
-    )
-    .split(layout_vertical[1]);
-
-    widgets.search.draw(f, app, layout_vertical[0]);
-    // Dont draw batch pane if none selected
-    match app.batch.is_empty() {
-        true => widgets.results.draw(f, app, layout_vertical[1]),
-        false => {
-            widgets.batch.draw(f, app, layout_horizontal[0]);
-            widgets.results.draw(f, app, layout_horizontal[1]);
-        }
-    }
-    match app.mode {
-        Mode::Category => widgets.category.draw(f, app, f.size()),
-        Mode::Sort(_) => widgets.sort.draw(f, app, f.size()),
-        Mode::Filter => widgets.filter.draw(f, app, f.size()),
-        Mode::Theme => widgets.theme.draw(f, app, f.size()),
-        Mode::Error => {
-            // Get the oldest error first
-            if let Some(error) = app.errors.pop_front() {
-                widgets.error.with_error(error);
+            if !ctx.errors.is_empty() {
+                ctx.mode = Mode::Error;
             }
-            widgets.error.draw(f, app, f.size());
-        }
-        Mode::Help => widgets.help.draw(f, app, f.size()),
-        Mode::Page => widgets.page.draw(f, app, f.size()),
-        Mode::Sources => widgets.sources.draw(f, app, f.size()),
-        Mode::Clients => widgets.clients.draw(f, app, f.size()),
-        Mode::KeyCombo(_) | Mode::Normal | Mode::Search | Mode::Loading(_) => {}
-    }
-}
 
-fn get_help(app: &mut App, w: &mut Widgets) {
-    let help = match app.mode {
-        Mode::Category => CategoryPopup::get_help(),
-        Mode::Sort(_) => SortPopup::get_help(),
-        Mode::Normal => ResultsWidget::get_help(),
-        Mode::Search => SearchWidget::get_help(),
-        Mode::Filter => FilterPopup::get_help(),
-        Mode::Theme => ThemePopup::get_help(),
-        Mode::Page => PagePopup::get_help(),
-        Mode::Sources => SourcesPopup::get_help(),
-        Mode::Clients => ClientsPopup::get_help(),
-        Mode::Error => None,
-        Mode::Help => None,
-        Mode::KeyCombo(_) => None,
-        Mode::Loading(_) => None,
-    };
-    if let Some(msg) = help {
-        w.help.with_items(msg, app.mode.clone());
-        w.help.table.select(0);
-    }
-}
-
-fn handle_combo(app: &mut App, w: &Widgets, mut keys: Vec<char>, e: &Event) {
-    if let Event::Key(KeyEvent {
-        code,
-        kind: KeyEventKind::Press,
-        ..
-    }) = e
-    {
-        match code {
-            // Only handle standard chars for now
-            KeyCode::Char(c) => keys.push(*c),
-            KeyCode::Esc => {
-                // Stop combo if esc
-                app.mode = Mode::Normal;
-                return;
-            }
-            _ => {}
-        }
-    }
-    match keys[..] {
-        ['y', c] => {
-            let s = w.results.table.state.selected().unwrap_or(0);
-            match w.results.table.items.get(s) {
-                Some(item) => {
-                    let link = match c {
-                        't' => item.torrent_link.to_owned(),
-                        'm' => item.magnet_link.to_owned(),
-                        'p' => item.post_link.to_owned(),
-                        _ => return,
+            self.get_help(w, ctx);
+            // w.batch.with_items(c.batch.clone()); // TODO: Find a way to not have to pass this around
+            terminal.draw(|f| self.draw(w, ctx, f))?;
+            if let Mode::Loading(load_type) = ctx.mode {
+                ctx.mode = Mode::Normal;
+                if load_type == LoadType::Downloading {
+                    let item = match w
+                        .results
+                        .table
+                        .state
+                        .selected()
+                        .and_then(|i| w.results.table.items.get(i))
+                    {
+                        Some(i) => i,
+                        None => continue,
                     };
-                    app.mode = Mode::Normal;
-                    match clip::copy_to_clipboard(link.to_owned(), app.config.clipboard.clone()) {
-                        Ok(_) => app.notify(format!("Copied \"{}\" to clipboard", link)),
-                        Err(e) => app.show_error(e),
-                    }
+                    ctx.client.clone().download(item, ctx).await;
+                    continue;
                 }
-                None => {
-                    app.show_error("Failed to copy:\nFailed to get torrent link for selected item")
+
+                let result = ctx.src.clone().load(load_type, ctx, w).await;
+
+                match result {
+                    Ok(items) => w.results.with_items(items, w.sort.selected),
+                    Err(e) => ctx.show_error(e),
                 }
+                continue; // Redraw
             }
+
+            let evt = event::read()?;
+            self.on(&evt, w, ctx);
         }
-        _ => app.mode = Mode::KeyCombo(keys),
     }
-}
 
-pub async fn run_app<B: Backend>(
-    terminal: &mut Terminal<B>,
-    app: &mut App,
-) -> Result<(), Box<dyn Error>> {
-    let w = &mut Widgets::default();
-    let config = match Config::load() {
-        Ok(config) => config,
-        Err(e) => {
-            app.show_error(e);
-            app.config.clone()
-        }
-    };
-    config.apply(app, w);
-    loop {
-        if app.should_quit {
-            return Ok(());
-        }
-        if !app.errors.is_empty() {
-            app.mode = Mode::Error;
-        }
+    pub fn draw(&mut self, widgets: &mut Widgets, ctx: &mut Context, f: &mut Frame) {
+        let layout_vertical = Layout::new(
+            Direction::Vertical,
+            [Constraint::Length(3), Constraint::Min(1)],
+        )
+        .split(f.size());
+        let layout_horizontal = Layout::new(
+            Direction::Horizontal,
+            [Constraint::Ratio(1, 5), Constraint::Ratio(4, 5)],
+        )
+        .split(layout_vertical[1]);
 
-        get_help(app, w);
-        w.batch.with_items(app.batch.clone()); // TODO: Find a way to not have to pass this around
-        terminal.draw(|f| draw(w, app, f))?;
-        if let Mode::Loading(load_type) = app.mode {
-            app.mode = Mode::Normal;
-            if load_type == LoadType::Downloading {
-                let item = match w
-                    .results
-                    .table
-                    .state
-                    .selected()
-                    .and_then(|i| w.results.table.items.get(i))
-                {
-                    Some(i) => i,
-                    None => continue,
-                };
-                app.client.clone().download(item, app).await;
-                continue;
+        widgets.search.draw(f, ctx, layout_vertical[0]);
+        // Dont draw batch pane if none selected
+        match ctx.batch.is_empty() {
+            true => widgets.results.draw(f, ctx, layout_vertical[1]),
+            false => {
+                widgets.batch.draw(f, ctx, layout_horizontal[0]);
+                widgets.results.draw(f, ctx, layout_horizontal[1]);
             }
-
-            let result = app.src.clone().load(load_type, app, w).await;
-
-            match result {
-                Ok(items) => w.results.with_items(items, w.sort.selected),
-                Err(e) => app.show_error(e),
-            }
-            continue; // Redraw
         }
+        match ctx.mode {
+            Mode::Category => widgets.category.draw(f, ctx, f.size()),
+            Mode::Sort(_) => widgets.sort.draw(f, ctx, f.size()),
+            Mode::Filter => widgets.filter.draw(f, ctx, f.size()),
+            Mode::Theme => widgets.theme.draw(f, ctx, f.size()),
+            Mode::Error => {
+                // Get the oldest error first
+                if let Some(error) = ctx.errors.pop_front() {
+                    widgets.error.with_error(error);
+                }
+                widgets.error.draw(f, ctx, f.size());
+            }
+            Mode::Help => widgets.help.draw(f, ctx, f.size()),
+            Mode::Page => widgets.page.draw(f, ctx, f.size()),
+            Mode::Sources => widgets.sources.draw(f, ctx, f.size()),
+            Mode::Clients => widgets.clients.draw(f, ctx, f.size()),
+            Mode::KeyCombo(_) | Mode::Normal | Mode::Search | Mode::Loading(_) => {}
+        }
+    }
 
-        let evt = event::read()?;
-        match app.mode.to_owned() {
-            Mode::Category => w.category.handle_event(app, &evt),
-            Mode::Sort(_) => w.sort.handle_event(app, &evt),
-            Mode::Normal => w.results.handle_event(app, &evt),
-            Mode::Search => w.search.handle_event(app, &evt),
-            Mode::Filter => w.filter.handle_event(app, &evt),
-            Mode::Theme => w.theme.handle_event(app, &evt),
-            Mode::Error => w.error.handle_event(app, &evt),
-            Mode::Page => w.page.handle_event(app, &evt),
-            Mode::Help => w.help.handle_event(app, &evt),
-            Mode::Sources => w.sources.handle_event(app, &evt),
-            Mode::Clients => w.clients.handle_event(app, &evt),
-            Mode::KeyCombo(keys) => handle_combo(app, w, keys, &evt),
+    fn on(&mut self, evt: &Event, w: &mut Widgets, ctx: &mut Context) {
+        match ctx.mode.to_owned() {
+            Mode::Category => w.category.handle_event(ctx, &evt),
+            Mode::Sort(_) => w.sort.handle_event(ctx, &evt),
+            Mode::Normal => w.results.handle_event(ctx, &evt),
+            Mode::Search => w.search.handle_event(ctx, &evt),
+            Mode::Filter => w.filter.handle_event(ctx, &evt),
+            Mode::Theme => w.theme.handle_event(ctx, &evt),
+            Mode::Error => w.error.handle_event(ctx, &evt),
+            Mode::Page => w.page.handle_event(ctx, &evt),
+            Mode::Help => w.help.handle_event(ctx, &evt),
+            Mode::Sources => w.sources.handle_event(ctx, &evt),
+            Mode::Clients => w.clients.handle_event(ctx, &evt),
+            Mode::KeyCombo(keys) => self.on_combo(w, ctx, keys, &evt),
             Mode::Loading(_) => {}
         }
-        if app.mode != Mode::Help {
-            help_event(app, &evt);
+        if ctx.mode != Mode::Help {
+            self.on_help(&evt, ctx);
+        }
+    }
+
+    fn on_help(&mut self, e: &Event, ctx: &mut Context) {
+        if let Event::Key(KeyEvent {
+            code,
+            kind: KeyEventKind::Press,
+            ..
+        }) = e
+        {
+            match code {
+                KeyCode::Char('?') if ctx.mode != Mode::Search => {
+                    ctx.mode = Mode::Help;
+                }
+                KeyCode::F(1) => {
+                    ctx.mode = Mode::Help;
+                }
+                _ => {}
+            }
+        }
+    }
+
+    fn get_help(&mut self, w: &mut Widgets, ctx: &Context) {
+        let help = match ctx.mode {
+            Mode::Category => CategoryPopup::get_help(),
+            Mode::Sort(_) => SortPopup::get_help(),
+            Mode::Normal => ResultsWidget::get_help(),
+            Mode::Search => SearchWidget::get_help(),
+            Mode::Filter => FilterPopup::get_help(),
+            Mode::Theme => ThemePopup::get_help(),
+            Mode::Page => PagePopup::get_help(),
+            Mode::Sources => SourcesPopup::get_help(),
+            Mode::Clients => ClientsPopup::get_help(),
+            Mode::Error => None,
+            Mode::Help => None,
+            Mode::KeyCombo(_) => None,
+            Mode::Loading(_) => None,
+        };
+        if let Some(msg) = help {
+            w.help.with_items(msg, ctx.mode.clone());
+            w.help.table.select(0);
+        }
+    }
+
+    fn on_combo(&mut self, w: &Widgets, ctx: &mut Context, mut keys: Vec<char>, e: &Event) {
+        if let Event::Key(KeyEvent {
+            code,
+            kind: KeyEventKind::Press,
+            ..
+        }) = e
+        {
+            match code {
+                // Only handle standard chars for now
+                KeyCode::Char(c) => keys.push(*c),
+                KeyCode::Esc => {
+                    // Stop combo if esc
+                    ctx.mode = Mode::Normal;
+                    return;
+                }
+                _ => {}
+            }
+        }
+        match keys[..] {
+            ['y', c] => {
+                let s = w.results.table.state.selected().unwrap_or(0);
+                match w.results.table.items.get(s) {
+                    Some(item) => {
+                        let link = match c {
+                            't' => item.torrent_link.to_owned(),
+                            'm' => item.magnet_link.to_owned(),
+                            'p' => item.post_link.to_owned(),
+                            _ => return,
+                        };
+                        ctx.mode = Mode::Normal;
+                        match clip::copy_to_clipboard(link.to_owned(), ctx.config.clipboard.clone())
+                        {
+                            Ok(_) => ctx.notify(format!("Copied \"{}\" to clipboard", link)),
+                            Err(e) => ctx.show_error(e),
+                        }
+                    }
+                    None => ctx.show_error(
+                        "Failed to copy:\nFailed to get torrent link for selected item",
+                    ),
+                }
+            }
+            _ => ctx.mode = Mode::KeyCombo(keys),
         }
     }
 }

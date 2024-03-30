@@ -5,7 +5,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::{app::App, source::Item};
+use crate::{app::Context, source::Item};
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(default)]
@@ -30,7 +30,7 @@ impl Default for CmdConfig {
     }
 }
 
-pub fn load_config(app: &mut App) {
+pub fn load_config(app: &mut Context) {
     if app.config.client.cmd.is_none() {
         let mut def = CmdConfig::default();
         // Replace deprecated torrent_client_cmd with client.command config
@@ -42,7 +42,7 @@ pub fn load_config(app: &mut App) {
     }
 }
 
-pub async fn download(item: &Item, app: &mut App) {
+pub async fn download(item: &Item, app: &mut Context) {
     load_config(app);
     let cmd = match app.config.client.cmd.to_owned() {
         Some(c) => c,

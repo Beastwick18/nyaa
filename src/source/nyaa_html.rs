@@ -6,7 +6,7 @@ use scraper::{ElementRef, Html, Selector};
 use urlencoding::encode;
 
 use crate::{
-    app::{App, Widgets},
+    app::{Context, Widgets},
     widget::category::CatEntry,
 };
 
@@ -45,16 +45,16 @@ fn attr(e: ElementRef, s: &Selector, attr: &str) -> String {
 }
 
 impl Source for NyaaHtmlSource {
-    async fn filter(app: &mut App, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
+    async fn filter(app: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
         NyaaHtmlSource::search(app, w).await
     }
-    async fn categorize(app: &mut App, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
+    async fn categorize(app: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
         NyaaHtmlSource::search(app, w).await
     }
-    async fn sort(app: &mut App, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
+    async fn sort(app: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
         NyaaHtmlSource::search(app, w).await
     }
-    async fn search(app: &mut App, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
+    async fn search(app: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
         let cat = w.category.category;
         let filter = w.filter.selected as u16;
         let page = app.page;
@@ -172,7 +172,6 @@ impl Source for NyaaHtmlSource {
                     icon,
                     trusted: e.value().classes().any(|e| e == "success"),
                     remake: e.value().classes().any(|e| e == "danger"),
-                    selected: false,
                 })
             })
             .collect())

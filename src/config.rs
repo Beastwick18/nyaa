@@ -1,5 +1,5 @@
 use crate::{
-    app::{App, Widgets, APP_NAME},
+    app::{Context, Widgets, APP_NAME},
     client::{Client, ClientConfig},
     clip::ClipboardConfig,
     source::Sources,
@@ -69,24 +69,24 @@ impl Config {
     pub fn store(self) -> Result<(), ConfyError> {
         confy::store::<Config>(APP_NAME, CONFIG_FILE, self)
     }
-    pub fn apply(&self, app: &mut App, w: &mut Widgets) {
-        app.config = self.to_owned();
-        w.search.input.input = app.config.default_search.to_owned();
+    pub fn apply(&self, ctx: &mut Context, w: &mut Widgets) {
+        ctx.config = self.to_owned();
+        w.search.input.input = ctx.config.default_search.to_owned();
         w.search.input.cursor = w.search.input.input.len();
-        w.sort.selected = app.config.default_sort.to_owned();
-        w.filter.selected = app.config.default_filter.to_owned();
-        app.client = app.config.download_client.to_owned();
-        app.src = app.config.source.to_owned();
-        if let Some((i, theme)) = theme::find_theme(app.config.theme.to_owned()) {
+        w.sort.selected = ctx.config.default_sort.to_owned();
+        w.filter.selected = ctx.config.default_filter.to_owned();
+        ctx.client = ctx.config.download_client.to_owned();
+        ctx.src = ctx.config.source.to_owned();
+        if let Some((i, theme)) = theme::find_theme(ctx.config.theme.to_owned()) {
             w.theme.selected = i;
-            app.theme = theme;
+            ctx.theme = theme;
         }
-        if let Some(ent) = category::find_category(app.config.default_category.to_owned()) {
+        if let Some(ent) = category::find_category(ctx.config.default_category.to_owned()) {
             w.category.category = ent.id;
         }
 
-        if let Err(e) = app.client.clone().load_config(app) {
-            app.show_error(e);
+        if let Err(e) = ctx.client.clone().load_config(ctx) {
+            ctx.show_error(e);
         }
     }
 }

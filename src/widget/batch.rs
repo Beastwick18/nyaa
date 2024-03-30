@@ -1,52 +1,41 @@
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::{
     layout::{Constraint, Rect},
-    widgets::{Clear, Row, Table, Widget},
+    widgets::{Clear, Row, StatefulWidget, Table, Widget},
     Frame,
 };
 
-use crate::{
-    app::{App, LoadType, Mode},
-    source::Item,
-};
+use crate::app::{Context, LoadType, Mode};
 
-use super::{border_block, StatefulTable};
+use super::{border_block, VirtualStatefulTable};
 
 pub struct BatchWidget {
-    table: StatefulTable<Item>,
-}
-
-impl BatchWidget {
-    pub fn with_items(&mut self, items: Vec<Item>) {
-        self.table.with_items(items);
-    }
+    table: VirtualStatefulTable,
 }
 
 impl Default for BatchWidget {
     fn default() -> Self {
         BatchWidget {
-            table: StatefulTable::empty(),
+            table: VirtualStatefulTable::new(),
         }
     }
 }
 
 impl super::Widget for BatchWidget {
-    fn draw(&mut self, f: &mut Frame, app: &App, area: Rect) {
+    fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
         let buf = f.buffer_mut();
-        let block = border_block(app.theme, app.mode == Mode::Search).title("Batch");
-        let rows = self
-            .table
-            .items
+        let block = border_block(ctx.theme, ctx.mode == Mode::Search).title("Batch");
+        let rows = ctx
+            .batch
             .iter()
             .map(|i| Row::new([i.title.to_owned()]))
             .collect::<Vec<Row>>();
         let table = Table::new(rows, [Constraint::Percentage(100)]).block(block);
         Clear.render(area, buf);
-        table.render(area, buf)
-        // block.render(area, buf);
+        StatefulWidget::render(table, area, buf, &mut self.table.state);
     }
 
-    fn handle_event(&mut self, app: &mut crate::app::App, evt: &Event) {
+    fn handle_event(&mut self, ctx: &mut Context, evt: &Event) {
         if let Event::Key(KeyEvent {
             code,
             kind: KeyEventKind::Press,
@@ -57,11 +46,11 @@ impl super::Widget for BatchWidget {
             use KeyCode::*;
             match (code, modifiers) {
                 (Esc, &KeyModifiers::NONE) => {
-                    app.mode = Mode::Normal;
+                    ctx.mode = Mode::Normal;
                 }
                 (Enter, &KeyModifiers::NONE) => {
-                    app.mode = Mode::Loading(LoadType::Searching);
-                    app.page = 1; // Go back to first page
+                    ctx.mode = Mode::Loading(LoadType::Searching);
+                    ctx.page = 1; // Go back to first page
                 }
                 _ => {}
             };

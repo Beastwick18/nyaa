@@ -6,7 +6,7 @@ use rss::{extension::Extension, Channel};
 use urlencoding::encode;
 
 use crate::{
-    app::{App, Widgets},
+    app::{Context, Widgets},
     widget::{category::CatEntry, sort::Sort},
 };
 
@@ -40,13 +40,13 @@ fn sort_items(items: &mut [Item], sort: Sort, ascending: bool) {
 }
 
 impl Source for NyaaRssSource {
-    async fn sort(app: &mut App, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
+    async fn sort(app: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
         let mut items = w.results.table.items.clone();
         sort_items(&mut items, w.sort.selected, app.ascending);
         Ok(items)
     }
 
-    async fn search(app: &mut App, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
+    async fn search(app: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
         let cat = w.category.category;
         let query = w.search.input.input.clone();
         let filter = w.filter.selected as usize;
@@ -117,7 +117,6 @@ impl Source for NyaaRssSource {
                     remake: get_ext_value::<String>(ext, "remake").eq("Yes"),
                     category,
                     icon,
-                    selected: false,
                 })
             })
             .collect();
@@ -126,11 +125,11 @@ impl Source for NyaaRssSource {
         Ok(results)
     }
 
-    async fn filter(app: &mut App, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
+    async fn filter(app: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
         NyaaRssSource::search(app, w).await
     }
 
-    async fn categorize(app: &mut App, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
+    async fn categorize(app: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
         NyaaRssSource::search(app, w).await
     }
 }
