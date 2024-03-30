@@ -19,6 +19,7 @@
 - [Installation](#-installation)
   - [With Cargo](#with-cargo)
   - [On Arch Linux](#on-arch-linux-aur)
+  - [Using nix (flakes)](#using-nix-flakes)
   - [Ubuntu/Debian](#ubuntudebian)
   - [Windows/Linux Binaries](#windowslinux-binaries)
   - [From Source](#from-source)
