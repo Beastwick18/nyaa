@@ -156,17 +156,17 @@ impl VirtualStatefulTable {
         }
     }
 
-    pub fn next_wrap(&mut self, length: usize, amt: isize) {
-        if length == 0 {
-            return;
-        }
-        let i = match self.state.selected() {
-            Some(i) => (i as isize + amt).rem_euclid(length as isize),
-            None => 0,
-        };
-        self.state.select(Some(i as usize));
-        self.scrollbar_state = self.scrollbar_state.position(i as usize);
-    }
+    // pub fn next_wrap(&mut self, length: usize, amt: isize) {
+    //     if length == 0 {
+    //         return;
+    //     }
+    //     let i = match self.state.selected() {
+    //         Some(i) => (i as isize + amt).rem_euclid(length as isize),
+    //         None => 0,
+    //     };
+    //     self.state.select(Some(i as usize));
+    //     self.scrollbar_state = self.scrollbar_state.position(i as usize);
+    // }
 
     pub fn next(&mut self, length: usize, amt: isize) {
         if length == 0 {
@@ -184,5 +184,9 @@ impl VirtualStatefulTable {
     pub fn select(&mut self, idx: usize) {
         self.state.select(Some(idx));
         self.scrollbar_state = self.scrollbar_state.position(idx);
+    }
+
+    pub fn selected(&self) -> Option<usize> {
+        self.state.selected()
     }
 }

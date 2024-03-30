@@ -2,7 +2,7 @@ use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     layout::{Constraint, Rect},
     style::{Color, Stylize as _},
-    text::{Line, Span, Text},
+    text::{Line, Text},
     widgets::{Row, Table, Widget as _},
     Frame,
 };
@@ -169,13 +169,14 @@ impl Widget for CategoryPopup {
 
             let cat_rows = cat.entries.iter().enumerate().map(|(i, e)| {
                 let row = Row::new(vec![Line::from(vec![
-                    Span::raw(match e.id == self.category {
+                    match e.id == self.category {
                         true => "  ",
                         false => "   ",
-                    }),
+                    }
+                    .into(),
                     e.icon.label.fg(e.icon.color),
-                    Span::raw(" "),
-                    Span::raw(e.name),
+                    " ".into(),
+                    e.name.into(),
                 ])]);
                 match i == self.minor {
                     true => row.bg(ctx.theme.hl_bg),

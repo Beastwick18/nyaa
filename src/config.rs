@@ -31,6 +31,7 @@ pub struct Config {
     pub download_client: Client,
     pub date_format: String,
     pub base_url: String,
+    pub request_proxy: Option<String>,
     pub timeout: u64,
 
     #[serde(rename = "clipboard")]
@@ -54,6 +55,7 @@ impl Default for Config {
             default_search: "".to_owned(),
             date_format: "%Y-%m-%d %H:%M".to_owned(),
             base_url: "https://nyaa.si/".to_owned(),
+            request_proxy: None,
             timeout: 30,
             clipboard: None,
             columns: None,

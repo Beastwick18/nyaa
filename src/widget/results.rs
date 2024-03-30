@@ -5,7 +5,7 @@ use ratatui::{
     layout::{Constraint, Margin, Rect},
     style::{Style, Stylize},
     symbols::{self},
-    text::{Line, Text},
+    text::Line,
     widgets::{
         Clear, Paragraph, Row, Scrollbar, ScrollbarOrientation, StatefulWidget, Table, Widget,
     },
@@ -16,15 +16,14 @@ use unicode_width::UnicodeWidthStr;
 
 use crate::{
     app::{Context, LoadType, Mode},
-    cond_vec, raw,
+    cond_vec,
     source::Item,
-    style, styled,
     widget::sort::SortDir,
 };
 
 use super::{border_block, centered_rect, sort::Sort, StatefulTable};
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize, Default)]
 pub struct ColumnsConfig {
     category: Option<bool>,
     title: Option<bool>,
@@ -33,20 +32,6 @@ pub struct ColumnsConfig {
     seeders: Option<bool>,
     leechers: Option<bool>,
     downloads: Option<bool>,
-}
-
-impl Default for ColumnsConfig {
-    fn default() -> Self {
-        ColumnsConfig {
-            category: None,
-            title: None,
-            size: None,
-            date: None,
-            seeders: None,
-            leechers: None,
-            downloads: None,
-        }
-    }
 }
 
 impl ColumnsConfig {
@@ -85,6 +70,16 @@ impl ResultsWidget {
                 if let Some(p) = ctx.batch.iter().position(|s| s.id == item.id) {
                     ctx.batch.remove(p);
                 } else {
+                    ctx.batch.push(item.to_owned());
+                }
+            }
+        }
+    }
+
+    fn try_select(&self, ctx: &mut Context) {
+        if let Some(sel) = self.table.state.selected() {
+            if let Some(item) = self.table.items.get(sel) {
+                if !ctx.batch.iter().any(|s| s.id == item.id) {
                     ctx.batch.push(item.to_owned());
                 }
             }
@@ -164,7 +159,9 @@ impl super::Widget for ResultsWidget {
         let title_width = max(area.width as i32 - tot as i32, 5) as u16;
         let b = cond_vec!(cols ; [3, title_width, 9, self.date_width, 4, 4, 5]);
         let header = Row::new(cond_vec!(cols; header_slice))
-            .style(style!(bold, underlined, fg:focus_color))
+            .fg(focus_color)
+            .bold()
+            .underlined()
             .height(1)
             .bottom_margin(0);
 
@@ -183,21 +180,20 @@ impl super::Widget for ResultsWidget {
                 .iter()
                 .map(|item| {
                     Row::new(cond_vec!(cols ; [
-                        styled!(item.icon.label, fg:item.icon.color),
-                        styled!(
-                            item.title.to_owned(),
-                            fg:{ if item.trusted {
+                        item.icon.label.fg(item.icon.color),
+                            item.title.to_owned().fg(
+                            if item.trusted {
                                 ctx.theme.trusted
                             } else if item.remake {
                                 ctx.theme.remake
                             } else {
                                 ctx.theme.fg
-                            } }),
-                        raw!(format!("{:>9}", item.size)),
-                        raw!(format!("{:<14}", item.date)),
-                        styled!(format!("{:>4}", item.seeders), fg:ctx.theme.trusted),
-                        styled!(format!("{:>4}", item.leechers), fg:ctx.theme.remake),
-                        Text::raw(shorten_number(item.downloads)),
+                            }),
+                        format!("{:>9}", item.size).into(),
+                        format!("{:<14}", item.date).into(),
+                        format!("{:>4}", item.seeders).fg(ctx.theme.trusted),
+                        format!("{:>4}", item.leechers).fg(ctx.theme.remake),
+                        shorten_number(item.downloads).into(),
                     ]))
                     .fg(ctx.theme.fg)
                     .height(1)
@@ -217,11 +213,8 @@ impl super::Widget for ResultsWidget {
 
         let num_items = items.len();
         let first_item = (ctx.page - 1) * 75;
-        let focused = match ctx.mode {
-            Mode::Normal | Mode::KeyCombo(_) => true,
-            _ => false,
-        };
-        let table = Table::new(items, [Constraint::Percentage(100)])
+        let focused = matches!(ctx.mode, Mode::Normal | Mode::KeyCombo(_));
+        let table = Table::new(items, binding)
             .header(header)
             .block(border_block(ctx.theme, focused).title(format!(
                 "Results {}-{} ({} total): Page {}/{}",
@@ -231,8 +224,7 @@ impl super::Widget for ResultsWidget {
                 ctx.page,
                 ctx.last_page
             )))
-            .highlight_style(Style::default().bg(ctx.theme.hl_bg))
-            .widths(&binding);
+            .highlight_style(Style::default().bg(ctx.theme.hl_bg));
         StatefulWidget::render(table, area, buf, &mut self.table.state);
         StatefulWidget::render(sb, sb_area, buf, &mut self.table.scrollbar_state);
 
@@ -354,16 +346,25 @@ impl super::Widget for ResultsWidget {
                     ctx.quit();
                 }
                 (Char('j') | KeyCode::Down, &KeyModifiers::NONE) => {
-                    self.table.next(1);
-                    if self.control_space {
-                        self.try_select_toggle(ctx);
+                    if self
+                        .table
+                        .state
+                        .selected()
+                        .is_some_and(|s| s + 1 != self.table.items.len())
+                    {
+                        self.table.next(1);
+                        if self.control_space {
+                            self.try_select_toggle(ctx);
+                        }
                     }
                 }
                 (Char('k') | KeyCode::Up, &KeyModifiers::NONE) => {
-                    if self.control_space {
-                        self.try_select_toggle(ctx);
+                    if self.table.state.selected().is_some_and(|s| s != 0) {
+                        if self.control_space {
+                            self.try_select_toggle(ctx);
+                        }
+                        self.table.next(-1);
                     }
-                    self.table.next(-1);
                 }
                 (Char('J'), &KeyModifiers::SHIFT) => {
                     self.table.next(4);
@@ -417,7 +418,7 @@ impl super::Widget for ResultsWidget {
                     self.control_space = !self.control_space;
                     if self.control_space {
                         ctx.notify("Entered VISUAL mode");
-                        self.try_select_toggle(ctx);
+                        self.try_select(ctx);
                     } else {
                         ctx.notify("Exited VISUAL mode");
                     }
@@ -432,6 +433,9 @@ impl super::Widget for ResultsWidget {
                             }
                         }
                     }
+                }
+                (Tab | BackTab, _) => {
+                    ctx.mode = Mode::Batch;
                 }
                 (Esc, &KeyModifiers::NONE) => {
                     ctx.notification = None;
@@ -453,6 +457,7 @@ impl super::Widget for ResultsWidget {
             ("g/G", "Goto Top/Bottom"),
             ("k, ↑", "Up"),
             ("j, ↓", "Down"),
+            ("K, J", "Up/Down 4 items"),
             ("n, l, →", "Next Page"),
             ("p, h, ←", "Prev Page"),
             ("N, L", "Last Page"),
@@ -460,7 +465,9 @@ impl super::Widget for ResultsWidget {
             ("r", "Reload"),
             ("o", "Open in browser"),
             ("yt, ym, yp", "Copy torrent/magnet/post link"),
-            ("Space", "Mark item for batch download"),
+            ("Space", "Toggle item for batch download"),
+            ("Ctrl-Space", "Multi-line select torrents"),
+            ("Tab/Shift-Tab", "Switch to Batches"),
             ("/, i", "Search"),
             ("c", "Categories"),
             ("f", "Filters"),

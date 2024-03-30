@@ -2,6 +2,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{app::Context, source::Item};
 
+use super::ClientConfig;
+
 #[derive(Serialize, Deserialize, Clone, Default)]
 #[serde(default)]
 pub struct DefaultAppConfig {
@@ -15,13 +17,11 @@ pub fn load_config(app: &mut Context) {
     }
 }
 
-pub async fn download(item: &Item, app: &mut Context) {
-    load_config(app);
-    let conf = match app.config.client.default_app.to_owned() {
+pub async fn download(item: Item, conf: ClientConfig) -> Result<String, String> {
+    let conf = match conf.default_app.to_owned() {
         Some(c) => c,
         None => {
-            app.show_error("Failed to get default app config");
-            return;
+            return Err("Failed to get default app config".to_owned());
         }
     };
     let link = match conf.use_magnet {
@@ -29,7 +29,7 @@ pub async fn download(item: &Item, app: &mut Context) {
         Some(false) => item.torrent_link.to_owned(),
     };
     match open::that_detached(&link) {
-        Ok(_) => app.notify("Successfully opened link in default app"),
-        Err(e) => app.show_error(format!("Unable to open {}:\n{}", link, e)),
+        Ok(_) => Ok("Successfully opened link in default app".to_owned()),
+        Err(e) => Err(format!("Unable to open {}:\n{}", link, e).to_owned()),
     }
 }

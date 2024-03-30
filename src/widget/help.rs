@@ -41,13 +41,14 @@ impl Widget for HelpPopup {
     fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
         let buf = f.buffer_mut();
         let iter = self.table.items.iter();
+        let max_size = 35;
 
         // Get max len of Key
         let key_min = iter.clone().fold(15, |acc, e| max(acc, e.0.len())) as u16;
         // Get max len of action
         let map_min = iter.fold(15, |acc, e| max(acc, e.1.len())) as u16;
         // Cap height between the number of entries + 3 for padding, and 20
-        let height = min(25, self.table.items.len() + 3) as u16;
+        let height = min(max_size, self.table.items.len() + 3) as u16;
 
         let center = super::centered_rect(key_min + map_min + 6, height, area);
         let clear = super::centered_rect(center.width + 2, center.height, area);

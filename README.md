@@ -10,7 +10,6 @@
   <a href="https://github.com/Beastwick18/nyaa/releases/latest"><img src="https://img.shields.io/github/downloads/Beastwick18/nyaa/total?label=github%20downloads&color=#2ea043" /></a>
 </div>
 
-
 <p align="center">
   <img src="assets/tty.gif" width="800" alt="animated" />
 </p>
@@ -20,6 +19,7 @@
 - [Installation](#-installation)
   - [With Cargo](#with-cargo)
   - [On Arch Linux](#on-arch-linux-aur)
+  - [Using nix (flakes)](#using-nix-flakes)
   - [Ubuntu/Debian](#ubuntudebian)
   - [Windows/Linux Binaries](#windowslinux-binaries)
   - [From Source](#from-source)
@@ -30,35 +30,78 @@
 - [Planned Features](#%EF%B8%8F-planned-features)
 
 ## ⚡ Installation
+
 ### With cargo
+
 ```sh
 cargo install nyaa
 ```
 
 ### On Arch Linux ([AUR](https://aur.archlinux.org/packages/nyaa))
+
 ```sh
 yay -S nyaa
 ```
+
 or
+
 ```sh
 yay -S nyaa-bin
 ```
 
+### Using nix (flakes)
+
+#### Run without installing
+
+```sh
+nix run github:Beastwick18/nyaa
+```
+
+#### Install (via `home-manager`)
+
+Add to `inputs` in `flake.nix`
+
+```nix
+nyaa = {
+    url = "github:Beastwick18/nyaa";
+    inputs.nixpkgs.follows = "nixpkgs";
+};
+```
+
+Add to `home.nix`
+
+```nix
+home.packages = [ inputs.nyaa.packages.x86_64-linux.default ];
+```
+
+#### Install (via `nix profile`)
+
+```sh
+nix profile install github:Beastwick18/nyaa
+```
+
 ### Ubuntu/Debian
+
 Download the .deb file from the [latest release](https://github.com/Beastwick18/nyaa/releases/latest) and install with `apt`:
+
 ```sh
 sudo apt install ./nyaa-VERSION-x86_64.deb
 ```
+
 or `dpkg`
+
 ```sh
 sudo dpkg -i ./nyaa-VERSION-x86_64.deb
 ```
 
 ### Windows/Linux Binaries
+
 Binaries for Linux and Windows are available on the [releases](https://github.com/Beastwick18/nyaa/releases/latest) page.
 
 ### From Source
+
 To build from source, you must have both `git` and `cargo` installed.
+
 ```sh
 git clone https://github.com/Beastwick18/nyaa
 cd nyaa
@@ -66,7 +109,9 @@ cargo install --path .
 ```
 
 ## ⌨️ Keybinds
+
 Like modal text editors such as Vim, there are several modes. Each have their own keybinds, which can be found out by pressing `F1` or `?` while in that mode. Some of the important ones are:
+
 - `hjkl` or arrow keys for general navigation
 - `/` or `i` to search
 - `c` to open category popup
@@ -79,12 +124,23 @@ Like modal text editors such as Vim, there are several modes. Each have their ow
 For a list of all modes and their respective keybinds, check [Keybinds](https://github.com/Beastwick18/nyaa/wiki/Keybinds) on the wiki.
 
 ## 🌐 Proxies
+
 If `nyaa.si` is not accessible in your region, try one of the [proxies](https://nyaatorrents.info/#proxy). Once you find one that works, replace the value for `base_url` in the default config with the working proxy url. I would recommend `nyaa.land`, as it is very compatible, and usually working. Here's what the config for `nyaa.land` would look like:
+
 ```toml
 base_url = 'nyaa.land'
 ```
 
+If you have your own proxy setup, you use it by adding:
+
+```toml
+request_proxy = "localhost:8118"
+```
+
+to your config.
+
 ## ⚙️ Configuration
+
 The location of the config file for linux is:
 
 `~/.config/nyaa/config.toml`
@@ -103,12 +159,13 @@ source = "NyaaHtml"
 download_client = "transmission"
 date_format = "%Y-%m-%d %H:%M"
 base_url = "https://nyaa.si/"
+request_proxy = "localhost:8118" # None by default
 timeout = 30
 
 # ... client configurations
 ```
 
-`default_category` refers to the category selected by default when the app is opened. Possible values are defined in [CATEGORIES.md](./CATEGORIES.md).
+`default_category` refers to the category selected by default when the app is opened. Possible values are defined in the [Wiki](https://github.com/Beastwick18/nyaa/wiki/Category-Values).
 
 `default_filter` refers to the filter selected by default when the app is opened. Possible values are `NoFilter`, `NoRemakes`, `TrustedOnly` or `Batches`.
 
@@ -126,9 +183,12 @@ timeout = 30
 
 `base_url` refers to the url used to make requests. Change this to any nyaa mirror url in the format: `http(s)://nyaa.si` or `nyaa.si`
 
+`request_proxy` refers to the url to proxy request through. This is not to be confused with _nyaa_ proxies, which are defined with `base_url`.
+
 `timeout` refers to how long the program will wait for a search request before it times out. This value is measured in seconds. You may want to increase this if your request times are usually long.
 
 ### Download Client Integration
+
 - Check the wiki for connecting to your torrent client:
   - [qBittorrent](https://github.com/Beastwick18/nyaa/wiki/qBittorrent)
   - [Transmission](https://github.com/Beastwick18/nyaa/wiki/Transmission)
@@ -138,6 +198,7 @@ timeout = 30
   - [Run command](https://github.com/Beastwick18/nyaa/wiki/Run-command)
 
 ## 🗺️ Planned Features
+
 - [ ] User-defined themes
 - [ ] Sources other than nyaa/Custom user-defined sources
 - [x] ~~Integration with torrent clients~~

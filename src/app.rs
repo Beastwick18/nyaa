@@ -38,6 +38,7 @@ pub enum LoadType {
     Sorting,
     Filtering,
     Categorizing,
+    Batching,
     Downloading,
 }
 
@@ -48,6 +49,7 @@ pub enum Mode {
     Search,
     Category,
     Sort(SortDir),
+    Batch,
     Filter,
     Theme,
     Sources,
@@ -62,6 +64,7 @@ impl ToString for Mode {
     fn to_string(&self) -> String {
         match self {
             Mode::Normal | Mode::KeyCombo(_) => "Normal".to_string(),
+            Mode::Batch => "Batch".to_string(),
             Mode::Search => "Search".to_string(),
             Mode::Category => "Category".to_string(),
             Mode::Sort(_) => "Sort".to_string(),
@@ -77,6 +80,7 @@ impl ToString for Mode {
     }
 }
 
+#[derive(Default)]
 pub struct App {
     pub widgets: Widgets,
 }
@@ -146,14 +150,6 @@ pub struct Widgets {
     pub help: HelpPopup,
 }
 
-impl Default for App {
-    fn default() -> Self {
-        App {
-            widgets: Widgets::default(),
-        }
-    }
-}
-
 impl App {
     pub async fn run_app<B: Backend>(
         &mut self,
@@ -173,16 +169,31 @@ impl App {
             if !ctx.errors.is_empty() {
                 ctx.mode = Mode::Error;
             }
+            if ctx.mode == Mode::Batch && ctx.batch.is_empty() {
+                ctx.mode = Mode::Normal;
+            }
 
             self.get_help(w, ctx);
             terminal.draw(|f| self.draw(w, ctx, f))?;
             if let Mode::Loading(load_type) = ctx.mode {
                 ctx.mode = Mode::Normal;
-                if load_type == LoadType::Downloading {
-                    if let Some(i) = w.results.table.selected() {
-                        ctx.client.clone().download(i, ctx).await;
+                match load_type {
+                    LoadType::Downloading => {
+                        if load_type == LoadType::Downloading {
+                            if let Some(i) = w.results.table.selected() {
+                                ctx.client.clone().download(i.to_owned(), ctx).await;
+                            }
+                            continue;
+                        }
                     }
-                    continue;
+                    LoadType::Batching => {
+                        ctx.client
+                            .clone()
+                            .batch_download(ctx.batch.clone(), ctx)
+                            .await;
+                        continue;
+                    }
+                    _ => {}
                 }
 
                 let result = ctx.src.clone().load(load_type, ctx, w).await;
@@ -237,28 +248,29 @@ impl App {
             Mode::Page => widgets.page.draw(f, ctx, f.size()),
             Mode::Sources => widgets.sources.draw(f, ctx, f.size()),
             Mode::Clients => widgets.clients.draw(f, ctx, f.size()),
-            Mode::KeyCombo(_) | Mode::Normal | Mode::Search | Mode::Loading(_) => {}
+            Mode::KeyCombo(_) | Mode::Normal | Mode::Search | Mode::Loading(_) | Mode::Batch => {}
         }
     }
 
     fn on(&mut self, evt: &Event, w: &mut Widgets, ctx: &mut Context) {
         match ctx.mode.to_owned() {
-            Mode::Category => w.category.handle_event(ctx, &evt),
-            Mode::Sort(_) => w.sort.handle_event(ctx, &evt),
-            Mode::Normal => w.results.handle_event(ctx, &evt),
-            Mode::Search => w.search.handle_event(ctx, &evt),
-            Mode::Filter => w.filter.handle_event(ctx, &evt),
-            Mode::Theme => w.theme.handle_event(ctx, &evt),
-            Mode::Error => w.error.handle_event(ctx, &evt),
-            Mode::Page => w.page.handle_event(ctx, &evt),
-            Mode::Help => w.help.handle_event(ctx, &evt),
-            Mode::Sources => w.sources.handle_event(ctx, &evt),
-            Mode::Clients => w.clients.handle_event(ctx, &evt),
-            Mode::KeyCombo(keys) => self.on_combo(w, ctx, keys, &evt),
+            Mode::Category => w.category.handle_event(ctx, evt),
+            Mode::Sort(_) => w.sort.handle_event(ctx, evt),
+            Mode::Normal => w.results.handle_event(ctx, evt),
+            Mode::Batch => w.batch.handle_event(ctx, evt),
+            Mode::Search => w.search.handle_event(ctx, evt),
+            Mode::Filter => w.filter.handle_event(ctx, evt),
+            Mode::Theme => w.theme.handle_event(ctx, evt),
+            Mode::Error => w.error.handle_event(ctx, evt),
+            Mode::Page => w.page.handle_event(ctx, evt),
+            Mode::Help => w.help.handle_event(ctx, evt),
+            Mode::Sources => w.sources.handle_event(ctx, evt),
+            Mode::Clients => w.clients.handle_event(ctx, evt),
+            Mode::KeyCombo(keys) => self.on_combo(w, ctx, keys, evt),
             Mode::Loading(_) => {}
         }
         if ctx.mode != Mode::Help {
-            self.on_help(&evt, ctx);
+            self.on_help(evt, ctx);
         }
     }
 
@@ -286,6 +298,7 @@ impl App {
             Mode::Category => CategoryPopup::get_help(),
             Mode::Sort(_) => SortPopup::get_help(),
             Mode::Normal => ResultsWidget::get_help(),
+            Mode::Batch => BatchWidget::get_help(),
             Mode::Search => SearchWidget::get_help(),
             Mode::Filter => FilterPopup::get_help(),
             Mode::Theme => ThemePopup::get_help(),

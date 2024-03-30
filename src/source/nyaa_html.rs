@@ -1,4 +1,4 @@
-use std::{error::Error, time::Duration};
+use std::error::Error;
 
 use chrono::{DateTime, Local, NaiveDateTime, TimeZone};
 use reqwest::{StatusCode, Url};
@@ -45,26 +45,25 @@ fn attr(e: ElementRef, s: &Selector, attr: &str) -> String {
 }
 
 impl Source for NyaaHtmlSource {
-    async fn filter(app: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
-        NyaaHtmlSource::search(app, w).await
+    async fn filter(ctx: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
+        NyaaHtmlSource::search(ctx, w).await
     }
-    async fn categorize(app: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
-        NyaaHtmlSource::search(app, w).await
+    async fn categorize(ctx: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
+        NyaaHtmlSource::search(ctx, w).await
     }
-    async fn sort(app: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
-        NyaaHtmlSource::search(app, w).await
+    async fn sort(ctx: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
+        NyaaHtmlSource::search(ctx, w).await
     }
-    async fn search(app: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
+    async fn search(ctx: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
         let cat = w.category.category;
         let filter = w.filter.selected as u16;
-        let page = app.page;
+        let page = ctx.page;
         let sort = w.sort.selected.to_url();
-        let timeout = app.config.timeout;
 
-        let base_url = add_protocol(app.config.base_url.clone(), true);
+        let base_url = add_protocol(ctx.config.base_url.clone(), true);
         let (high, low) = (cat / 10, cat % 10);
         let query = encode(&w.search.input.input);
-        let ord = match app.ascending {
+        let ord = match ctx.ascending {
             true => "asc",
             false => "desc",
         };
@@ -75,10 +74,7 @@ impl Source for NyaaHtmlSource {
             query, high, low, filter, page, sort, ord
         )));
 
-        let client = reqwest::Client::builder()
-            .gzip(true)
-            .timeout(Duration::from_secs(timeout))
-            .build()?;
+        let client = super::request_client(ctx)?;
         let response = client.get(url_query.to_owned()).send().await?;
         if response.status() != StatusCode::OK {
             // Throw error if response code is not OK
@@ -100,15 +96,15 @@ impl Source for NyaaHtmlSource {
         let dl_sel = &Selector::parse("td:nth-of-type(8)")?;
         let pagination_sel = &Selector::parse(".pagination-page-info")?;
 
-        app.last_page = 100;
-        app.total_results = 7500;
+        ctx.last_page = 100;
+        ctx.total_results = 7500;
         // For searches, pagination has a description of total results found
         if let Some(pagination) = doc.select(pagination_sel).next() {
             // 6th word in pagination description contains total number of results
             if let Some(num_results_str) = pagination.inner_html().split(' ').nth(5) {
                 if let Ok(num_results) = num_results_str.parse::<usize>() {
-                    app.last_page = (num_results + 74) / 75;
-                    app.total_results = num_results;
+                    ctx.last_page = (num_results + 74) / 75;
+                    ctx.total_results = num_results;
                 }
             }
         }
@@ -141,7 +137,7 @@ impl Source for NyaaHtmlSource {
                 let naive =
                     NaiveDateTime::parse_from_str(&date, "%Y-%m-%d %H:%M").unwrap_or_default();
                 let date_time: DateTime<Local> = Local.from_utc_datetime(&naive);
-                let date = date_time.format(&app.config.date_format).to_string();
+                let date = date_time.format(&ctx.config.date_format).to_string();
 
                 let seeders = inner(e, seed_sel, "0").parse().unwrap_or(0);
                 let leechers = inner(e, leech_sel, "0").parse().unwrap_or(0);
