@@ -113,6 +113,11 @@ impl super::Widget for InputWidget {
                         self.cursor -= 1;
                     }
                 }
+                (Delete, &KeyModifiers::NONE) => {
+                    if !self.input.is_empty() && self.cursor < self.input.len() {
+                        self.input.remove(self.cursor);
+                    }
+                }
                 (Left, &KeyModifiers::NONE)
                 | (Char('h'), &KeyModifiers::CONTROL | &KeyModifiers::ALT) => {
                     self.cursor = max(self.cursor, 1) - 1;
