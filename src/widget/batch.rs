@@ -2,9 +2,12 @@ use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::{
     layout::{Constraint, Margin, Rect},
     style::{Style, Stylize},
-    widgets::{Clear, Row, Scrollbar, ScrollbarOrientation, StatefulWidget, Table, Widget},
+    widgets::{
+        Clear, Paragraph, Row, Scrollbar, ScrollbarOrientation, StatefulWidget, Table, Widget,
+    },
     Frame,
 };
+use unicode_width::UnicodeWidthStr as _;
 
 use crate::app::{Context, LoadType, Mode};
 
@@ -61,6 +64,16 @@ impl super::Widget for BatchWidget {
                 &mut self.table.scrollbar_state.content_length(rows.len()),
             );
         }
+
+        let right_str = format!("Total: {}", ctx.batch.len());
+        let text = Paragraph::new(right_str.clone());
+        let right = Rect::new(
+            area.right() - 1 - right_str.width() as u16,
+            area.top(),
+            right_str.width() as u16,
+            1,
+        );
+        f.render_widget(text, right);
     }
 
     fn handle_event(&mut self, ctx: &mut Context, evt: &Event) {
