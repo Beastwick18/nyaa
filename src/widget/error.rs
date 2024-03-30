@@ -8,7 +8,7 @@ use ratatui::{
     Frame,
 };
 
-use crate::app::{App, Mode};
+use crate::app::{Context, Mode};
 
 use super::{border_block, Widget};
 
@@ -31,7 +31,8 @@ impl Default for ErrorPopup {
 }
 
 impl Widget for ErrorPopup {
-    fn draw(&mut self, f: &mut Frame, app: &App, area: Rect) {
+    fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
+        let buf = f.buffer_mut();
         let lines = self.error.split('\n');
         let max_line = lines.clone().fold(30, |acc, e| max(e.len(), acc)) as u16 + 3;
         let x_len = min(max_line, area.width - 4);
@@ -44,16 +45,19 @@ impl Widget for ErrorPopup {
         let clear = super::centered_rect(center.width + 2, center.height, area);
         let p = Paragraph::new(self.error.to_owned())
             .block(
-                border_block(app.theme, true)
-                    .fg(app.theme.remake)
-                    .title("Error: Press any key to dismiss"),
+                border_block(ctx.theme, true)
+                    .fg(ctx.theme.remake)
+                    .title(format!(
+                        "Error ({}): Press any key to dismiss",
+                        ctx.errors.len() + 1
+                    )),
             )
             .wrap(Wrap { trim: false });
-        super::clear(clear, f.buffer_mut(), app.theme.bg);
-        p.render(center, f.buffer_mut());
+        super::clear(clear, buf, ctx.theme.bg);
+        p.render(center, buf);
     }
 
-    fn handle_event(&mut self, app: &mut App, e: &Event) {
+    fn handle_event(&mut self, app: &mut Context, e: &Event) {
         if let Event::Key(KeyEvent {
             code,
             kind: KeyEventKind::Press,

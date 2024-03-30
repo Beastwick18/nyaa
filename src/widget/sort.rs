@@ -7,7 +7,7 @@ use ratatui::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    app::{App, LoadType, Mode},
+    app::{Context, LoadType, Mode},
     popup_enum, style,
 };
 
@@ -48,14 +48,14 @@ pub struct SortPopup {
 impl Default for SortPopup {
     fn default() -> Self {
         SortPopup {
-            table: StatefulTable::with_items(Sort::iter().map(|item| item.to_string()).collect()),
+            table: StatefulTable::new(Sort::iter().map(|item| item.to_string()).collect()),
             selected: Sort::Date,
         }
     }
 }
 
 impl Widget for SortPopup {
-    fn draw(&mut self, f: &mut Frame, app: &App, area: Rect) {
+    fn draw(&mut self, f: &mut Frame, app: &Context, area: Rect) {
         let buf = f.buffer_mut();
         let center = super::centered_rect(30, self.table.items.len() as u16 + 2, area);
         let clear = super::centered_rect(center.width + 2, center.height, area);
@@ -77,7 +77,7 @@ impl Widget for SortPopup {
         table.render(center, buf, &mut self.table.state);
     }
 
-    fn handle_event(&mut self, app: &mut crate::app::App, e: &crossterm::event::Event) {
+    fn handle_event(&mut self, app: &mut crate::app::Context, e: &crossterm::event::Event) {
         if let Event::Key(KeyEvent {
             code,
             kind: KeyEventKind::Press,

@@ -6,7 +6,7 @@ use ratatui::{
 };
 
 use crate::{
-    app::{App, Mode},
+    app::{Context, Mode},
     client::Client,
     style,
 };
@@ -20,30 +20,30 @@ pub struct ClientsPopup {
 impl Default for ClientsPopup {
     fn default() -> Self {
         ClientsPopup {
-            table: StatefulTable::with_items(Client::iter().map(|item| item.to_string()).collect()),
+            table: StatefulTable::new(Client::iter().map(|item| item.to_string()).collect()),
         }
     }
 }
 
 impl Widget for ClientsPopup {
-    fn draw(&mut self, f: &mut Frame, app: &App, area: Rect) {
+    fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
         let buf = f.buffer_mut();
         let center = super::centered_rect(30, self.table.items.len() as u16 + 2, area);
         let clear = super::centered_rect(center.width + 2, center.height, area);
         let items = self.table.items.iter().enumerate().map(|(i, item)| {
-            Row::new(vec![match i == app.client.to_owned() as usize {
+            Row::new(vec![match i == ctx.client.to_owned() as usize {
                 true => format!("  {}", item.to_owned()),
                 false => format!("   {}", item.to_owned()),
             }])
         });
-        super::clear(clear, buf, app.theme.bg);
+        super::clear(clear, buf, ctx.theme.bg);
         let table = Table::new(items, [Constraint::Percentage(100)])
-            .block(border_block(app.theme, true).title("Download Client"))
-            .highlight_style(style!(bg:app.theme.hl_bg));
+            .block(border_block(ctx.theme, true).title("Download Client"))
+            .highlight_style(style!(bg:ctx.theme.hl_bg));
         table.render(center, buf, &mut self.table.state);
     }
 
-    fn handle_event(&mut self, app: &mut App, e: &Event) {
+    fn handle_event(&mut self, app: &mut Context, e: &Event) {
         if let Event::Key(KeyEvent {
             code,
             kind: KeyEventKind::Press,

@@ -1,10 +1,11 @@
-use std::error::Error;
+use std::{error::Error, time::Duration};
 
 use regex::Regex;
+use reqwest::Proxy;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    app::{App, LoadType, Widgets},
+    app::{Context, LoadType, Widgets},
     popup_enum,
     widget::{category::CatIcon, EnumIter},
 };
@@ -28,9 +29,19 @@ pub fn add_protocol<S: Into<String>>(url: S, default_https: bool) -> String {
     }
 }
 
+pub fn request_client(ctx: &Context) -> Result<reqwest::Client, reqwest::Error> {
+    let mut client = reqwest::Client::builder()
+        .gzip(true)
+        .timeout(Duration::from_secs(ctx.config.timeout));
+    if let Some(proxy_url) = ctx.config.request_proxy.to_owned() {
+        client = client.proxy(Proxy::all(add_protocol(proxy_url, false))?);
+    }
+    client.build()
+}
+
 #[derive(Clone)]
 pub struct Item {
-    pub index: usize,
+    pub id: usize,
     pub date: String,
     pub seeders: u32,
     pub leechers: u32,
@@ -55,17 +66,17 @@ popup_enum! {
 }
 
 pub trait Source {
-    async fn search(app: &mut App, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>>;
-    async fn sort(app: &mut App, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>>;
-    async fn filter(app: &mut App, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>>;
-    async fn categorize(app: &mut App, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>>;
+    async fn search(app: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>>;
+    async fn sort(app: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>>;
+    async fn filter(app: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>>;
+    async fn categorize(app: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>>;
 }
 
 impl Sources {
     pub async fn load(
         &self,
         load_type: LoadType,
-        app: &mut App,
+        app: &mut Context,
         w: &Widgets,
     ) -> Result<Vec<Item>, Box<dyn Error>> {
         match self {
@@ -74,14 +85,14 @@ impl Sources {
                 LoadType::Sorting => NyaaHtmlSource::sort(app, w).await,
                 LoadType::Filtering => NyaaHtmlSource::filter(app, w).await,
                 LoadType::Categorizing => NyaaHtmlSource::categorize(app, w).await,
-                LoadType::Downloading => Ok(w.results.table.items.clone()),
+                LoadType::Downloading | LoadType::Batching => Ok(w.results.table.items.clone()),
             },
             Sources::NyaaRss => match load_type {
                 LoadType::Searching => NyaaRssSource::search(app, w).await,
                 LoadType::Sorting => NyaaRssSource::sort(app, w).await,
                 LoadType::Filtering => NyaaRssSource::filter(app, w).await,
                 LoadType::Categorizing => NyaaRssSource::categorize(app, w).await,
-                LoadType::Downloading => Ok(w.results.table.items.clone()),
+                LoadType::Downloading | LoadType::Batching => Ok(w.results.table.items.clone()),
             },
         }
     }

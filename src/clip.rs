@@ -47,7 +47,7 @@ pub fn copy_to_clipboard(
                 return Err(format!("Failed to copy to clipboard:\n{}", e).into());
             }
         } else {
-            return Err(format!("Failed to copy to linux clipboard").into());
+            return Err("Failed to copy to linux clipboard".into());
         }
         return Ok(());
     } else {

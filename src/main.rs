@@ -1,6 +1,6 @@
 use std::{env, io::stdout};
 
-use app::{run_app, App};
+use app::App;
 use crossterm::{
     cursor::SetCursorStyle,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
@@ -37,7 +37,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut app = App::default();
 
-    run_app(&mut terminal, &mut app).await?;
+    app.run_app(&mut terminal).await?;
 
     disable_raw_mode()?;
     stdout().execute(SetCursorStyle::DefaultUserShape)?;

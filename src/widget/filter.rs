@@ -7,7 +7,7 @@ use ratatui::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    app::{App, LoadType, Mode},
+    app::{Context, LoadType, Mode},
     popup_enum, style,
 };
 
@@ -30,14 +30,14 @@ pub struct FilterPopup {
 impl Default for FilterPopup {
     fn default() -> Self {
         FilterPopup {
-            table: StatefulTable::with_items(Filter::iter().map(|item| item.to_string()).collect()),
+            table: StatefulTable::new(Filter::iter().map(|item| item.to_string()).collect()),
             selected: Filter::NoFilter,
         }
     }
 }
 
 impl Widget for FilterPopup {
-    fn draw(&mut self, f: &mut Frame, app: &App, area: Rect) {
+    fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
         let center = super::centered_rect(30, self.table.items.len() as u16 + 2, area);
         let clear = super::centered_rect(center.width + 2, center.height, area);
         let items = self.table.items.iter().enumerate().map(|(i, item)| {
@@ -46,14 +46,14 @@ impl Widget for FilterPopup {
                 false => Row::new(vec![format!("   {}", item.to_owned())]),
             }
         });
-        super::clear(clear, f.buffer_mut(), app.theme.bg);
+        super::clear(clear, f.buffer_mut(), ctx.theme.bg);
         Table::new(items, [Constraint::Percentage(100)])
-            .block(border_block(app.theme, true).title("Filter"))
-            .highlight_style(style!(bg:app.theme.hl_bg))
+            .block(border_block(ctx.theme, true).title("Filter"))
+            .highlight_style(style!(bg:ctx.theme.hl_bg))
             .render(center, f.buffer_mut(), &mut self.table.state);
     }
 
-    fn handle_event(&mut self, app: &mut crate::app::App, e: &crossterm::event::Event) {
+    fn handle_event(&mut self, app: &mut crate::app::Context, e: &crossterm::event::Event) {
         if let Event::Key(KeyEvent {
             code,
             kind: KeyEventKind::Press,

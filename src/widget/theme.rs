@@ -9,7 +9,7 @@ use ratatui::{
 };
 
 use crate::{
-    app::{App, Mode},
+    app::{Context, Mode},
     style,
 };
 
@@ -107,16 +107,14 @@ pub struct ThemePopup {
 impl Default for ThemePopup {
     fn default() -> Self {
         ThemePopup {
-            table: StatefulTable::with_items(
-                THEMES.iter().map(|item| item.name.to_owned()).collect(),
-            ),
+            table: StatefulTable::new(THEMES.iter().map(|item| item.name.to_owned()).collect()),
             selected: 0,
         }
     }
 }
 
 impl Widget for ThemePopup {
-    fn draw(&mut self, f: &mut Frame, app: &App, area: Rect) {
+    fn draw(&mut self, f: &mut Frame, app: &Context, area: Rect) {
         let buf = f.buffer_mut();
         let height = min(min(THEMES.len() as u16 + 2, 10), area.height);
         let center = super::centered_rect(30, height, area);
@@ -151,7 +149,7 @@ impl Widget for ThemePopup {
         }
     }
 
-    fn handle_event(&mut self, app: &mut App, e: &Event) {
+    fn handle_event(&mut self, app: &mut Context, e: &Event) {
         if let Event::Key(KeyEvent {
             code,
             kind: KeyEventKind::Press,

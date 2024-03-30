@@ -2,6 +2,7 @@
 name = "nyaa"
 version = "0.7.0"
 edition = "2021"
+rust-version = "1.75"
 categories = ["command-line-utilities"]
 keywords = ["tui", "cli", "nyaa", "torrent", "download"]
 description = "A tui tool for browsing and downloading torrents from nyaa.si"

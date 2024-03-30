@@ -7,9 +7,11 @@ use reqwest::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    app::App,
+    app::Context,
     source::{add_protocol, Item},
 };
+
+use super::ClientConfig;
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(default)]
@@ -170,37 +172,30 @@ async fn add_torrent(
         .await
 }
 
-pub fn load_config(app: &mut App) {
+pub fn load_config(app: &mut Context) {
     if app.config.client.qbit.is_none() {
         app.config.client.qbit = Some(QbitConfig::default());
     }
 }
 
-pub async fn download(item: &Item, app: &mut App) {
-    load_config(app);
-    let qbit = match app.config.client.qbit.clone() {
+pub async fn download(item: Item, conf: ClientConfig, timeout: u64) -> Result<String, String> {
+    let qbit = match conf.qbit.clone() {
         Some(q) => q,
         None => {
-            app.show_error("Failed to get qBittorrent config");
-            return;
+            return Err("Failed to get qBittorrent config".to_owned());
         }
     };
     if let Some(labels) = qbit.tags.clone() {
         if let Some(bad) = labels.iter().find(|l| l.contains(',')) {
             let bad = format!("\"{}\"", bad);
-            app.show_error(format!(
-                "qBittorrent tags must not contain commas:\n{}",
-                bad
-            ));
-            return;
+            return Err(format!("qBittorrent tags must not contain commas:\n{}", bad).to_owned());
         }
     }
-    let timeout = Duration::from_secs(app.config.timeout);
+    let timeout = Duration::from_secs(timeout);
     let sid = match login(&qbit, timeout).await {
         Ok(s) => s,
         Err(e) => {
-            app.show_error(format!("Failed to get SID:\n{}", e));
-            return;
+            return Err(format!("Failed to get SID:\n{}", e));
         }
     };
     let link = match qbit.use_magnet.unwrap_or(true) {
@@ -208,18 +203,16 @@ pub async fn download(item: &Item, app: &mut App) {
         false => item.torrent_link.to_owned(),
     };
     let Ok(res) = add_torrent(&qbit, sid.to_owned(), link, timeout).await else {
-        app.show_error("Failed to get response");
-        return;
+        return Err("Failed to get response".to_owned());
     };
     if res.status() != StatusCode::OK {
-        app.show_error(format!(
+        return Err(format!(
             "qBittorrent returned status code {}",
             res.status().as_u16()
         ));
-        return;
     }
 
-    app.notify("Successfully sent torrent to qBittorrent");
-
     logout(&qbit, sid.clone(), timeout).await;
+
+    Ok("Successfully sent torrent to qBittorrent".to_owned())
 }

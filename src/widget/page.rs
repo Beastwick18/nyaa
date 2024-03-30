@@ -1,6 +1,6 @@
 use std::cmp::{max, min};
 
-use crate::app::{App, LoadType, Mode};
+use crate::app::{Context, LoadType, Mode};
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     layout::{Margin, Rect},
@@ -27,13 +27,13 @@ impl Default for PagePopup {
 }
 
 impl Widget for PagePopup {
-    fn draw(&mut self, f: &mut Frame, app: &App, area: Rect) {
+    fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
         let buf = f.buffer_mut();
         let center = super::centered_rect(13, 3, area);
         let clear = super::centered_rect(center.width + 2, center.height, area);
         let page_p = Paragraph::new(self.input.input.clone());
-        let indicator = Paragraph::new(">").block(border_block(app.theme, true).title("Goto Page"));
-        super::clear(clear, buf, app.theme.bg);
+        let indicator = Paragraph::new(">").block(border_block(ctx.theme, true).title("Goto Page"));
+        super::clear(clear, buf, ctx.theme.bg);
         indicator.render(center, buf);
 
         let input_area = center.inner(&Margin {
@@ -48,12 +48,12 @@ impl Widget for PagePopup {
         );
         page_p.render(input_area, buf);
 
-        if app.mode == Mode::Page {
+        if ctx.mode == Mode::Page {
             self.input.show_cursor(f, input_area);
         }
     }
 
-    fn handle_event(&mut self, app: &mut crate::app::App, e: &crossterm::event::Event) {
+    fn handle_event(&mut self, app: &mut crate::app::Context, e: &crossterm::event::Event) {
         if let Event::Key(KeyEvent {
             code,
             kind: KeyEventKind::Press,

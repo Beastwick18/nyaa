@@ -8,10 +8,10 @@ This mode is entered when the results table is focused.
 | Enter | Confirm |
 | Esc | Dismiss notification |
 | q | Exit App |
-| g | Top |
-| G | Bottom |
+| g/G | Goto Top/Bottom |,
 | j, ↓ | Down |
 | k, ↑ | Up |
+| K, J | Up/Down 4 items |,
 | n, l, → | Next Page |
 | p, h, ← | Prev Page |
 | N, L | Last Page |
@@ -19,6 +19,9 @@ This mode is entered when the results table is focused.
 | r | Reload |
 | o | Open in browser |
 | yt, ym, yp | Copy torrent/magnet/post link |
+| Space | Toggle item for batch download |
+| Ctrl-Space | Multi-line select torrents|
+| Tab/Shift-Tab | Switch to Batches|
 | /, i | Search |
 | c | Categories |
 | f | Filters |
@@ -46,6 +49,19 @@ This mode is entered when any input field is focused
 | Ctrl/Alt-Backspace | Delete word backwards |
 | Del | Delete letter forwards |
 | Backspace | Delete letter backwards |
+
+## Batch
+| Key | Map |
+| --- | --- |
+| Enter | Download single torrent |
+| Ctrl-A | Download all torrents |
+| Esc/Tab/Shift-Tab | Back to results |
+| q | Exit app |
+| g/G | Goto Top/Bottom |
+| k, ↑ | Up |
+| j, ↓ | Down |
+| K, J | Up/Down 4 items |
+| Space | Toggle item for batch download |
 
 ## Category
 This mode is entered when the category popup is focused.

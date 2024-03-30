@@ -4,7 +4,8 @@ use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::{
     layout::{Constraint, Margin, Rect},
     style::{Style, Stylize},
-    text::Text,
+    symbols::{self},
+    text::{Line, Text},
     widgets::{
         Clear, Paragraph, Row, Scrollbar, ScrollbarOrientation, StatefulWidget, Table, Widget,
     },
@@ -14,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use unicode_width::UnicodeWidthStr;
 
 use crate::{
-    app::{App, LoadType, Mode},
+    app::{Context, LoadType, Mode},
     cond_vec, raw,
     source::Item,
     style, styled,
@@ -23,7 +24,7 @@ use crate::{
 
 use super::{border_block, centered_rect, sort::Sort, StatefulTable};
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize, Default)]
 pub struct ColumnsConfig {
     category: Option<bool>,
     title: Option<bool>,
@@ -32,20 +33,6 @@ pub struct ColumnsConfig {
     seeders: Option<bool>,
     leechers: Option<bool>,
     downloads: Option<bool>,
-}
-
-impl Default for ColumnsConfig {
-    fn default() -> Self {
-        ColumnsConfig {
-            category: None,
-            title: None,
-            size: None,
-            date: None,
-            seeders: None,
-            leechers: None,
-            downloads: None,
-        }
-    }
 }
 
 impl ColumnsConfig {
@@ -67,27 +54,48 @@ pub struct ResultsWidget {
     sort: Sort,
     raw_date_width: u16,
     date_width: u16,
+    control_space: bool,
 }
 
 impl ResultsWidget {
     pub fn with_items(&mut self, items: Vec<Item>, sort: Sort) {
-        let len = items.len();
-        self.table.items = items;
-        self.table.select(0);
-        self.table.scrollbar_state = self.table.scrollbar_state.content_length(len);
+        self.table.with_items(items);
         self.sort = sort;
         self.raw_date_width = self.table.items.first().map(|i| i.date.len()).unwrap_or(10) as u16;
         self.date_width = max(self.raw_date_width, 6);
+    }
+
+    fn try_select_toggle(&self, ctx: &mut Context) {
+        if let Some(sel) = self.table.state.selected() {
+            if let Some(item) = self.table.items.get(sel) {
+                if let Some(p) = ctx.batch.iter().position(|s| s.id == item.id) {
+                    ctx.batch.remove(p);
+                } else {
+                    ctx.batch.push(item.to_owned());
+                }
+            }
+        }
+    }
+
+    fn try_select(&self, ctx: &mut Context) {
+        if let Some(sel) = self.table.state.selected() {
+            if let Some(item) = self.table.items.get(sel) {
+                if !ctx.batch.iter().any(|s| s.id == item.id) {
+                    ctx.batch.push(item.to_owned());
+                }
+            }
+        }
     }
 }
 
 impl Default for ResultsWidget {
     fn default() -> Self {
         ResultsWidget {
-            table: StatefulTable::with_items(vec![]),
+            table: StatefulTable::empty(),
             sort: Sort::Date,
             date_width: 6,
             raw_date_width: 4,
+            control_space: false,
         }
     }
 }
@@ -101,14 +109,13 @@ fn shorten_number(mut n: u32) -> String {
 }
 
 impl super::Widget for ResultsWidget {
-    fn draw(&mut self, f: &mut Frame, app: &App, area: Rect) {
+    fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
         let size = f.size();
         let buf = f.buffer_mut();
-        let focus_color = match app.mode {
-            Mode::Normal | Mode::KeyCombo(_) => app.theme.border_focused_color,
-            _ => app.theme.border_color,
+        let focus_color = match ctx.mode {
+            Mode::Normal | Mode::KeyCombo(_) => ctx.theme.border_focused_color,
+            _ => ctx.theme.border_color,
         };
-        // let binding = Constraint::from_lengths([3, title_width, 9, date_width, 4, 4, 5]);
         let header_slice = &mut [
             "Cat".to_owned(),
             "Name".to_owned(),
@@ -122,7 +129,7 @@ impl super::Widget for ResultsWidget {
             format!(" {}", ""),
             format!(" {}", ""),
         ];
-        let direction = match app.ascending {
+        let direction = match ctx.ascending {
             true => "▲",
             false => "▼",
         };
@@ -147,7 +154,7 @@ impl super::Widget for ResultsWidget {
         };
         header_slice[sort_idx] = sort_fmt;
 
-        let cols = app.config.columns.unwrap_or_default().array();
+        let cols = ctx.config.columns.unwrap_or_default().array();
         let b = cond_vec!(cols ; [3, 0, 9, self.date_width, 4, 4, 5]);
         let tot = b.iter().sum::<u16>() + cols.iter().map(|b| *b as u16).sum::<u16>();
         let title_width = max(area.width as i32 - tot as i32, 5) as u16;
@@ -160,7 +167,7 @@ impl super::Widget for ResultsWidget {
         let binding = Constraint::from_lengths(b);
 
         Clear.render(area, buf);
-        let items: Vec<Row> = match app.mode {
+        let items: Vec<Row> = match ctx.mode {
             Mode::Loading(_) => {
                 let area = centered_rect(8, 1, size);
                 Paragraph::new("Loading…").render(area, buf);
@@ -176,19 +183,19 @@ impl super::Widget for ResultsWidget {
                         styled!(
                             item.title.to_owned(),
                             fg:{ if item.trusted {
-                                app.theme.trusted
+                                ctx.theme.trusted
                             } else if item.remake {
-                                app.theme.remake
+                                ctx.theme.remake
                             } else {
-                                app.theme.fg
+                                ctx.theme.fg
                             } }),
                         raw!(format!("{:>9}", item.size)),
                         raw!(format!("{:<14}", item.date)),
-                        styled!(format!("{:>4}", item.seeders), fg:app.theme.trusted),
-                        styled!(format!("{:>4}", item.leechers), fg:app.theme.remake),
+                        styled!(format!("{:>4}", item.seeders), fg:ctx.theme.trusted),
+                        styled!(format!("{:>4}", item.leechers), fg:ctx.theme.remake),
                         Text::raw(shorten_number(item.downloads)),
                     ]))
-                    .fg(app.theme.fg)
+                    .fg(ctx.theme.fg)
                     .height(1)
                     .bottom_margin(0)
                 })
@@ -205,28 +212,42 @@ impl super::Widget for ResultsWidget {
         });
 
         let num_items = items.len();
-        let first_item = (app.page - 1) * 75;
-        let focused = match app.mode {
-            Mode::Normal | Mode::KeyCombo(_) => true,
-            _ => false,
-        };
-        let table = Table::new(items, [Constraint::Percentage(100)])
+        let first_item = (ctx.page - 1) * 75;
+        let focused = matches!(ctx.mode, Mode::Normal | Mode::KeyCombo(_));
+        let table = Table::new(items, binding)
             .header(header)
-            .block(border_block(app.theme, focused).title(format!(
+            .block(border_block(ctx.theme, focused).title(format!(
                 "Results {}-{} ({} total): Page {}/{}",
                 first_item + 1,
                 num_items + first_item,
-                app.total_results,
-                app.page,
-                app.last_page
+                ctx.total_results,
+                ctx.page,
+                ctx.last_page
             )))
-            .highlight_style(Style::default().bg(app.theme.hl_bg))
-            .widths(&binding);
-        // f.render_stateful_widget(table, area, &mut self.table.state);
+            .highlight_style(Style::default().bg(ctx.theme.hl_bg));
         StatefulWidget::render(table, area, buf, &mut self.table.state);
         StatefulWidget::render(sb, sb_area, buf, &mut self.table.scrollbar_state);
 
-        let right_str = format!("D:{}─S:{}", app.client.to_string(), app.src.to_string());
+        if let Some(visible_items) = self.table.items.get(self.table.state.offset()..) {
+            let selected_ids: Vec<usize> = ctx.batch.iter().map(|i| i.id).collect();
+            let lines = visible_items
+                .iter()
+                .map(|i| {
+                    Line::from(
+                        match selected_ids.contains(&i.id) {
+                            true => symbols::border::QUADRANT_BLOCK,
+                            false => symbols::line::VERTICAL,
+                        }
+                        .to_owned(),
+                    )
+                })
+                .collect::<Vec<Line>>();
+            let para = Paragraph::new(lines);
+            let pararea = Rect::new(area.x, area.y + 2, 1, area.height - 3);
+            para.render(pararea, buf);
+        }
+
+        let right_str = format!("D:{}─S:{}", ctx.client.to_string(), ctx.src.to_string());
         if area.right() > right_str.width() as u16 {
             let text = Paragraph::new(right_str.clone());
             let right = Rect::new(
@@ -238,12 +259,13 @@ impl super::Widget for ResultsWidget {
             f.render_widget(text, right);
         }
 
-        if let Mode::KeyCombo(keys) = app.mode.to_owned() {
-            let b_right_str = keys
-                .iter()
-                .map(|c| c.to_string())
-                .collect::<Vec<String>>()
-                .join("");
+        if let Mode::KeyCombo(keys) = ctx.mode.to_owned() {
+            let b_right_str: String = keys.into_iter().collect();
+            // let b_right_str = keys
+            //     .iter()
+            //     .map(|c| c.to_string())
+            //     .collect::<Vec<String>>()
+            //     .join("");
             if area.right() > b_right_str.width() as u16 {
                 let text = Paragraph::new(b_right_str.clone());
                 let right = Rect::new(
@@ -256,14 +278,14 @@ impl super::Widget for ResultsWidget {
             }
         }
 
-        if let Some(bottom_str) = app.notification.clone() {
+        if let Some(bottom_str) = ctx.notification.clone() {
             let text = Paragraph::new(bottom_str.clone());
             let minw = std::cmp::min(area.right() - 2, bottom_str.width() as u16);
             let bottom = Rect::new(area.left() + 1, area.bottom() - 1, minw, 1);
             f.render_widget(text, bottom);
         }
 
-        match app.mode {
+        match ctx.mode {
             Mode::Loading(_) => {}
             _ => {
                 if num_items == 0 {
@@ -274,7 +296,7 @@ impl super::Widget for ResultsWidget {
         }
     }
 
-    fn handle_event(&mut self, app: &mut crate::app::App, e: &crossterm::event::Event) {
+    fn handle_event(&mut self, ctx: &mut Context, e: &Event) {
         if let Event::Key(KeyEvent {
             code,
             kind: KeyEventKind::Press,
@@ -285,49 +307,64 @@ impl super::Widget for ResultsWidget {
             use KeyCode::*;
             match (code, modifiers) {
                 (Char('c'), &KeyModifiers::NONE) => {
-                    app.mode = Mode::Category;
+                    ctx.mode = Mode::Category;
                 }
                 (Char('s'), &KeyModifiers::NONE) => {
-                    app.mode = Mode::Sort(SortDir::Desc);
+                    ctx.mode = Mode::Sort(SortDir::Desc);
                 }
                 (Char('S'), &KeyModifiers::SHIFT) => {
-                    app.mode = Mode::Sort(SortDir::Asc);
+                    ctx.mode = Mode::Sort(SortDir::Asc);
                 }
                 (Char('f'), &KeyModifiers::NONE) => {
-                    app.mode = Mode::Filter;
+                    ctx.mode = Mode::Filter;
                 }
                 (Char('t'), &KeyModifiers::NONE) => {
-                    app.mode = Mode::Theme;
+                    ctx.mode = Mode::Theme;
                 }
                 (Char('/') | Char('i'), &KeyModifiers::NONE) => {
-                    app.mode = Mode::Search;
+                    ctx.mode = Mode::Search;
                 }
                 (Char('p'), &KeyModifiers::CONTROL) => {
-                    app.mode = Mode::Page;
+                    ctx.mode = Mode::Page;
                 }
                 (Char('p') | Char('h') | Left, &KeyModifiers::NONE) => {
-                    if app.page > 1 {
-                        app.page -= 1;
-                        app.mode = Mode::Loading(LoadType::Searching);
+                    if ctx.page > 1 {
+                        ctx.page -= 1;
+                        ctx.mode = Mode::Loading(LoadType::Searching);
                     }
                 }
                 (Char('n') | Char('l') | Right, &KeyModifiers::NONE) => {
-                    if app.page < app.last_page {
-                        app.page += 1;
-                        app.mode = Mode::Loading(LoadType::Searching);
+                    if ctx.page < ctx.last_page {
+                        ctx.page += 1;
+                        ctx.mode = Mode::Loading(LoadType::Searching);
                     }
                 }
                 (Char('r'), &KeyModifiers::NONE) => {
-                    app.mode = Mode::Loading(LoadType::Searching);
+                    ctx.mode = Mode::Loading(LoadType::Searching);
                 }
                 (Char('q'), &KeyModifiers::NONE) => {
-                    app.quit();
+                    ctx.quit();
                 }
                 (Char('j') | KeyCode::Down, &KeyModifiers::NONE) => {
-                    self.table.next(1);
+                    if self
+                        .table
+                        .state
+                        .selected()
+                        .is_some_and(|s| s + 1 != self.table.items.len())
+                    {
+                        self.table.next(1);
+                        if self.control_space {
+                            self.try_select_toggle(ctx);
+                        }
+                    }
                 }
                 (Char('k') | KeyCode::Up, &KeyModifiers::NONE) => {
-                    self.table.next(-1);
+                    if self.table.state.selected().is_some_and(|s| s != 0) {
+                        if self.control_space {
+                            self.try_select_toggle(ctx);
+                        }
+                        self.table.next(-1);
+                    }
                 }
                 (Char('J'), &KeyModifiers::SHIFT) => {
                     self.table.next(4);
@@ -342,25 +379,25 @@ impl super::Widget for ResultsWidget {
                     self.table.select(0);
                 }
                 (Char('H') | Char('P'), &KeyModifiers::SHIFT) => {
-                    if app.page != 1 {
-                        app.page = 1;
-                        app.mode = Mode::Loading(LoadType::Searching);
+                    if ctx.page != 1 {
+                        ctx.page = 1;
+                        ctx.mode = Mode::Loading(LoadType::Searching);
                     }
                 }
                 (Char('L') | Char('N'), &KeyModifiers::SHIFT) => {
-                    if app.page != app.last_page && app.last_page > 0 {
-                        app.page = app.last_page;
-                        app.mode = Mode::Loading(LoadType::Searching);
+                    if ctx.page != ctx.last_page && ctx.last_page > 0 {
+                        ctx.page = ctx.last_page;
+                        ctx.mode = Mode::Loading(LoadType::Searching);
                     }
                 }
                 (Enter, &KeyModifiers::NONE) => {
-                    app.mode = Mode::Loading(LoadType::Downloading);
+                    ctx.mode = Mode::Loading(LoadType::Downloading);
                 }
                 (Char('s'), &KeyModifiers::CONTROL) => {
-                    app.mode = Mode::Sources;
+                    ctx.mode = Mode::Sources;
                 }
                 (Char('d'), &KeyModifiers::NONE) => {
-                    app.mode = Mode::Clients;
+                    ctx.mode = Mode::Clients;
                 }
                 (Char('o'), &KeyModifiers::NONE) => {
                     let link = self
@@ -371,14 +408,41 @@ impl super::Widget for ResultsWidget {
                         .unwrap_or("https://nyaa.si".to_owned());
                     let res = open::that_detached(link.clone());
                     if let Err(e) = res {
-                        app.show_error(format!("Failed to open {}:\n{}", link, e));
+                        ctx.show_error(format!("Failed to open {}:\n{}", link, e));
                     } else {
-                        app.notify(format!("Opened {}", link));
+                        ctx.notify(format!("Opened {}", link));
                     }
                 }
-                (Char('y'), &KeyModifiers::NONE) => app.mode = Mode::KeyCombo(vec!['y']),
+                (Char('y'), &KeyModifiers::NONE) => ctx.mode = Mode::KeyCombo(vec!['y']),
+                (Char(' '), &KeyModifiers::CONTROL) => {
+                    self.control_space = !self.control_space;
+                    if self.control_space {
+                        ctx.notify("Entered VISUAL mode");
+                        self.try_select(ctx);
+                    } else {
+                        ctx.notify("Exited VISUAL mode");
+                    }
+                }
+                (Char(' '), &KeyModifiers::NONE) => {
+                    if let Some(sel) = self.table.state.selected() {
+                        if let Some(item) = &mut self.table.items.get_mut(sel) {
+                            if let Some(p) = ctx.batch.iter().position(|s| s.id == item.id) {
+                                ctx.batch.remove(p);
+                            } else {
+                                ctx.batch.push(item.to_owned());
+                            }
+                        }
+                    }
+                }
+                (Tab | BackTab, _) => {
+                    ctx.mode = Mode::Batch;
+                }
                 (Esc, &KeyModifiers::NONE) => {
-                    app.notification = None;
+                    ctx.notification = None;
+                    if self.control_space {
+                        ctx.notify("Exited VISUAL mode");
+                    }
+                    self.control_space = false;
                 }
                 _ => {}
             }
@@ -390,10 +454,10 @@ impl super::Widget for ResultsWidget {
             ("Enter", "Confirm"),
             ("Esc", "Dismiss notification"),
             ("q", "Exit App"),
-            ("g", "Top"),
-            ("G", "Bottom"),
-            ("j, ↓", "Down"),
+            ("g/G", "Goto Top/Bottom"),
             ("k, ↑", "Up"),
+            ("j, ↓", "Down"),
+            ("K, J", "Up/Down 4 items"),
             ("n, l, →", "Next Page"),
             ("p, h, ←", "Prev Page"),
             ("N, L", "Last Page"),
@@ -401,6 +465,9 @@ impl super::Widget for ResultsWidget {
             ("r", "Reload"),
             ("o", "Open in browser"),
             ("yt, ym, yp", "Copy torrent/magnet/post link"),
+            ("Space", "Toggle item for batch download"),
+            ("Ctrl-Space", "Multi-line select torrents"),
+            ("Tab/Shift-Tab", "Switch to Batches"),
             ("/, i", "Search"),
             ("c", "Categories"),
             ("f", "Filters"),

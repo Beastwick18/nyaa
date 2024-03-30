@@ -9,10 +9,11 @@ use ratatui::{
     Frame,
 };
 
-use crate::{app::App, style};
+use crate::{app::Context, style};
 
 use self::theme::Theme;
 
+pub mod batch;
 pub mod category;
 pub mod clients;
 pub mod error;
@@ -27,8 +28,8 @@ pub mod sources;
 pub mod theme;
 
 pub trait Widget {
-    fn draw(&mut self, buf: &mut Frame, app: &App, area: Rect);
-    fn handle_event(&mut self, app: &mut App, e: &Event);
+    fn draw(&mut self, buf: &mut Frame, ctx: &Context, area: Rect);
+    fn handle_event(&mut self, app: &mut Context, e: &Event);
     fn get_help() -> Option<Vec<(&'static str, &'static str)>>;
 }
 
@@ -84,12 +85,27 @@ pub struct StatefulTable<T> {
 }
 
 impl<T> StatefulTable<T> {
-    pub fn with_items(items: Vec<T>) -> StatefulTable<T> {
+    pub fn new(items: Vec<T>) -> StatefulTable<T> {
         StatefulTable {
-            state: TableState::new().with_selected(Some(0)),
-            scrollbar_state: ScrollbarState::new(items.len()),
+            state: TableState::default().with_selected(0),
+            scrollbar_state: ScrollbarState::default(),
             items,
         }
+    }
+
+    pub fn empty() -> StatefulTable<T> {
+        StatefulTable {
+            state: TableState::default().with_selected(0),
+            scrollbar_state: ScrollbarState::default(),
+            items: vec![],
+        }
+    }
+
+    pub fn with_items(&mut self, items: Vec<T>) -> &mut Self {
+        self.state = TableState::new().with_selected(Some(0));
+        self.scrollbar_state = ScrollbarState::new(items.len());
+        self.items = items;
+        self
     }
 
     pub fn next_wrap(&mut self, amt: isize) {
@@ -120,5 +136,57 @@ impl<T> StatefulTable<T> {
     pub fn select(&mut self, idx: usize) {
         self.state.select(Some(idx));
         self.scrollbar_state = self.scrollbar_state.position(idx);
+    }
+
+    pub fn selected(&self) -> Option<&T> {
+        self.state.selected().and_then(|i| self.items.get(i))
+    }
+}
+
+pub struct VirtualStatefulTable {
+    pub state: TableState,
+    pub scrollbar_state: ScrollbarState,
+}
+
+impl VirtualStatefulTable {
+    pub fn new() -> VirtualStatefulTable {
+        VirtualStatefulTable {
+            state: TableState::default().with_selected(0),
+            scrollbar_state: ScrollbarState::default(),
+        }
+    }
+
+    // pub fn next_wrap(&mut self, length: usize, amt: isize) {
+    //     if length == 0 {
+    //         return;
+    //     }
+    //     let i = match self.state.selected() {
+    //         Some(i) => (i as isize + amt).rem_euclid(length as isize),
+    //         None => 0,
+    //     };
+    //     self.state.select(Some(i as usize));
+    //     self.scrollbar_state = self.scrollbar_state.position(i as usize);
+    // }
+
+    pub fn next(&mut self, length: usize, amt: isize) {
+        if length == 0 {
+            return;
+        }
+        let i = match self.state.selected() {
+            Some(i) => i as isize + amt,
+            None => 0,
+        };
+        let idx = i.max(0).min(length as isize - 1) as usize;
+        self.state.select(Some(idx));
+        self.scrollbar_state = self.scrollbar_state.position(idx);
+    }
+
+    pub fn select(&mut self, idx: usize) {
+        self.state.select(Some(idx));
+        self.scrollbar_state = self.scrollbar_state.position(idx);
+    }
+
+    pub fn selected(&self) -> Option<usize> {
+        self.state.selected()
     }
 }

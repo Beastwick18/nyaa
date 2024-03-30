@@ -5,7 +5,9 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::{app::App, source::Item};
+use crate::{app::Context, source::Item};
+
+use super::ClientConfig;
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(default)]
@@ -30,7 +32,7 @@ impl Default for CmdConfig {
     }
 }
 
-pub fn load_config(app: &mut App) {
+pub fn load_config(app: &mut Context) {
     if app.config.client.cmd.is_none() {
         let mut def = CmdConfig::default();
         // Replace deprecated torrent_client_cmd with client.command config
@@ -42,13 +44,12 @@ pub fn load_config(app: &mut App) {
     }
 }
 
-pub async fn download(item: &Item, app: &mut App) {
-    load_config(app);
-    let cmd = match app.config.client.cmd.to_owned() {
+pub async fn download(item: Item, conf: ClientConfig) -> Result<String, String> {
+    // load_config(app);
+    let cmd = match conf.cmd.to_owned() {
         Some(c) => c,
         None => {
-            app.show_error("Failed to get cmd config");
-            return;
+            return Err("Failed to get cmd config".to_owned());
         }
     };
     let cmd_str = cmd
@@ -71,15 +72,13 @@ pub async fn download(item: &Item, app: &mut App) {
         let child = match cmd {
             Ok(child) => child,
             Err(e) => {
-                app.show_error(format!("{}:\nFailed to run:\n{}", cmd_str, e));
-                return;
+                return Err(format!("{}:\nFailed to run:\n{}", cmd_str, e).to_owned());
             }
         };
         let output = match child.wait_with_output() {
             Ok(output) => output,
             Err(e) => {
-                app.show_error(format!("{}:\nFailed to get output:\n{}", cmd_str, e));
-                return;
+                return Err(format!("{}:\nFailed to get output:\n{}", cmd_str, e).to_owned());
             }
         };
 
@@ -87,17 +86,18 @@ pub async fn download(item: &Item, app: &mut App) {
             let mut err = BufReader::new(&*output.stderr);
             let mut err_str = String::new();
             err.read_to_string(&mut err_str).unwrap_or(0);
-            app.show_error(format!(
+            return Err(format!(
                 "{}:\nExited with status code {}:\n{}",
                 cmd_str, output.status, err_str
-            ));
-        } else {
-            app.notify("Successfully ran command");
+            )
+            .to_owned());
         }
+        Ok("Successfully ran command".to_owned())
     } else {
-        app.show_error(format!(
+        Err(format!(
             "Shell command is not properly formatted:\n{}",
             cmd.shell_cmd,
-        ))
+        )
+        .to_owned())
     }
 }
