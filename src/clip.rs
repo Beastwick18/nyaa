@@ -1,7 +1,7 @@
 use std::error::Error;
 
 use cli_clipboard::{
-    ClipboardContext, ClipboardProvider,
+    ClipboardProvider,
 };
 use serde::{Deserialize, Serialize};
 
@@ -58,7 +58,7 @@ pub fn copy_to_clipboard(
     }
     #[cfg(not(target_os = "linux"))]
     {
-        let mut ctx: ClipboardContext = match ClipboardProvider::new() {
+        let mut ctx: ClipboardProvider = match ClipboardProvider::new() {
             Ok(ctx) => ctx,
             Err(e) => {
                 return Err(format!("Failed to copy to clipboard:\n{}", e).into());
