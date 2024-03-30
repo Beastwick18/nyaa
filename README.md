@@ -103,12 +103,13 @@ source = "NyaaHtml"
 download_client = "transmission"
 date_format = "%Y-%m-%d %H:%M"
 base_url = "https://nyaa.si/"
+request_proxy = "localhost:8118" # None by default
 timeout = 30
 
 # ... client configurations
 ```
 
-`default_category` refers to the category selected by default when the app is opened. Possible values are defined in [CATEGORIES.md](./CATEGORIES.md).
+`default_category` refers to the category selected by default when the app is opened. Possible values are defined in the [Wiki](https://github.com/Beastwick18/nyaa/wiki/Category-Values).
 
 `default_filter` refers to the filter selected by default when the app is opened. Possible values are `NoFilter`, `NoRemakes`, `TrustedOnly` or `Batches`.
 
@@ -125,6 +126,8 @@ timeout = 30
 `date_format` refers to the formatting of the dates in the Date column of the results table. Refer to [chrono's documentation](https://docs.rs/chrono/latest/chrono/format/strftime/index.html) for information on how to format the date.
 
 `base_url` refers to the url used to make requests. Change this to any nyaa mirror url in the format: `http(s)://nyaa.si` or `nyaa.si`
+
+`request_proxy` refers to the url to proxy request through. This is not to be confused with *nyaa* proxies, which are defined with `base_url`.
 
 `timeout` refers to how long the program will wait for a search request before it times out. This value is measured in seconds. You may want to increase this if your request times are usually long.
 
