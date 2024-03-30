@@ -86,16 +86,16 @@ impl super::Widget for BatchWidget {
         {
             use KeyCode::*;
             match (code, modifiers) {
-                (Tab | BackTab, _) => {
+                (Esc | Tab | BackTab, _) => {
                     ctx.mode = Mode::Normal;
                 }
                 (Char('q'), &KeyModifiers::NONE) => {
                     ctx.quit();
                 }
-                (Char('j'), &KeyModifiers::NONE) => {
+                (Char('j') | Down, &KeyModifiers::NONE) => {
                     self.table.next(ctx.batch.len(), 1);
                 }
-                (Char('k'), &KeyModifiers::NONE) => {
+                (Char('k') | Up, &KeyModifiers::NONE) => {
                     self.table.next(ctx.batch.len(), -1);
                 }
                 (Char('J'), &KeyModifiers::SHIFT) => {
@@ -117,7 +117,7 @@ impl super::Widget for BatchWidget {
                         self.table.next(ctx.batch.len(), 0);
                     }
                 }
-                (Char('a'), _) => {
+                (Char('a'), &KeyModifiers::CONTROL) => {
                     ctx.mode = Mode::Loading(LoadType::Batching);
                 }
                 _ => {}
@@ -126,6 +126,16 @@ impl super::Widget for BatchWidget {
     }
 
     fn get_help() -> Option<Vec<(&'static str, &'static str)>> {
-        Some(vec![("Enter", "Confirm"), ("Esc", "Stop")])
+        Some(vec![
+            ("Enter", "Download single torrent"),
+            ("Ctrl-A", "Download all torrents"),
+            ("Esc/Tab/Shift-Tab", "Back to results"),
+            ("q", "Exit app"),
+            ("g/G", "Goto Top/Bottom"),
+            ("k, ↑", "Up"),
+            ("j, ↓", "Down"),
+            ("K, J", "Up/Down 4 items"),
+            ("Space", "Toggle item for batch download"),
+        ])
     }
 }
