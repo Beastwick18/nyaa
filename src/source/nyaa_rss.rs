@@ -50,6 +50,7 @@ impl Source for NyaaRssSource {
         let cat = w.category.category;
         let query = w.search.input.input.clone();
         let filter = w.filter.selected as usize;
+        let user = ctx.user.to_owned().unwrap_or_default();
         ctx.last_page = 1;
         ctx.page = 1;
         let (high, low) = (cat / 10, cat % 10);
@@ -58,7 +59,10 @@ impl Source for NyaaRssSource {
         let base_url = Url::parse(&base_url)?;
 
         let mut url = base_url.clone();
-        let query = format!("page=rss&f={}&c={}_{}&q={}&m", filter, high, low, query);
+        let query = format!(
+            "page=rss&f={}&c={}_{}&q={}&u={}&m",
+            filter, high, low, query, user
+        );
         url.set_query(Some(&query));
 
         let client = super::request_client(ctx)?;

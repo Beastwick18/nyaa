@@ -26,6 +26,7 @@ use crate::{
         sort::{SortDir, SortPopup},
         sources::SourcesPopup,
         theme::{Theme, ThemePopup},
+        user::UserPopup,
         Widget,
     },
 };
@@ -57,6 +58,7 @@ pub enum Mode {
     Loading(LoadType),
     Error,
     Page,
+    User,
     Help,
 }
 
@@ -75,6 +77,7 @@ impl ToString for Mode {
             Mode::Loading(_) => "Loading".to_string(),
             Mode::Error => "Error".to_string(),
             Mode::Page => "Page".to_owned(),
+            Mode::User => "User".to_owned(),
             Mode::Help => "Help".to_string(),
         }
     }
@@ -93,6 +96,7 @@ pub struct Context {
     pub notification: Option<String>,
     pub ascending: bool,
     pub page: usize,
+    pub user: Option<String>,
     pub last_page: usize,
     pub total_results: usize,
     pub src: Sources,
@@ -124,6 +128,7 @@ impl Default for Context {
             notification: None,
             ascending: false,
             page: 1,
+            user: None,
             last_page: 1,
             total_results: 0,
             src: Sources::NyaaHtml,
@@ -147,6 +152,7 @@ pub struct Widgets {
     pub results: ResultsWidget,
     pub error: ErrorPopup,
     pub page: PagePopup,
+    pub user: UserPopup,
     pub help: HelpPopup,
 }
 
@@ -246,6 +252,7 @@ impl App {
             }
             Mode::Help => widgets.help.draw(f, ctx, f.size()),
             Mode::Page => widgets.page.draw(f, ctx, f.size()),
+            Mode::User => widgets.user.draw(f, ctx, f.size()),
             Mode::Sources => widgets.sources.draw(f, ctx, f.size()),
             Mode::Clients => widgets.clients.draw(f, ctx, f.size()),
             Mode::KeyCombo(_) | Mode::Normal | Mode::Search | Mode::Loading(_) | Mode::Batch => {}
@@ -263,6 +270,7 @@ impl App {
             Mode::Theme => w.theme.handle_event(ctx, evt),
             Mode::Error => w.error.handle_event(ctx, evt),
             Mode::Page => w.page.handle_event(ctx, evt),
+            Mode::User => w.user.handle_event(ctx, evt),
             Mode::Help => w.help.handle_event(ctx, evt),
             Mode::Sources => w.sources.handle_event(ctx, evt),
             Mode::Clients => w.clients.handle_event(ctx, evt),
@@ -303,6 +311,7 @@ impl App {
             Mode::Filter => FilterPopup::get_help(),
             Mode::Theme => ThemePopup::get_help(),
             Mode::Page => PagePopup::get_help(),
+            Mode::User => UserPopup::get_help(),
             Mode::Sources => SourcesPopup::get_help(),
             Mode::Clients => ClientsPopup::get_help(),
             Mode::Error => None,

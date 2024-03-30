@@ -58,6 +58,7 @@ impl Source for NyaaHtmlSource {
         let cat = w.category.category;
         let filter = w.filter.selected as u16;
         let page = ctx.page;
+        let user = ctx.user.to_owned().unwrap_or_default();
         let sort = w.sort.selected.to_url();
 
         let base_url = add_protocol(ctx.config.base_url.clone(), true);
@@ -70,8 +71,8 @@ impl Source for NyaaHtmlSource {
         let url = Url::parse(&base_url)?;
         let mut url_query = url.clone();
         url_query.set_query(Some(&format!(
-            "q={}&c={}_{}&f={}&p={}&s={}&o={}",
-            query, high, low, filter, page, sort, ord
+            "q={}&c={}_{}&f={}&p={}&s={}&o={}&u={}",
+            query, high, low, filter, page, sort, ord, user
         )));
 
         let client = super::request_client(ctx)?;
