@@ -1,6 +1,7 @@
 use std::error::Error;
 
 use serde::{Deserialize, Serialize};
+use tokio::task::JoinSet;
 
 use crate::{app::Context, popup_enum, source::Item, widget::EnumIter};
 
@@ -55,19 +56,79 @@ pub struct ClientConfig {
 }
 
 impl Client {
-    pub async fn download(&self, item: &Item, app: &mut Context) {
-        match self {
-            Self::Cmd => cmd::download(item, app).await,
-            Self::Qbit => qbit::download(item, app).await,
-            Self::Transmission => transmission::download(item, app).await,
-            Self::Rqbit => rqbit::download(item, app).await,
-            Self::DefaultApp => default_app::download(item, app).await,
-            Self::Download => download::download(item, app).await,
+    pub async fn download(&self, item: Item, ctx: &mut Context) {
+        let conf = ctx.config.client.to_owned();
+        let timeout = ctx.config.timeout;
+        let item = item.clone();
+        let result = match self {
+            Self::Cmd => cmd::download(item, conf).await,
+            Self::Qbit => qbit::download(item, conf, timeout).await,
+            Self::Transmission => transmission::download(item, conf).await,
+            Self::Rqbit => rqbit::download(item, conf, timeout).await,
+            Self::DefaultApp => default_app::download(item, conf).await,
+            Self::Download => download::download(item, conf, timeout).await,
+        };
+        match result {
+            Ok(o) => ctx.notify(o),
+            Err(e) => ctx.show_error(e),
         }
     }
 
-    // TODO: Add batch_download function
-    // Downloads a Vec of &Item, all at once.
+    pub async fn download_async(
+        self,
+        item: Item,
+        conf: ClientConfig,
+        timeout: u64,
+    ) -> Result<usize, String> {
+        let id = item.id;
+        let item = item.clone();
+        let result = match self {
+            Self::Cmd => cmd::download(item, conf).await,
+            Self::Qbit => qbit::download(item, conf, timeout).await,
+            Self::Transmission => transmission::download(item, conf).await,
+            Self::Rqbit => rqbit::download(item, conf, timeout).await,
+            Self::DefaultApp => default_app::download(item, conf).await,
+            Self::Download => download::download(item, conf, timeout).await,
+        };
+        match result {
+            Ok(_) => Ok(id),
+            Err(e) => Err(e),
+        }
+    }
+
+    pub async fn batch_download(&self, items: Vec<Item>, ctx: &mut Context) {
+        let conf = ctx.config.client.to_owned();
+        let timeout = ctx.config.timeout;
+        let mut set = JoinSet::new();
+        for item in items.iter() {
+            let item = item.to_owned();
+            set.spawn(self.download_async(item.to_owned(), conf.to_owned(), timeout));
+        }
+        let mut success_ids = vec![];
+        while let Some(res) = set.join_next().await {
+            let res = match res {
+                Ok(res) => res,
+                Err(e) => {
+                    ctx.show_error(format!("Failed to join download thread:\n{}", e));
+                    continue;
+                }
+            };
+            match res {
+                Ok(o) => {
+                    success_ids.push(o);
+                }
+                Err(e) => {
+                    ctx.show_error(e);
+                }
+            }
+        }
+        ctx.notify(format!(
+            "Successfully downloaded {} torrents with {}",
+            success_ids.len(),
+            self.to_string()
+        ));
+        ctx.batch.retain(|i| !success_ids.contains(&i.id)); // Remove successes from batch
+    }
 
     pub fn load_config(&self, app: &mut Context) -> Result<(), Box<dyn Error>> {
         match self {

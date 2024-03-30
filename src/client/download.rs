@@ -5,6 +5,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{app::Context, source::Item};
 
+use super::ClientConfig;
+
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub struct DownloadConfig {
@@ -58,13 +60,11 @@ async fn download_torrent(
     Ok(buf.to_string_lossy().to_string())
 }
 
-pub async fn download(item: &Item, app: &mut Context) {
-    load_config(app);
-    let conf = match app.config.client.download.to_owned() {
+pub async fn download(item: Item, conf: ClientConfig, timeout: u64) -> Result<String, String> {
+    let conf = match conf.download.to_owned() {
         Some(c) => c,
         None => {
-            app.show_error("Failed to get download config");
-            return;
+            return Err("Failed to get download config".to_owned());
         }
     };
 
@@ -73,15 +73,16 @@ pub async fn download(item: &Item, app: &mut Context) {
         item.torrent_link.to_owned(),
         filename,
         conf.save_dir.clone(),
-        app.config.timeout,
+        timeout,
     )
     .await
     {
-        Ok(path) => app.notify(format!("Saved to \"{}\"", path)),
-        Err(e) => app.show_error(format!(
+        Ok(path) => Ok(format!("Saved to \"{}\"", path)),
+        Err(e) => Err(format!(
             "Failed to download torrent to {}:\n{}",
             conf.save_dir.to_owned(),
             e
-        )),
+        )
+        .to_owned()),
     }
 }

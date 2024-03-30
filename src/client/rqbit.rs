@@ -9,6 +9,8 @@ use crate::{
     source::{add_protocol, Item},
 };
 
+use super::ClientConfig;
+
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub struct RqbitConfig {
@@ -64,16 +66,14 @@ pub fn load_config(app: &mut Context) {
     }
 }
 
-pub async fn download(item: &Item, app: &mut Context) {
-    load_config(app);
-    let conf = match app.config.client.rqbit.clone() {
+pub async fn download(item: Item, conf: ClientConfig, timeout: u64) -> Result<String, String> {
+    let conf = match conf.rqbit.clone() {
         Some(q) => q,
         None => {
-            app.show_error("Failed to get rqbit config");
-            return;
+            return Err("Failed to get rqbit config".into());
         }
     };
-    let timeout = Duration::from_secs(app.config.timeout);
+    let timeout = Duration::from_secs(timeout);
     let link = match conf.use_magnet.unwrap_or(true) {
         true => item.magnet_link.to_owned(),
         false => item.torrent_link.to_owned(),
@@ -81,16 +81,15 @@ pub async fn download(item: &Item, app: &mut Context) {
     let res = match add_torrent(&conf, link, timeout).await {
         Ok(r) => r,
         Err(e) => {
-            app.show_error(format!("Failed to get response from rqbit\n{}", e));
-            return;
+            return Err(format!("Failed to get response from rqbit\n{}", e));
         }
     };
     if res.status() != StatusCode::OK {
-        app.show_error(format!(
+        return Err(format!(
             "rqbit returned status code {}",
             res.status().as_u16()
         ));
     }
 
-    app.notify("Successfully sent torrent to rqbit");
+    Ok("Successfully sent torrent to rqbit".to_owned())
 }

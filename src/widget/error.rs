@@ -32,6 +32,7 @@ impl Default for ErrorPopup {
 
 impl Widget for ErrorPopup {
     fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
+        let buf = f.buffer_mut();
         let lines = self.error.split('\n');
         let max_line = lines.clone().fold(30, |acc, e| max(e.len(), acc)) as u16 + 3;
         let x_len = min(max_line, area.width - 4);
@@ -46,11 +47,14 @@ impl Widget for ErrorPopup {
             .block(
                 border_block(ctx.theme, true)
                     .fg(ctx.theme.remake)
-                    .title("Error: Press any key to dismiss"),
+                    .title(format!(
+                        "Error ({}): Press any key to dismiss",
+                        ctx.errors.len() + 1
+                    )),
             )
             .wrap(Wrap { trim: false });
-        super::clear(clear, f.buffer_mut(), ctx.theme.bg);
-        p.render(center, f.buffer_mut());
+        super::clear(clear, buf, ctx.theme.bg);
+        p.render(center, buf);
     }
 
     fn handle_event(&mut self, app: &mut Context, e: &Event) {

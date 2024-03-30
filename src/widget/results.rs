@@ -214,7 +214,7 @@ impl super::Widget for ResultsWidget {
         let num_items = items.len();
         let first_item = (ctx.page - 1) * 75;
         let focused = matches!(ctx.mode, Mode::Normal | Mode::KeyCombo(_));
-        let table = Table::new(items, [Constraint::Percentage(100)])
+        let table = Table::new(items, binding)
             .header(header)
             .block(border_block(ctx.theme, focused).title(format!(
                 "Results {}-{} ({} total): Page {}/{}",
@@ -224,8 +224,7 @@ impl super::Widget for ResultsWidget {
                 ctx.page,
                 ctx.last_page
             )))
-            .highlight_style(Style::default().bg(ctx.theme.hl_bg))
-            .widths(&binding);
+            .highlight_style(Style::default().bg(ctx.theme.hl_bg));
         StatefulWidget::render(table, area, buf, &mut self.table.state);
         StatefulWidget::render(sb, sb_area, buf, &mut self.table.scrollbar_state);
 

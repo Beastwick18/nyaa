@@ -85,14 +85,14 @@ impl Sources {
                 LoadType::Sorting => NyaaHtmlSource::sort(app, w).await,
                 LoadType::Filtering => NyaaHtmlSource::filter(app, w).await,
                 LoadType::Categorizing => NyaaHtmlSource::categorize(app, w).await,
-                LoadType::Downloading => Ok(w.results.table.items.clone()),
+                LoadType::Downloading | LoadType::Batching => Ok(w.results.table.items.clone()),
             },
             Sources::NyaaRss => match load_type {
                 LoadType::Searching => NyaaRssSource::search(app, w).await,
                 LoadType::Sorting => NyaaRssSource::sort(app, w).await,
                 LoadType::Filtering => NyaaRssSource::filter(app, w).await,
                 LoadType::Categorizing => NyaaRssSource::categorize(app, w).await,
-                LoadType::Downloading => Ok(w.results.table.items.clone()),
+                LoadType::Downloading | LoadType::Batching => Ok(w.results.table.items.clone()),
             },
         }
     }

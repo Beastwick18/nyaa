@@ -10,6 +10,8 @@ use crate::{
     source::{add_protocol, Item},
 };
 
+use super::ClientConfig;
+
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub struct TransmissionConfig {
@@ -77,23 +79,21 @@ pub fn load_config(app: &mut Context) {
     }
 }
 
-pub async fn download(item: &Item, app: &mut Context) {
-    let conf = match app.config.client.transmission.clone() {
+pub async fn download(item: Item, conf: ClientConfig) -> Result<String, String> {
+    let conf = match conf.transmission.clone() {
         Some(c) => c,
         None => {
-            app.show_error("Failed to get configuration for transmission");
-            return;
+            return Err("Failed to get configuration for transmission".to_owned());
         }
     };
 
     if let Some(labels) = conf.labels.clone() {
         if let Some(bad) = labels.iter().find(|l| l.contains(',')) {
             let bad = format!("\"{}\"", bad);
-            app.show_error(format!(
+            return Err(format!(
                 "Transmission labels must not contain commas:\n{}",
                 bad
             ));
-            return;
         }
     }
 
@@ -102,7 +102,7 @@ pub async fn download(item: &Item, app: &mut Context) {
         Some(false) => item.torrent_link.to_owned(),
     };
     match add_torrent(&conf, link).await {
-        Ok(_) => app.notify("Successfully sent torrent to Transmission"),
-        Err(e) => app.show_error(e),
+        Ok(_) => Ok("Successfully sent torrent to Transmission".to_owned()),
+        Err(e) => Err(e),
     }
 }

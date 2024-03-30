@@ -38,6 +38,7 @@ pub enum LoadType {
     Sorting,
     Filtering,
     Categorizing,
+    Batching,
     Downloading,
 }
 
@@ -176,11 +177,23 @@ impl App {
             terminal.draw(|f| self.draw(w, ctx, f))?;
             if let Mode::Loading(load_type) = ctx.mode {
                 ctx.mode = Mode::Normal;
-                if load_type == LoadType::Downloading {
-                    if let Some(i) = w.results.table.selected() {
-                        ctx.client.clone().download(i, ctx).await;
+                match load_type {
+                    LoadType::Downloading => {
+                        if load_type == LoadType::Downloading {
+                            if let Some(i) = w.results.table.selected() {
+                                ctx.client.clone().download(i.to_owned(), ctx).await;
+                            }
+                            continue;
+                        }
                     }
-                    continue;
+                    LoadType::Batching => {
+                        ctx.client
+                            .clone()
+                            .batch_download(ctx.batch.clone(), ctx)
+                            .await;
+                        continue;
+                    }
+                    _ => {}
                 }
 
                 let result = ctx.src.clone().load(load_type, ctx, w).await;

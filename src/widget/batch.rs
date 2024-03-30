@@ -9,7 +9,7 @@ use ratatui::{
 };
 use unicode_width::UnicodeWidthStr as _;
 
-use crate::app::{Context, Mode};
+use crate::app::{Context, LoadType, Mode};
 
 use super::{border_block, VirtualStatefulTable};
 
@@ -116,6 +116,9 @@ impl super::Widget for BatchWidget {
                         ctx.batch.remove(i);
                         self.table.next(ctx.batch.len(), 0);
                     }
+                }
+                (Char('a'), _) => {
+                    ctx.mode = Mode::Loading(LoadType::Batching);
                 }
                 _ => {}
             };
