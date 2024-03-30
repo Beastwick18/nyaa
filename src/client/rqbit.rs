@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use urlencoding::encode;
 
 use crate::{
-    app::App,
+    app::Context,
     source::{add_protocol, Item},
 };
 
@@ -58,13 +58,13 @@ async fn add_torrent(
     }
 }
 
-pub fn load_config(app: &mut App) {
+pub fn load_config(app: &mut Context) {
     if app.config.client.rqbit.is_none() {
         app.config.client.rqbit = Some(RqbitConfig::default());
     }
 }
 
-pub async fn download(item: &Item, app: &mut App) {
+pub async fn download(item: &Item, app: &mut Context) {
     load_config(app);
     let conf = match app.config.client.rqbit.clone() {
         Some(q) => q,

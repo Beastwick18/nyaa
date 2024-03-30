@@ -9,7 +9,7 @@ use ratatui::{
 };
 
 use crate::{
-    app::{App, Mode},
+    app::{Context, Mode},
     style,
 };
 
@@ -23,7 +23,7 @@ pub struct HelpPopup {
 impl Default for HelpPopup {
     fn default() -> Self {
         HelpPopup {
-            table: StatefulTable::with_items(vec![]),
+            table: StatefulTable::empty(),
             prev_mode: Mode::Normal,
         }
     }
@@ -38,7 +38,7 @@ impl HelpPopup {
 }
 
 impl Widget for HelpPopup {
-    fn draw(&mut self, f: &mut Frame, app: &App, area: Rect) {
+    fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
         let buf = f.buffer_mut();
         let iter = self.table.items.iter();
 
@@ -63,19 +63,19 @@ impl Widget for HelpPopup {
             Line::from(""),
             Line::from("Action").alignment(Alignment::Center),
         ])
-        .style(style!(bold, underlined, fg:app.theme.border_focused_color))
+        .style(style!(bold, underlined, fg:ctx.theme.border_focused_color))
         .height(1)
         .bottom_margin(0);
         let table = Table::new(items, [Constraint::Percentage(100)])
             .block(
-                border_block(app.theme, true)
+                border_block(ctx.theme, true)
                     .title(format!("Help: {}", self.prev_mode.to_string())),
             )
             .header(header)
             .widths(Constraint::from_lengths([key_min, 1, map_min]))
-            .highlight_style(style!(bg:app.theme.hl_bg));
+            .highlight_style(style!(bg:ctx.theme.hl_bg));
 
-        super::clear(clear, buf, app.theme.bg);
+        super::clear(clear, buf, ctx.theme.bg);
         table.render(center, buf, &mut self.table.state);
 
         // Only show scrollbar if content overflows
@@ -93,7 +93,7 @@ impl Widget for HelpPopup {
         }
     }
 
-    fn handle_event(&mut self, app: &mut crate::app::App, e: &crossterm::event::Event) {
+    fn handle_event(&mut self, app: &mut Context, e: &Event) {
         if let Event::Key(KeyEvent {
             code,
             kind: KeyEventKind::Press,

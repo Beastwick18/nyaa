@@ -6,7 +6,7 @@ use transmission_rpc::{
 };
 
 use crate::{
-    app::App,
+    app::Context,
     source::{add_protocol, Item},
 };
 
@@ -71,13 +71,13 @@ async fn add_torrent(conf: &TransmissionConfig, link: String) -> Result<(), Stri
     }
 }
 
-pub fn load_config(app: &mut App) {
+pub fn load_config(app: &mut Context) {
     if app.config.client.transmission.is_none() {
         app.config.client.transmission = Some(TransmissionConfig::default());
     }
 }
 
-pub async fn download(item: &Item, app: &mut App) {
+pub async fn download(item: &Item, app: &mut Context) {
     let conf = match app.config.client.transmission.clone() {
         Some(c) => c,
         None => {

@@ -4,7 +4,7 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    app::{App, LoadType, Widgets},
+    app::{Context, LoadType, Widgets},
     popup_enum,
     widget::{category::CatIcon, EnumIter},
 };
@@ -30,7 +30,7 @@ pub fn add_protocol<S: Into<String>>(url: S, default_https: bool) -> String {
 
 #[derive(Clone)]
 pub struct Item {
-    pub index: usize,
+    pub id: usize,
     pub date: String,
     pub seeders: u32,
     pub leechers: u32,
@@ -55,17 +55,17 @@ popup_enum! {
 }
 
 pub trait Source {
-    async fn search(app: &mut App, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>>;
-    async fn sort(app: &mut App, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>>;
-    async fn filter(app: &mut App, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>>;
-    async fn categorize(app: &mut App, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>>;
+    async fn search(app: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>>;
+    async fn sort(app: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>>;
+    async fn filter(app: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>>;
+    async fn categorize(app: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>>;
 }
 
 impl Sources {
     pub async fn load(
         &self,
         load_type: LoadType,
-        app: &mut App,
+        app: &mut Context,
         w: &Widgets,
     ) -> Result<Vec<Item>, Box<dyn Error>> {
         match self {

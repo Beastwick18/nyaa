@@ -7,7 +7,7 @@ use ratatui::{
 };
 
 use crate::{
-    app::{App, LoadType, Mode},
+    app::{Context, LoadType, Mode},
     style,
 };
 
@@ -29,9 +29,9 @@ impl Default for SearchWidget {
 }
 
 impl super::Widget for SearchWidget {
-    fn draw(&mut self, f: &mut Frame, app: &App, area: Rect) {
+    fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
         let buf = f.buffer_mut();
-        let block = border_block(app.theme, app.mode == Mode::Search).title("Search");
+        let block = border_block(ctx.theme, ctx.mode == Mode::Search).title("Search");
         Clear.render(area, buf);
         block.render(area, buf);
         let input_area = area.inner(&Margin {
@@ -52,13 +52,13 @@ impl super::Widget for SearchWidget {
             text.render(right, buf);
         }
 
-        self.input.draw(f, app, input_area);
-        if app.mode == Mode::Search {
+        self.input.draw(f, ctx, input_area);
+        if ctx.mode == Mode::Search {
             self.input.show_cursor(f, input_area);
         }
     }
 
-    fn handle_event(&mut self, app: &mut crate::app::App, evt: &Event) {
+    fn handle_event(&mut self, ctx: &mut Context, evt: &Event) {
         if let Event::Key(KeyEvent {
             code,
             kind: KeyEventKind::Press,
@@ -69,14 +69,14 @@ impl super::Widget for SearchWidget {
             use KeyCode::*;
             match (code, modifiers) {
                 (Esc, &KeyModifiers::NONE) => {
-                    app.mode = Mode::Normal;
+                    ctx.mode = Mode::Normal;
                 }
                 (Enter, &KeyModifiers::NONE) => {
-                    app.mode = Mode::Loading(LoadType::Searching);
-                    app.page = 1; // Go back to first page
+                    ctx.mode = Mode::Loading(LoadType::Searching);
+                    ctx.page = 1; // Go back to first page
                 }
                 _ => {
-                    self.input.handle_event(app, evt);
+                    self.input.handle_event(ctx, evt);
                 }
             };
         }

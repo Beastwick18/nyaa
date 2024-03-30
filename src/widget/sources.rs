@@ -6,7 +6,7 @@ use ratatui::{
 };
 
 use crate::{
-    app::{App, LoadType, Mode},
+    app::{Context, LoadType, Mode},
     source::Sources,
     style,
 };
@@ -20,15 +20,13 @@ pub struct SourcesPopup {
 impl Default for SourcesPopup {
     fn default() -> Self {
         SourcesPopup {
-            table: StatefulTable::with_items(
-                Sources::iter().map(|item| item.to_string()).collect(),
-            ),
+            table: StatefulTable::new(Sources::iter().map(|item| item.to_string()).collect()),
         }
     }
 }
 
 impl Widget for SourcesPopup {
-    fn draw(&mut self, f: &mut Frame, app: &App, area: Rect) {
+    fn draw(&mut self, f: &mut Frame, app: &Context, area: Rect) {
         let buf = f.buffer_mut();
         let center = super::centered_rect(30, self.table.items.len() as u16 + 2, area);
         let clear = super::centered_rect(center.width + 2, center.height, area);
@@ -45,7 +43,7 @@ impl Widget for SourcesPopup {
         table.render(center, buf, &mut self.table.state);
     }
 
-    fn handle_event(&mut self, app: &mut crate::app::App, e: &crossterm::event::Event) {
+    fn handle_event(&mut self, app: &mut crate::app::Context, e: &crossterm::event::Event) {
         if let Event::Key(KeyEvent {
             code,
             kind: KeyEventKind::Press,

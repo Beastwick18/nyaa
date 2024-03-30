@@ -8,7 +8,7 @@ use ratatui::{
 };
 use unicode_width::UnicodeWidthChar;
 
-use crate::app::App;
+use crate::app::Context;
 
 pub struct InputWidget {
     pub input: String,
@@ -36,7 +36,7 @@ impl InputWidget {
 }
 
 impl super::Widget for InputWidget {
-    fn draw(&mut self, f: &mut Frame, _app: &App, area: Rect) {
+    fn draw(&mut self, f: &mut Frame, _ctx: &Context, area: Rect) {
         let width = self.input.len();
         let fwidth = area.width as usize;
         // Try to insert ellipsis if input is too long (visual only)
@@ -53,7 +53,7 @@ impl super::Widget for InputWidget {
         p.render(area, f.buffer_mut());
     }
 
-    fn handle_event(&mut self, _app: &mut crate::app::App, evt: &Event) {
+    fn handle_event(&mut self, _ctx: &mut Context, evt: &Event) {
         if let Event::Key(KeyEvent {
             code,
             kind: KeyEventKind::Press,

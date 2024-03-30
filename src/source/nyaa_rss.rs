@@ -6,7 +6,7 @@ use rss::{extension::Extension, Channel};
 use urlencoding::encode;
 
 use crate::{
-    app::{App, Widgets},
+    app::{Context, Widgets},
     widget::{category::CatEntry, sort::Sort},
 };
 
@@ -27,7 +27,7 @@ pub fn get_ext_value<T: Default + FromStr>(ext_map: &ExtensionMap, key: &str) ->
 
 fn sort_items(items: &mut [Item], sort: Sort, ascending: bool) {
     let f: fn(&Item, &Item) -> Ordering = match sort {
-        Sort::Date => |a, b| a.index.cmp(&b.index),
+        Sort::Date => |a, b| a.id.cmp(&b.id),
         Sort::Downloads => |a, b| b.downloads.cmp(&a.downloads),
         Sort::Seeders => |a, b| b.seeders.cmp(&a.seeders),
         Sort::Leechers => |a, b| b.leechers.cmp(&a.leechers),
@@ -40,13 +40,13 @@ fn sort_items(items: &mut [Item], sort: Sort, ascending: bool) {
 }
 
 impl Source for NyaaRssSource {
-    async fn sort(app: &mut App, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
+    async fn sort(app: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
         let mut items = w.results.table.items.clone();
         sort_items(&mut items, w.sort.selected, app.ascending);
         Ok(items)
     }
 
-    async fn search(app: &mut App, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
+    async fn search(app: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
         let cat = w.category.category;
         let query = w.search.input.input.clone();
         let filter = w.filter.selected as usize;
@@ -78,13 +78,13 @@ impl Source for NyaaRssSource {
         let mut results: Vec<Item> = channel
             .items
             .iter()
-            .enumerate()
-            .filter_map(|(index, item)| {
+            .filter_map(|item| {
                 let ext = item.extensions().get("nyaa")?;
                 let guid = item.guid()?;
                 let post = guid.value.clone();
                 let id = guid.value.rsplit('/').next().unwrap_or_default(); // Get nyaa id from guid url in format
                                                                             // `https://nyaa.si/view/{id}`
+                let id_usize = id.parse::<usize>().ok()?;
                 let category_str = get_ext_value::<String>(ext, "categoryId");
                 let cat = CatEntry::from_str(&category_str);
                 let category = cat.id;
@@ -101,7 +101,7 @@ impl Source for NyaaRssSource {
                     .unwrap_or("null".to_owned());
 
                 Some(Item {
-                    index,
+                    id: id_usize,
                     date: date.format(&app.config.date_format).to_string(),
                     seeders: get_ext_value(ext, "seeders"),
                     leechers: get_ext_value(ext, "leechers"),
@@ -125,11 +125,11 @@ impl Source for NyaaRssSource {
         Ok(results)
     }
 
-    async fn filter(app: &mut App, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
+    async fn filter(app: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
         NyaaRssSource::search(app, w).await
     }
 
-    async fn categorize(app: &mut App, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
+    async fn categorize(app: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
         NyaaRssSource::search(app, w).await
     }
 }

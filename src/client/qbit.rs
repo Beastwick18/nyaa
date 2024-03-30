@@ -7,7 +7,7 @@ use reqwest::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    app::App,
+    app::Context,
     source::{add_protocol, Item},
 };
 
@@ -170,13 +170,13 @@ async fn add_torrent(
         .await
 }
 
-pub fn load_config(app: &mut App) {
+pub fn load_config(app: &mut Context) {
     if app.config.client.qbit.is_none() {
         app.config.client.qbit = Some(QbitConfig::default());
     }
 }
 
-pub async fn download(item: &Item, app: &mut App) {
+pub async fn download(item: &Item, app: &mut Context) {
     load_config(app);
     let qbit = match app.config.client.qbit.clone() {
         Some(q) => q,

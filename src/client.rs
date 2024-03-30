@@ -2,7 +2,7 @@ use std::error::Error;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{app::App, popup_enum, source::Item, widget::EnumIter};
+use crate::{app::Context, popup_enum, source::Item, widget::EnumIter};
 
 use self::{
     cmd::CmdConfig, default_app::DefaultAppConfig, download::DownloadConfig, qbit::QbitConfig,
@@ -55,7 +55,7 @@ pub struct ClientConfig {
 }
 
 impl Client {
-    pub async fn download(&self, item: &Item, app: &mut App) {
+    pub async fn download(&self, item: &Item, app: &mut Context) {
         match self {
             Self::Cmd => cmd::download(item, app).await,
             Self::Qbit => qbit::download(item, app).await,
@@ -66,7 +66,10 @@ impl Client {
         }
     }
 
-    pub fn load_config(&self, app: &mut App) -> Result<(), Box<dyn Error>> {
+    // TODO: Add batch_download function
+    // Downloads a Vec of &Item, all at once.
+
+    pub fn load_config(&self, app: &mut Context) -> Result<(), Box<dyn Error>> {
         match self {
             Self::Cmd => cmd::load_config(app),
             Self::Qbit => qbit::load_config(app),
