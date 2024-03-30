@@ -2,9 +2,8 @@ use std::error::Error;
 
 use cli_clipboard::{
     ClipboardProvider,
-    #[cfg(not(target_os = "linux"))]
-    ClipboardContext,
 };
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -24,6 +23,9 @@ use cli_clipboard::{
     linux_clipboard::LinuxClipboardContext,
     x11_clipboard::{Clipboard, Primary, X11ClipboardContext},
 };
+
+#[cfg(not(target_os = "linux"))]
+use cli_clipboard::ClipboardContext;
 
 pub fn copy_to_clipboard(
     link: String,
