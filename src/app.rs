@@ -48,6 +48,7 @@ pub enum Mode {
     Search,
     Category,
     Sort(SortDir),
+    Batch,
     Filter,
     Theme,
     Sources,
@@ -62,6 +63,7 @@ impl ToString for Mode {
     fn to_string(&self) -> String {
         match self {
             Mode::Normal | Mode::KeyCombo(_) => "Normal".to_string(),
+            Mode::Batch => "Batch".to_string(),
             Mode::Search => "Search".to_string(),
             Mode::Category => "Category".to_string(),
             Mode::Sort(_) => "Sort".to_string(),
@@ -173,6 +175,9 @@ impl App {
             if !ctx.errors.is_empty() {
                 ctx.mode = Mode::Error;
             }
+            if ctx.mode == Mode::Batch && ctx.batch.is_empty() {
+                ctx.mode = Mode::Normal;
+            }
 
             self.get_help(w, ctx);
             terminal.draw(|f| self.draw(w, ctx, f))?;
@@ -237,7 +242,7 @@ impl App {
             Mode::Page => widgets.page.draw(f, ctx, f.size()),
             Mode::Sources => widgets.sources.draw(f, ctx, f.size()),
             Mode::Clients => widgets.clients.draw(f, ctx, f.size()),
-            Mode::KeyCombo(_) | Mode::Normal | Mode::Search | Mode::Loading(_) => {}
+            Mode::KeyCombo(_) | Mode::Normal | Mode::Search | Mode::Loading(_) | Mode::Batch => {}
         }
     }
 
@@ -246,6 +251,7 @@ impl App {
             Mode::Category => w.category.handle_event(ctx, &evt),
             Mode::Sort(_) => w.sort.handle_event(ctx, &evt),
             Mode::Normal => w.results.handle_event(ctx, &evt),
+            Mode::Batch => w.batch.handle_event(ctx, &evt),
             Mode::Search => w.search.handle_event(ctx, &evt),
             Mode::Filter => w.filter.handle_event(ctx, &evt),
             Mode::Theme => w.theme.handle_event(ctx, &evt),
@@ -286,6 +292,7 @@ impl App {
             Mode::Category => CategoryPopup::get_help(),
             Mode::Sort(_) => SortPopup::get_help(),
             Mode::Normal => ResultsWidget::get_help(),
+            Mode::Batch => BatchWidget::get_help(),
             Mode::Search => SearchWidget::get_help(),
             Mode::Filter => FilterPopup::get_help(),
             Mode::Theme => ThemePopup::get_help(),

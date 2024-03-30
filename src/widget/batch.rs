@@ -1,7 +1,7 @@
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::{
     layout::{Constraint, Margin, Rect},
-    style::Stylize,
+    style::{Style, Stylize},
     widgets::{Clear, Row, Scrollbar, ScrollbarOrientation, StatefulWidget, Table, Widget},
     Frame,
 };
@@ -25,7 +25,7 @@ impl Default for BatchWidget {
 impl super::Widget for BatchWidget {
     fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
         let buf = f.buffer_mut();
-        let block = border_block(ctx.theme, ctx.mode == Mode::Search).title("Batch");
+        let block = border_block(ctx.theme, ctx.mode == Mode::Batch).title("Batch");
         let rows = ctx
             .batch
             .iter()
@@ -39,7 +39,9 @@ impl super::Widget for BatchWidget {
                 })
             })
             .collect::<Vec<Row>>();
-        let table = Table::new(rows.to_owned(), [Constraint::Percentage(100)]).block(block);
+        let table = Table::new(rows.to_owned(), [Constraint::Percentage(100)])
+            .block(block)
+            .highlight_style(Style::default().bg(ctx.theme.hl_bg));
         Clear.render(area, buf);
         StatefulWidget::render(table, area, buf, &mut self.table.state);
         if ctx.batch.len() + 2 > area.height as usize {
@@ -71,12 +73,36 @@ impl super::Widget for BatchWidget {
         {
             use KeyCode::*;
             match (code, modifiers) {
-                (Esc, &KeyModifiers::NONE) => {
+                (Tab | BackTab, _) => {
                     ctx.mode = Mode::Normal;
                 }
-                (Enter, &KeyModifiers::NONE) => {
-                    ctx.mode = Mode::Loading(LoadType::Searching);
-                    ctx.page = 1; // Go back to first page
+                (Char('q'), &KeyModifiers::NONE) => {
+                    ctx.quit();
+                }
+                (Char('j'), &KeyModifiers::NONE) => {
+                    self.table.next(ctx.batch.len(), 1);
+                }
+                (Char('k'), &KeyModifiers::NONE) => {
+                    self.table.next(ctx.batch.len(), -1);
+                }
+                (Char('J'), &KeyModifiers::SHIFT) => {
+                    self.table.next(ctx.batch.len(), 4);
+                }
+                (Char('K'), &KeyModifiers::SHIFT) => {
+                    self.table.next(ctx.batch.len(), -4);
+                }
+                (Char('g'), &KeyModifiers::NONE) => {
+                    self.table.select(0);
+                }
+                (Char('G'), &KeyModifiers::SHIFT) => {
+                    self.table.select(ctx.batch.len() - 1);
+                }
+                (Char(' '), &KeyModifiers::NONE) => {
+                    if let Some(i) = self.table.selected() {
+                        self.table.next(ctx.batch.len(), 0);
+                        ctx.batch.remove(i);
+                        self.table.next(ctx.batch.len(), 0);
+                    }
                 }
                 _ => {}
             };

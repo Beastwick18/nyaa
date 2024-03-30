@@ -90,6 +90,16 @@ impl ResultsWidget {
             }
         }
     }
+
+    fn try_select(&self, ctx: &mut Context) {
+        if let Some(sel) = self.table.state.selected() {
+            if let Some(item) = self.table.items.get(sel) {
+                if !ctx.batch.iter().any(|s| s.id == item.id) {
+                    ctx.batch.push(item.to_owned());
+                }
+            }
+        }
+    }
 }
 
 impl Default for ResultsWidget {
@@ -354,16 +364,25 @@ impl super::Widget for ResultsWidget {
                     ctx.quit();
                 }
                 (Char('j') | KeyCode::Down, &KeyModifiers::NONE) => {
-                    self.table.next(1);
-                    if self.control_space {
-                        self.try_select_toggle(ctx);
+                    if self
+                        .table
+                        .state
+                        .selected()
+                        .is_some_and(|s| s + 1 != self.table.items.len())
+                    {
+                        self.table.next(1);
+                        if self.control_space {
+                            self.try_select_toggle(ctx);
+                        }
                     }
                 }
                 (Char('k') | KeyCode::Up, &KeyModifiers::NONE) => {
-                    if self.control_space {
-                        self.try_select_toggle(ctx);
+                    if self.table.state.selected().is_some_and(|s| s != 0) {
+                        if self.control_space {
+                            self.try_select_toggle(ctx);
+                        }
+                        self.table.next(-1);
                     }
-                    self.table.next(-1);
                 }
                 (Char('J'), &KeyModifiers::SHIFT) => {
                     self.table.next(4);
@@ -417,7 +436,7 @@ impl super::Widget for ResultsWidget {
                     self.control_space = !self.control_space;
                     if self.control_space {
                         ctx.notify("Entered VISUAL mode");
-                        self.try_select_toggle(ctx);
+                        self.try_select(ctx);
                     } else {
                         ctx.notify("Exited VISUAL mode");
                     }
@@ -432,6 +451,9 @@ impl super::Widget for ResultsWidget {
                             }
                         }
                     }
+                }
+                (Tab | BackTab, _) => {
+                    ctx.mode = Mode::Batch;
                 }
                 (Esc, &KeyModifiers::NONE) => {
                     ctx.notification = None;

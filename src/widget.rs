@@ -185,4 +185,8 @@ impl VirtualStatefulTable {
         self.state.select(Some(idx));
         self.scrollbar_state = self.scrollbar_state.position(idx);
     }
+
+    pub fn selected(&self) -> Option<usize> {
+        self.state.selected()
+    }
 }
