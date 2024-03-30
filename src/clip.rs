@@ -54,7 +54,6 @@ pub fn copy_to_clipboard(
         } else {
             return Err(format!("Failed to copy to linux clipboard").into());
         }
-        return Ok(());
     }
     #[cfg(not(target_os = "linux"))]
     {
