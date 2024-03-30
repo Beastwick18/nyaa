@@ -79,6 +79,7 @@ impl ToString for Mode {
     }
 }
 
+#[derive(Default)]
 pub struct App {
     pub widgets: Widgets,
 }
@@ -146,14 +147,6 @@ pub struct Widgets {
     pub error: ErrorPopup,
     pub page: PagePopup,
     pub help: HelpPopup,
-}
-
-impl Default for App {
-    fn default() -> Self {
-        App {
-            widgets: Widgets::default(),
-        }
-    }
 }
 
 impl App {
@@ -248,23 +241,23 @@ impl App {
 
     fn on(&mut self, evt: &Event, w: &mut Widgets, ctx: &mut Context) {
         match ctx.mode.to_owned() {
-            Mode::Category => w.category.handle_event(ctx, &evt),
-            Mode::Sort(_) => w.sort.handle_event(ctx, &evt),
-            Mode::Normal => w.results.handle_event(ctx, &evt),
-            Mode::Batch => w.batch.handle_event(ctx, &evt),
-            Mode::Search => w.search.handle_event(ctx, &evt),
-            Mode::Filter => w.filter.handle_event(ctx, &evt),
-            Mode::Theme => w.theme.handle_event(ctx, &evt),
-            Mode::Error => w.error.handle_event(ctx, &evt),
-            Mode::Page => w.page.handle_event(ctx, &evt),
-            Mode::Help => w.help.handle_event(ctx, &evt),
-            Mode::Sources => w.sources.handle_event(ctx, &evt),
-            Mode::Clients => w.clients.handle_event(ctx, &evt),
-            Mode::KeyCombo(keys) => self.on_combo(w, ctx, keys, &evt),
+            Mode::Category => w.category.handle_event(ctx, evt),
+            Mode::Sort(_) => w.sort.handle_event(ctx, evt),
+            Mode::Normal => w.results.handle_event(ctx, evt),
+            Mode::Batch => w.batch.handle_event(ctx, evt),
+            Mode::Search => w.search.handle_event(ctx, evt),
+            Mode::Filter => w.filter.handle_event(ctx, evt),
+            Mode::Theme => w.theme.handle_event(ctx, evt),
+            Mode::Error => w.error.handle_event(ctx, evt),
+            Mode::Page => w.page.handle_event(ctx, evt),
+            Mode::Help => w.help.handle_event(ctx, evt),
+            Mode::Sources => w.sources.handle_event(ctx, evt),
+            Mode::Clients => w.clients.handle_event(ctx, evt),
+            Mode::KeyCombo(keys) => self.on_combo(w, ctx, keys, evt),
             Mode::Loading(_) => {}
         }
         if ctx.mode != Mode::Help {
-            self.on_help(&evt, ctx);
+            self.on_help(evt, ctx);
         }
     }
 

@@ -24,7 +24,7 @@ use crate::{
 
 use super::{border_block, centered_rect, sort::Sort, StatefulTable};
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize, Default)]
 pub struct ColumnsConfig {
     category: Option<bool>,
     title: Option<bool>,
@@ -33,20 +33,6 @@ pub struct ColumnsConfig {
     seeders: Option<bool>,
     leechers: Option<bool>,
     downloads: Option<bool>,
-}
-
-impl Default for ColumnsConfig {
-    fn default() -> Self {
-        ColumnsConfig {
-            category: None,
-            title: None,
-            size: None,
-            date: None,
-            seeders: None,
-            leechers: None,
-            downloads: None,
-        }
-    }
 }
 
 impl ColumnsConfig {
@@ -227,10 +213,7 @@ impl super::Widget for ResultsWidget {
 
         let num_items = items.len();
         let first_item = (ctx.page - 1) * 75;
-        let focused = match ctx.mode {
-            Mode::Normal | Mode::KeyCombo(_) => true,
-            _ => false,
-        };
+        let focused = matches!(ctx.mode, Mode::Normal | Mode::KeyCombo(_));
         let table = Table::new(items, [Constraint::Percentage(100)])
             .header(header)
             .block(border_block(ctx.theme, focused).title(format!(
