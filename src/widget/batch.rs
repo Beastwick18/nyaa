@@ -9,7 +9,7 @@ use ratatui::{
 };
 use unicode_width::UnicodeWidthStr as _;
 
-use crate::app::{Context, LoadType, Mode};
+use crate::app::{Context, Mode};
 
 use super::{border_block, VirtualStatefulTable};
 

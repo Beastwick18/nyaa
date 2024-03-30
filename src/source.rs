@@ -1,6 +1,7 @@
-use std::error::Error;
+use std::{error::Error, time::Duration};
 
 use regex::Regex;
+use reqwest::Proxy;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -26,6 +27,16 @@ pub fn add_protocol<S: Into<String>>(url: S, default_https: bool) -> String {
         // Assume http(s) if not present
         false => format!("{}://{}", protocol, url),
     }
+}
+
+pub fn request_client(ctx: &Context) -> Result<reqwest::Client, reqwest::Error> {
+    let mut client = reqwest::Client::builder()
+        .gzip(true)
+        .timeout(Duration::from_secs(ctx.config.timeout));
+    if let Some(proxy_url) = ctx.config.request_proxy.to_owned() {
+        client = client.proxy(Proxy::all(add_protocol(proxy_url, false))?);
+    }
+    client.build()
 }
 
 #[derive(Clone)]
