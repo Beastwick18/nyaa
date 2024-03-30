@@ -5,7 +5,7 @@ use ratatui::{
     layout::{Constraint, Margin, Rect},
     style::{Style, Stylize},
     symbols::{self},
-    text::{Line, Text},
+    text::Line,
     widgets::{
         Clear, Paragraph, Row, Scrollbar, ScrollbarOrientation, StatefulWidget, Table, Widget,
     },
@@ -16,9 +16,8 @@ use unicode_width::UnicodeWidthStr;
 
 use crate::{
     app::{Context, LoadType, Mode},
-    cond_vec, raw,
+    cond_vec,
     source::Item,
-    style, styled,
     widget::sort::SortDir,
 };
 
@@ -160,7 +159,9 @@ impl super::Widget for ResultsWidget {
         let title_width = max(area.width as i32 - tot as i32, 5) as u16;
         let b = cond_vec!(cols ; [3, title_width, 9, self.date_width, 4, 4, 5]);
         let header = Row::new(cond_vec!(cols; header_slice))
-            .style(style!(bold, underlined, fg:focus_color))
+            .fg(focus_color)
+            .bold()
+            .underlined()
             .height(1)
             .bottom_margin(0);
 
@@ -179,21 +180,20 @@ impl super::Widget for ResultsWidget {
                 .iter()
                 .map(|item| {
                     Row::new(cond_vec!(cols ; [
-                        styled!(item.icon.label, fg:item.icon.color),
-                        styled!(
-                            item.title.to_owned(),
-                            fg:{ if item.trusted {
+                        item.icon.label.fg(item.icon.color),
+                            item.title.to_owned().fg(
+                            if item.trusted {
                                 ctx.theme.trusted
                             } else if item.remake {
                                 ctx.theme.remake
                             } else {
                                 ctx.theme.fg
-                            } }),
-                        raw!(format!("{:>9}", item.size)),
-                        raw!(format!("{:<14}", item.date)),
-                        styled!(format!("{:>4}", item.seeders), fg:ctx.theme.trusted),
-                        styled!(format!("{:>4}", item.leechers), fg:ctx.theme.remake),
-                        Text::raw(shorten_number(item.downloads)),
+                            }),
+                        format!("{:>9}", item.size).into(),
+                        format!("{:<14}", item.date).into(),
+                        format!("{:>4}", item.seeders).fg(ctx.theme.trusted),
+                        format!("{:>4}", item.leechers).fg(ctx.theme.remake),
+                        shorten_number(item.downloads).into(),
                     ]))
                     .fg(ctx.theme.fg)
                     .height(1)
