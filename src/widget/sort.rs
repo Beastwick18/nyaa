@@ -48,7 +48,7 @@ pub struct SortPopup {
 impl Default for SortPopup {
     fn default() -> Self {
         SortPopup {
-            table: StatefulTable::with_items(Sort::iter().map(|item| item.to_string()).collect()),
+            table: StatefulTable::new(Sort::iter().map(|item| item.to_string()).collect()),
             selected: Sort::Date,
         }
     }

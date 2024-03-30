@@ -13,6 +13,7 @@ use crate::{app::App, style};
 
 use self::theme::Theme;
 
+pub mod batch;
 pub mod category;
 pub mod clients;
 pub mod error;
@@ -84,12 +85,27 @@ pub struct StatefulTable<T> {
 }
 
 impl<T> StatefulTable<T> {
-    pub fn with_items(items: Vec<T>) -> StatefulTable<T> {
+    pub fn new(items: Vec<T>) -> StatefulTable<T> {
         StatefulTable {
-            state: TableState::new().with_selected(Some(0)),
-            scrollbar_state: ScrollbarState::new(items.len()),
+            state: TableState::default(),
+            scrollbar_state: ScrollbarState::default(),
             items,
         }
+    }
+
+    pub fn empty() -> StatefulTable<T> {
+        StatefulTable {
+            state: TableState::default(),
+            scrollbar_state: ScrollbarState::default(),
+            items: vec![],
+        }
+    }
+
+    pub fn with_items(&mut self, items: Vec<T>) -> &mut Self {
+        self.state = TableState::new().with_selected(Some(0));
+        self.scrollbar_state = ScrollbarState::new(items.len());
+        self.items = items;
+        self
     }
 
     pub fn next_wrap(&mut self, amt: isize) {

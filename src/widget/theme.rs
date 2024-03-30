@@ -107,9 +107,7 @@ pub struct ThemePopup {
 impl Default for ThemePopup {
     fn default() -> Self {
         ThemePopup {
-            table: StatefulTable::with_items(
-                THEMES.iter().map(|item| item.name.to_owned()).collect(),
-            ),
+            table: StatefulTable::new(THEMES.iter().map(|item| item.name.to_owned()).collect()),
             selected: 0,
         }
     }

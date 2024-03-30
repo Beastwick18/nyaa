@@ -20,9 +20,7 @@ pub struct SourcesPopup {
 impl Default for SourcesPopup {
     fn default() -> Self {
         SourcesPopup {
-            table: StatefulTable::with_items(
-                Sources::iter().map(|item| item.to_string()).collect(),
-            ),
+            table: StatefulTable::new(Sources::iter().map(|item| item.to_string()).collect()),
         }
     }
 }

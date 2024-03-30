@@ -11,9 +11,10 @@ use crate::{
     client::Client,
     clip,
     config::Config,
-    source::Sources,
+    source::{Item, Sources},
     widget::{
         self,
+        batch::BatchWidget,
         category::CategoryPopup,
         clients::ClientsPopup,
         error::ErrorPopup,
@@ -88,8 +89,20 @@ pub struct App {
     pub total_results: usize,
     pub src: Sources,
     pub client: Client,
+    pub batch: Vec<Item>,
     should_quit: bool,
 }
+
+// pub struct Context {
+//     pub errors: VecDeque<String>,
+//     pub theme: &'static Theme,
+//     pub config: Config,
+//     pub notification: Option<String>,
+//     pub sort_ascending: bool,
+//     pub page: usize,
+//     pub last_page: usize,
+//     pub total_results: usize,
+// }
 
 impl App {
     pub fn quit(&mut self) {
@@ -105,6 +118,7 @@ impl App {
 
 #[derive(Default)]
 pub struct Widgets {
+    pub batch: BatchWidget,
     pub category: CategoryPopup,
     pub sort: SortPopup,
     pub filter: FilterPopup,
@@ -132,6 +146,7 @@ impl Default for App {
             total_results: 0,
             src: Sources::NyaaHtml,
             client: Client::Cmd,
+            batch: vec![],
             should_quit: false,
         }
     }
@@ -157,14 +172,26 @@ fn help_event(app: &mut App, e: &Event) {
 }
 
 pub fn draw(widgets: &mut Widgets, app: &mut App, f: &mut Frame) {
-    let layout = Layout::new(
+    let layout_vertical = Layout::new(
         Direction::Vertical,
         [Constraint::Length(3), Constraint::Min(1)],
     )
     .split(f.size());
+    let layout_horizontal = Layout::new(
+        Direction::Horizontal,
+        [Constraint::Ratio(1, 5), Constraint::Ratio(4, 5)],
+    )
+    .split(layout_vertical[1]);
 
-    widgets.search.draw(f, app, layout[0]);
-    widgets.results.draw(f, app, layout[1]);
+    widgets.search.draw(f, app, layout_vertical[0]);
+    // Dont draw batch pane if none selected
+    match app.batch.is_empty() {
+        true => widgets.results.draw(f, app, layout_vertical[1]),
+        false => {
+            widgets.batch.draw(f, app, layout_horizontal[0]);
+            widgets.results.draw(f, app, layout_horizontal[1]);
+        }
+    }
     match app.mode {
         Mode::Category => widgets.category.draw(f, app, f.size()),
         Mode::Sort(_) => widgets.sort.draw(f, app, f.size()),
@@ -273,6 +300,7 @@ pub async fn run_app<B: Backend>(
         }
 
         get_help(app, w);
+        w.batch.with_items(app.batch.clone()); // TODO: Find a way to not have to pass this around
         terminal.draw(|f| draw(w, app, f))?;
         if let Mode::Loading(load_type) = app.mode {
             app.mode = Mode::Normal;

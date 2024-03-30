@@ -27,7 +27,7 @@ pub fn get_ext_value<T: Default + FromStr>(ext_map: &ExtensionMap, key: &str) ->
 
 fn sort_items(items: &mut [Item], sort: Sort, ascending: bool) {
     let f: fn(&Item, &Item) -> Ordering = match sort {
-        Sort::Date => |a, b| a.index.cmp(&b.index),
+        Sort::Date => |a, b| a.id.cmp(&b.id),
         Sort::Downloads => |a, b| b.downloads.cmp(&a.downloads),
         Sort::Seeders => |a, b| b.seeders.cmp(&a.seeders),
         Sort::Leechers => |a, b| b.leechers.cmp(&a.leechers),
@@ -78,13 +78,13 @@ impl Source for NyaaRssSource {
         let mut results: Vec<Item> = channel
             .items
             .iter()
-            .enumerate()
-            .filter_map(|(index, item)| {
+            .filter_map(|item| {
                 let ext = item.extensions().get("nyaa")?;
                 let guid = item.guid()?;
                 let post = guid.value.clone();
                 let id = guid.value.rsplit('/').next().unwrap_or_default(); // Get nyaa id from guid url in format
                                                                             // `https://nyaa.si/view/{id}`
+                let id_usize = id.parse::<usize>().ok()?;
                 let category_str = get_ext_value::<String>(ext, "categoryId");
                 let cat = CatEntry::from_str(&category_str);
                 let category = cat.id;
@@ -101,7 +101,7 @@ impl Source for NyaaRssSource {
                     .unwrap_or("null".to_owned());
 
                 Some(Item {
-                    index,
+                    id: id_usize,
                     date: date.format(&app.config.date_format).to_string(),
                     seeders: get_ext_value(ext, "seeders"),
                     leechers: get_ext_value(ext, "leechers"),
@@ -117,6 +117,7 @@ impl Source for NyaaRssSource {
                     remake: get_ext_value::<String>(ext, "remake").eq("Yes"),
                     category,
                     icon,
+                    selected: false,
                 })
             })
             .collect();

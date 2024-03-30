@@ -30,7 +30,7 @@ pub struct FilterPopup {
 impl Default for FilterPopup {
     fn default() -> Self {
         FilterPopup {
-            table: StatefulTable::with_items(Filter::iter().map(|item| item.to_string()).collect()),
+            table: StatefulTable::new(Filter::iter().map(|item| item.to_string()).collect()),
             selected: Filter::NoFilter,
         }
     }

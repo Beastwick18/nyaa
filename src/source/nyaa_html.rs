@@ -115,8 +115,7 @@ impl Source for NyaaHtmlSource {
 
         Ok(doc
             .select(item_sel)
-            .enumerate()
-            .map(|(index, e)| {
+            .filter_map(|e| {
                 let cat_str = attr(e, icon_sel, "href");
                 let cat_str = cat_str.split('=').last().unwrap_or("");
                 let cat = CatEntry::from_str(cat_str);
@@ -124,7 +123,14 @@ impl Source for NyaaHtmlSource {
                 let icon = cat.icon.clone();
 
                 let torrent = attr(e, torrent_sel, "href");
-                let file_name = torrent.split('/').last().unwrap_or("nyaa.torrent");
+                let id = torrent
+                    .split('/')
+                    .last()?
+                    .split('.')
+                    .next()?
+                    .parse::<usize>()
+                    .ok()?;
+                let file_name = format!("{}.torrent", id);
 
                 let size = inner(e, size_sel, "0 bytes")
                     .replace('i', "")
@@ -149,8 +155,8 @@ impl Source for NyaaHtmlSource {
                     .map(|url| url.to_string())
                     .unwrap_or("null".to_owned());
 
-                Item {
-                    index,
+                Some(Item {
+                    id,
                     date,
                     seeders,
                     leechers,
@@ -166,7 +172,8 @@ impl Source for NyaaHtmlSource {
                     icon,
                     trusted: e.value().classes().any(|e| e == "success"),
                     remake: e.value().classes().any(|e| e == "danger"),
-                }
+                    selected: false,
+                })
             })
             .collect())
     }

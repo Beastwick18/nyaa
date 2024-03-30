@@ -20,7 +20,7 @@ pub struct ClientsPopup {
 impl Default for ClientsPopup {
     fn default() -> Self {
         ClientsPopup {
-            table: StatefulTable::with_items(Client::iter().map(|item| item.to_string()).collect()),
+            table: StatefulTable::new(Client::iter().map(|item| item.to_string()).collect()),
         }
     }
 }

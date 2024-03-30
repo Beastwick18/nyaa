@@ -30,7 +30,7 @@ pub fn add_protocol<S: Into<String>>(url: S, default_https: bool) -> String {
 
 #[derive(Clone)]
 pub struct Item {
-    pub index: usize,
+    pub id: usize,
     pub date: String,
     pub seeders: u32,
     pub leechers: u32,
@@ -46,6 +46,7 @@ pub struct Item {
     pub icon: CatIcon,
     pub trusted: bool,
     pub remake: bool,
+    pub selected: bool,
 }
 
 popup_enum! {

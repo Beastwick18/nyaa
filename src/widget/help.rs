@@ -23,7 +23,7 @@ pub struct HelpPopup {
 impl Default for HelpPopup {
     fn default() -> Self {
         HelpPopup {
-            table: StatefulTable::with_items(vec![]),
+            table: StatefulTable::empty(),
             prev_mode: Mode::Normal,
         }
     }

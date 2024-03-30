@@ -66,6 +66,9 @@ impl Client {
         }
     }
 
+    // TODO: Add batch_download function
+    // Downloads a Vec of &Item, all at once.
+
     pub fn load_config(&self, app: &mut App) -> Result<(), Box<dyn Error>> {
         match self {
             Self::Cmd => cmd::load_config(app),

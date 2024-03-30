@@ -4,7 +4,8 @@ use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::{
     layout::{Constraint, Margin, Rect},
     style::{Style, Stylize},
-    text::Text,
+    symbols::{self},
+    text::{Line, Text},
     widgets::{
         Clear, Paragraph, Row, Scrollbar, ScrollbarOrientation, StatefulWidget, Table, Widget,
     },
@@ -84,7 +85,7 @@ impl ResultsWidget {
 impl Default for ResultsWidget {
     fn default() -> Self {
         ResultsWidget {
-            table: StatefulTable::with_items(vec![]),
+            table: StatefulTable::empty(),
             sort: Sort::Date,
             date_width: 6,
             raw_date_width: 4,
@@ -191,6 +192,11 @@ impl super::Widget for ResultsWidget {
                     .fg(app.theme.fg)
                     .height(1)
                     .bottom_margin(0)
+                    // if item.selected {
+                    //     row.bg(app.theme.solid_bg)
+                    // } else {
+                    //     row
+                    // }
                 })
                 .collect(),
         };
@@ -225,6 +231,24 @@ impl super::Widget for ResultsWidget {
         // f.render_stateful_widget(table, area, &mut self.table.state);
         StatefulWidget::render(table, area, buf, &mut self.table.state);
         StatefulWidget::render(sb, sb_area, buf, &mut self.table.scrollbar_state);
+
+        if let Some(visible_items) = self.table.items.get(self.table.state.offset()..) {
+            let lines = visible_items
+                .iter()
+                .map(|i| {
+                    Line::from(
+                        match i.selected {
+                            true => symbols::border::QUADRANT_BLOCK,
+                            false => symbols::line::VERTICAL,
+                        }
+                        .to_owned(),
+                    )
+                })
+                .collect::<Vec<Line>>();
+            let para = Paragraph::new(lines);
+            let pararea = Rect::new(area.x, area.y + 2, 1, area.height - 3);
+            para.render(pararea, buf);
+        }
 
         let right_str = format!("D:{}─S:{}", app.client.to_string(), app.src.to_string());
         if area.right() > right_str.width() as u16 {
@@ -377,6 +401,21 @@ impl super::Widget for ResultsWidget {
                     }
                 }
                 (Char('y'), &KeyModifiers::NONE) => app.mode = Mode::KeyCombo(vec!['y']),
+                (Char(' '), _) => {
+                    if let Some(sel) = self.table.state.selected() {
+                        if let Some(item) = &mut self.table.items.get_mut(sel) {
+                            if item.selected {
+                                if let Some(r) = app.batch.iter().position(|i| i.id == item.id) {
+                                    item.selected = false;
+                                    app.batch.remove(r);
+                                }
+                            } else {
+                                item.selected = true;
+                                app.batch.push(item.to_owned());
+                            }
+                        }
+                    }
+                }
                 (Esc, &KeyModifiers::NONE) => {
                     app.notification = None;
                 }
@@ -401,6 +440,7 @@ impl super::Widget for ResultsWidget {
             ("r", "Reload"),
             ("o", "Open in browser"),
             ("yt, ym, yp", "Copy torrent/magnet/post link"),
+            ("Space", "Mark item for batch download"),
             ("/, i", "Search"),
             ("c", "Categories"),
             ("f", "Filters"),
