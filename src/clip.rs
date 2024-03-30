@@ -1,8 +1,9 @@
 use std::error::Error;
 
 use cli_clipboard::{
-    ClipboardContext,
     ClipboardProvider,
+    #[cfg(not(target_os = "linux"))]
+    ClipboardContext,
 };
 use serde::{Deserialize, Serialize};
 
