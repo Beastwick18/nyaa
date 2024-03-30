@@ -84,6 +84,12 @@ If `nyaa.si` is not accessible in your region, try one of the [proxies](https://
 base_url = 'nyaa.land'
 ```
 
+If you have your own proxy setup, you use it by adding:
+```toml
+request_proxy = "localhost:8118"
+```
+to your config.
+
 ## ⚙️ Configuration
 The location of the config file for linux is:
 
