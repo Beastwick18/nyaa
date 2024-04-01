@@ -137,7 +137,7 @@ If you have your own proxy setup, you use it by adding:
 request_proxy = "localhost:8118"
 ```
 
-to your config.
+to your config. Replace the value with the IP and port for your proxy.
 
 ## ⚙️ Configuration
 
