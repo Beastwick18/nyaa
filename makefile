@@ -34,5 +34,12 @@ deb:
 gh:
 	gh release create v$(VERSION) release/$(VERSION)/* --draft --title v$(VERSION) --latest
 
+changelog:
+	@echo "Adds:"
+	@git log $(shell git describe --tags --abbrev=0)..HEAD --oneline | sed -n 's/^.\+feat:\s\+/- /p'
+	@echo
+	@echo "Fixes:"
+	@git log $(shell git describe --tags --abbrev=0)..HEAD --oneline | sed -n 's/^.\+fix:\s\+/- /p'
+
 publish:
 	python3 publish.py
