@@ -1,8 +1,6 @@
 use std::error::Error;
 
-use cli_clipboard::{
-    ClipboardProvider,
-};
+use cli_clipboard::ClipboardProvider;
 
 use serde::{Deserialize, Serialize};
 
@@ -14,7 +12,7 @@ pub enum X11Selection {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ClipboardConfig {
-    pub clipboard_cmd: Option<String>,
+    // pub clipboard_cmd: Option<String>,
     pub x11_selection: Option<X11Selection>,
 }
 
@@ -29,11 +27,12 @@ use cli_clipboard::ClipboardContext;
 
 pub fn copy_to_clipboard(
     link: String,
-    _conf: Option<ClipboardConfig>,
+    #[cfg(target_os = "linux")] conf: Option<ClipboardConfig>,
+    #[cfg(not(target_os = "linux"))] _conf: Option<ClipboardConfig>,
 ) -> Result<(), Box<dyn Error>> {
     #[cfg(target_os = "linux")]
     {
-        let sel = _conf
+        let sel = conf
             .and_then(|sel| sel.x11_selection)
             .unwrap_or(X11Selection::Clipboard);
         if X11Selection::Clipboard == sel {
