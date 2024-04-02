@@ -155,7 +155,7 @@ async fn logout(qbit: &QbitConfig, sid: String, timeout: Duration) {
 async fn add_torrent(
     qbit: &QbitConfig,
     sid: String,
-    link: String,
+    links: String,
     timeout: Duration,
 ) -> Result<Response, reqwest::Error> {
     let client = reqwest::Client::new();
@@ -166,7 +166,7 @@ async fn add_torrent(
         .post(url)
         .header(REFERER, base_url)
         .header(COOKIE, sid)
-        .form(&qbit.to_form(link))
+        .form(&qbit.to_form(links))
         .timeout(timeout)
         .send()
         .await
@@ -178,7 +178,11 @@ pub fn load_config(app: &mut Context) {
     }
 }
 
-pub async fn download(item: Item, conf: ClientConfig, timeout: u64) -> Result<String, String> {
+pub async fn batch_download(
+    items: Vec<Item>,
+    conf: ClientConfig,
+    timeout: u64,
+) -> Result<String, String> {
     let qbit = match conf.qbit.clone() {
         Some(q) => q,
         None => {
@@ -198,11 +202,19 @@ pub async fn download(item: Item, conf: ClientConfig, timeout: u64) -> Result<St
             return Err(format!("Failed to get SID:\n{}", e));
         }
     };
-    let link = match qbit.use_magnet.unwrap_or(true) {
-        true => item.magnet_link.to_owned(),
-        false => item.torrent_link.to_owned(),
+    let links = match qbit.use_magnet.unwrap_or(true) {
+        true => items
+            .iter()
+            .map(|i| i.magnet_link.to_owned())
+            .collect::<Vec<String>>()
+            .join("\n"),
+        false => items
+            .iter()
+            .map(|i| i.torrent_link.to_owned())
+            .collect::<Vec<String>>()
+            .join("\n"),
     };
-    let Ok(res) = add_torrent(&qbit, sid.to_owned(), link, timeout).await else {
+    let Ok(res) = add_torrent(&qbit, sid.to_owned(), links, timeout).await else {
         return Err("Failed to get response".to_owned());
     };
     if res.status() != StatusCode::OK {
@@ -215,4 +227,8 @@ pub async fn download(item: Item, conf: ClientConfig, timeout: u64) -> Result<St
     logout(&qbit, sid.clone(), timeout).await;
 
     Ok("Successfully sent torrent to qBittorrent".to_owned())
+}
+
+pub async fn download(item: Item, conf: ClientConfig, timeout: u64) -> Result<String, String> {
+    return batch_download(vec![item], conf, timeout).await;
 }

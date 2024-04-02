@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use transmission_rpc::{
@@ -56,15 +58,28 @@ impl TransmissionConfig {
     }
 }
 
-async fn add_torrent(conf: &TransmissionConfig, link: String) -> Result<(), String> {
+async fn add_torrent(conf: &TransmissionConfig, link: String, timeout: u64) -> Result<(), String> {
     let base_url = add_protocol(conf.base_url.clone(), false);
     let url = match base_url.parse::<Url>() {
         Ok(url) => url,
         Err(e) => return Err(format!("Failed to parse base_url \"{}\":\n{}", base_url, e)),
     };
-    let mut client = match (conf.username.clone(), conf.password.clone()) {
-        (Some(user), Some(password)) => TransClient::with_auth(url, BasicAuth { user, password }),
-        _ => TransClient::new(url),
+    let rq_client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(timeout))
+        .build();
+    let rq_client = match rq_client {
+        Ok(o) => o,
+        Err(e) => {
+            return Err(format!(
+                "Failed to create request client for transmission:\n{}",
+                e
+            ))
+        }
+    };
+    let mut client = TransClient::new_with_client(url.to_owned(), rq_client);
+    match (conf.username.clone(), conf.password.clone()) {
+        (Some(user), Some(password)) => client.set_auth(BasicAuth { user, password }),
+        _ => {}
     };
     let add = conf.clone().to_form(link);
     match client.torrent_add(add).await {
@@ -79,7 +94,7 @@ pub fn load_config(app: &mut Context) {
     }
 }
 
-pub async fn download(item: Item, conf: ClientConfig) -> Result<String, String> {
+pub async fn download(item: Item, conf: ClientConfig, timeout: u64) -> Result<String, String> {
     let conf = match conf.transmission.clone() {
         Some(c) => c,
         None => {
@@ -101,7 +116,7 @@ pub async fn download(item: Item, conf: ClientConfig) -> Result<String, String> 
         None | Some(true) => item.magnet_link.to_owned(),
         Some(false) => item.torrent_link.to_owned(),
     };
-    match add_torrent(&conf, link).await {
+    match add_torrent(&conf, link, timeout).await {
         Ok(_) => Ok("Successfully sent torrent to Transmission".to_owned()),
         Err(e) => Err(e),
     }

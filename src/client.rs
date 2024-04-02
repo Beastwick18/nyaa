@@ -63,7 +63,7 @@ impl Client {
         let result = match self {
             Self::Cmd => cmd::download(item, conf).await,
             Self::Qbit => qbit::download(item, conf, timeout).await,
-            Self::Transmission => transmission::download(item, conf).await,
+            Self::Transmission => transmission::download(item, conf, timeout).await,
             Self::Rqbit => rqbit::download(item, conf, timeout).await,
             Self::DefaultApp => default_app::download(item, conf).await,
             Self::Download => download::download(item, conf, timeout).await,
@@ -85,7 +85,7 @@ impl Client {
         let result = match self {
             Self::Cmd => cmd::download(item, conf).await,
             Self::Qbit => qbit::download(item, conf, timeout).await,
-            Self::Transmission => transmission::download(item, conf).await,
+            Self::Transmission => transmission::download(item, conf, timeout).await,
             Self::Rqbit => rqbit::download(item, conf, timeout).await,
             Self::DefaultApp => default_app::download(item, conf).await,
             Self::Download => download::download(item, conf, timeout).await,
@@ -96,9 +96,32 @@ impl Client {
         }
     }
 
+    async fn try_batch_download(
+        self,
+        items: Vec<Item>,
+        conf: ClientConfig,
+        timeout: u64,
+    ) -> Option<Result<String, String>> {
+        match self {
+            Self::Qbit => Some(qbit::batch_download(items, conf, timeout).await),
+            _ => None,
+        }
+    }
+
     pub async fn batch_download(&self, items: Vec<Item>, ctx: &mut Context) {
         let conf = ctx.config.client.to_owned();
         let timeout = ctx.config.timeout;
+
+        if let Some(res) = self
+            .try_batch_download(items.to_owned(), conf.to_owned(), timeout)
+            .await
+        {
+            match res {
+                Ok(o) => ctx.notify(o),
+                Err(e) => ctx.show_error(e),
+            }
+        }
+
         let mut set = JoinSet::new();
         for item in items.iter() {
             let item = item.to_owned();
