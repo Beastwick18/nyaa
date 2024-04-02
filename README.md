@@ -200,6 +200,7 @@ timeout = 30
 ## 🗺️ Planned Features
 
 - [ ] User-defined themes
+- [ ] Mouse support
 - [ ] Sources other than nyaa/Custom user-defined sources
 - [x] ~~Integration with torrent clients~~
 - [x] ~~RPM Release~~
