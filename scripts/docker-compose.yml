@@ -1,0 +1,14 @@
+version: '3'
+services:
+  debian:
+    image: debian
+    user: root
+    container_name: nyaa-deb
+    network_mode: 'host'
+    restart: no
+    command: /bin/bash -c "/root/docker/init.sh"
+    environment:
+      - GITREPO=https://github.com/Beastwick18/nyaa
+      - VERSION
+    volumes:
+      - ./docker-deb:/root/docker

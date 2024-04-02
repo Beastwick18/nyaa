@@ -2,7 +2,7 @@ WINDOWS_TARGET := x86_64-pc-windows-msvc
 LINUX_TARGET := x86_64-unknown-linux-gnu
 VERSION := $(shell sed -nE 's/^version\s?=\s?"(.*)"/\1/p' Cargo.toml)
 
-.PHONY: none release win linux deb gh publish
+.PHONY: none release win linux deb gh publish changelog fedora
 none:
 	@echo 'Explictly select "release" option'
 
@@ -29,7 +29,7 @@ deb:
 	docker stop nyaa-deb || true
 	docker rm nyaa-deb || true
 	VERSION=$(VERSION) docker compose up
-	cp "docker-deb/nyaa-$(VERSION)-x86_64.deb" "release/$(VERSION)/"
+	cp "scripts/docker-deb/nyaa-$(VERSION)-x86_64.deb" "release/$(VERSION)/"
 
 gh:
 	gh release create v$(VERSION) release/$(VERSION)/* --draft --title v$(VERSION) --latest
@@ -42,4 +42,5 @@ changelog:
 	@git log $(shell git describe --tags --abbrev=0)..HEAD --oneline | sed -n 's/^.\+fix:\s\+/- /p'
 
 publish:
-	python3 publish.py
+	@echo -n "Publish v$(VERSION) to crates.io? [y/N] " && read ans && [ $${ans:-N} = y ]
+	cargo publish
