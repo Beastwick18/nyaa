@@ -77,10 +77,9 @@ async fn add_torrent(conf: &TransmissionConfig, link: String, timeout: u64) -> R
         }
     };
     let mut client = TransClient::new_with_client(url.to_owned(), rq_client);
-    match (conf.username.clone(), conf.password.clone()) {
-        (Some(user), Some(password)) => client.set_auth(BasicAuth { user, password }),
-        _ => {}
-    };
+    if let (Some(user), Some(password)) = (conf.username.clone(), conf.password.clone()) {
+        client.set_auth(BasicAuth { user, password });
+    }
     let add = conf.clone().to_form(link);
     match client.torrent_add(add).await {
         Ok(_) => Ok(()),

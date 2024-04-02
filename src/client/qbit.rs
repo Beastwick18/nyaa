@@ -230,5 +230,5 @@ pub async fn batch_download(
 }
 
 pub async fn download(item: Item, conf: ClientConfig, timeout: u64) -> Result<String, String> {
-    return batch_download(vec![item], conf, timeout).await;
+    batch_download(vec![item], conf, timeout).await
 }
