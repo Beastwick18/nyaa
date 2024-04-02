@@ -53,7 +53,7 @@ impl Widget for FilterPopup {
             .render(center, f.buffer_mut(), &mut self.table.state);
     }
 
-    fn handle_event(&mut self, app: &mut crate::app::Context, e: &crossterm::event::Event) {
+    fn handle_event(&mut self, ctx: &mut Context, e: &Event) {
         if let Event::Key(KeyEvent {
             code,
             kind: KeyEventKind::Press,
@@ -62,7 +62,7 @@ impl Widget for FilterPopup {
         {
             match code {
                 KeyCode::Esc | KeyCode::Char('f') | KeyCode::Char('q') => {
-                    app.mode = Mode::Normal;
+                    ctx.mode = Mode::Normal;
                 }
                 KeyCode::Char('j') | KeyCode::Down => {
                     self.table.next_wrap(1);
@@ -81,8 +81,8 @@ impl Widget for FilterPopup {
                         Filter::iter().nth(self.table.state.selected().unwrap_or_default())
                     {
                         self.selected = i.to_owned();
-                        app.mode = Mode::Loading(LoadType::Filtering);
-                        app.notify(format!("Filter by \"{}\"", i.to_string()));
+                        ctx.mode = Mode::Loading(LoadType::Filtering);
+                        ctx.notify(format!("Filter by \"{}\"", i.to_string()));
                     }
                 }
                 _ => {}

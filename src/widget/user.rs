@@ -52,7 +52,7 @@ impl Widget for UserPopup {
         }
     }
 
-    fn handle_event(&mut self, ctx: &mut Context, e: &crossterm::event::Event) {
+    fn handle_event(&mut self, ctx: &mut Context, e: &Event) {
         if let Event::Key(KeyEvent {
             code,
             kind: KeyEventKind::Press,

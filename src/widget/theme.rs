@@ -114,7 +114,7 @@ impl Default for ThemePopup {
 }
 
 impl Widget for ThemePopup {
-    fn draw(&mut self, f: &mut Frame, app: &Context, area: Rect) {
+    fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
         let buf = f.buffer_mut();
         let height = min(min(THEMES.len() as u16 + 2, 10), area.height);
         let center = super::centered_rect(30, height, area);
@@ -129,9 +129,9 @@ impl Widget for ThemePopup {
             ])
         });
         let table = Table::new(items, [Constraint::Percentage(100)])
-            .block(border_block(app.theme, true).title("Theme"))
-            .highlight_style(style!(bg:app.theme.hl_bg));
-        super::clear(clear, buf, app.theme.bg);
+            .block(border_block(ctx.theme, true).title("Theme"))
+            .highlight_style(style!(bg:ctx.theme.hl_bg));
+        super::clear(clear, buf, ctx.theme.bg);
         table.render(center, buf, &mut self.table.state);
 
         // Only show scrollbar if content overflows
@@ -149,7 +149,7 @@ impl Widget for ThemePopup {
         }
     }
 
-    fn handle_event(&mut self, app: &mut Context, e: &Event) {
+    fn handle_event(&mut self, ctx: &mut Context, e: &Event) {
         if let Event::Key(KeyEvent {
             code,
             kind: KeyEventKind::Press,
@@ -158,7 +158,7 @@ impl Widget for ThemePopup {
         {
             match code {
                 KeyCode::Esc | KeyCode::Char('t') | KeyCode::Char('q') => {
-                    app.mode = Mode::Normal;
+                    ctx.mode = Mode::Normal;
                 }
                 KeyCode::Char('j') | KeyCode::Down => {
                     self.table.next_wrap(1);
@@ -175,11 +175,11 @@ impl Widget for ThemePopup {
                 KeyCode::Enter => {
                     if let Some(theme) = THEMES.get(self.table.state.selected().unwrap_or(0)) {
                         self.selected = self.table.state.selected().unwrap_or(0);
-                        app.theme = theme;
-                        app.config.theme = theme.name.to_owned();
-                        match app.config.clone().store() {
-                            Ok(_) => app.notify(format!("Updated theme to \"{}\"", theme.name)),
-                            Err(e) => app.show_error(format!(
+                        ctx.theme = theme;
+                        ctx.config.theme = theme.name.to_owned();
+                        match ctx.config.clone().store() {
+                            Ok(_) => ctx.notify(format!("Updated theme to \"{}\"", theme.name)),
+                            Err(e) => ctx.show_error(format!(
                                 "Failed to update default theme in config file:\n{}",
                                 e
                             )),

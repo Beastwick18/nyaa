@@ -57,7 +57,7 @@ impl Widget for ErrorPopup {
         p.render(center, buf);
     }
 
-    fn handle_event(&mut self, app: &mut Context, e: &Event) {
+    fn handle_event(&mut self, ctx: &mut Context, e: &Event) {
         if let Event::Key(KeyEvent {
             code,
             kind: KeyEventKind::Press,
@@ -66,8 +66,8 @@ impl Widget for ErrorPopup {
         {
             match code {
                 KeyCode::Esc | KeyCode::Char(_) => {
-                    if app.errors.is_empty() {
-                        app.mode = Mode::Normal;
+                    if ctx.errors.is_empty() {
+                        ctx.mode = Mode::Normal;
                     }
                 }
                 _ => {}

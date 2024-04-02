@@ -55,7 +55,7 @@ impl Default for SortPopup {
 }
 
 impl Widget for SortPopup {
-    fn draw(&mut self, f: &mut Frame, app: &Context, area: Rect) {
+    fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
         let buf = f.buffer_mut();
         let center = super::centered_rect(30, self.table.items.len() as u16 + 2, area);
         let clear = super::centered_rect(center.width + 2, center.height, area);
@@ -66,18 +66,18 @@ impl Widget for SortPopup {
             }])
         });
         let table = Table::new(items, [Constraint::Percentage(100)])
-            .block(border_block(app.theme, true).title(
-                match app.mode == Mode::Sort(SortDir::Asc) {
+            .block(border_block(ctx.theme, true).title(
+                match ctx.mode == Mode::Sort(SortDir::Asc) {
                     true => "Sort Ascending",
                     false => "Sort Descending",
                 },
             ))
-            .highlight_style(style!(bg:app.theme.hl_bg));
-        super::clear(clear, buf, app.theme.bg);
+            .highlight_style(style!(bg:ctx.theme.hl_bg));
+        super::clear(clear, buf, ctx.theme.bg);
         table.render(center, buf, &mut self.table.state);
     }
 
-    fn handle_event(&mut self, app: &mut crate::app::Context, e: &crossterm::event::Event) {
+    fn handle_event(&mut self, ctx: &mut Context, e: &Event) {
         if let Event::Key(KeyEvent {
             code,
             kind: KeyEventKind::Press,
@@ -86,7 +86,7 @@ impl Widget for SortPopup {
         {
             match code {
                 KeyCode::Esc | KeyCode::Char('s') | KeyCode::Char('q') => {
-                    app.mode = Mode::Normal;
+                    ctx.mode = Mode::Normal;
                 }
                 KeyCode::Char('j') | KeyCode::Down => {
                     self.table.next_wrap(1);
@@ -103,9 +103,9 @@ impl Widget for SortPopup {
                 KeyCode::Enter => {
                     if let Some(i) = Sort::iter().nth(self.table.state.selected().unwrap_or(0)) {
                         self.selected = i.to_owned();
-                        app.ascending = app.mode == Mode::Sort(SortDir::Asc);
-                        app.mode = Mode::Loading(LoadType::Sorting);
-                        app.notify(format!("Sort by \"{}\"", i.to_string()));
+                        ctx.ascending = ctx.mode == Mode::Sort(SortDir::Asc);
+                        ctx.mode = Mode::Loading(LoadType::Sorting);
+                        ctx.notify(format!("Sort by \"{}\"", i.to_string()));
                     }
                 }
                 _ => {}

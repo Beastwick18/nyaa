@@ -53,7 +53,7 @@ impl Widget for PagePopup {
         }
     }
 
-    fn handle_event(&mut self, app: &mut crate::app::Context, e: &crossterm::event::Event) {
+    fn handle_event(&mut self, ctx: &mut Context, e: &Event) {
         if let Event::Key(KeyEvent {
             code,
             kind: KeyEventKind::Press,
@@ -62,18 +62,18 @@ impl Widget for PagePopup {
         {
             match code {
                 KeyCode::Esc => {
-                    app.mode = Mode::Normal;
+                    ctx.mode = Mode::Normal;
                 }
                 KeyCode::Enter => {
-                    app.page = max(min(self.input.input.parse().unwrap_or(1), app.last_page), 1);
-                    app.mode = Mode::Loading(LoadType::Searching);
+                    ctx.page = max(min(self.input.input.parse().unwrap_or(1), ctx.last_page), 1);
+                    ctx.mode = Mode::Loading(LoadType::Searching);
 
                     // Clear input on enter
                     self.input.input = "".to_owned();
                     self.input.cursor = 0;
                 }
                 _ => {
-                    self.input.handle_event(app, e);
+                    self.input.handle_event(ctx, e);
                 }
             }
         }

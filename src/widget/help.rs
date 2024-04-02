@@ -94,7 +94,7 @@ impl Widget for HelpPopup {
         }
     }
 
-    fn handle_event(&mut self, app: &mut Context, e: &Event) {
+    fn handle_event(&mut self, ctx: &mut Context, e: &Event) {
         if let Event::Key(KeyEvent {
             code,
             kind: KeyEventKind::Press,
@@ -103,7 +103,7 @@ impl Widget for HelpPopup {
         {
             match code {
                 KeyCode::Esc | KeyCode::Char('?') | KeyCode::F(1) | KeyCode::Char('q') => {
-                    app.mode = self.prev_mode.to_owned();
+                    ctx.mode = self.prev_mode.to_owned();
                 }
                 KeyCode::Char('j') | KeyCode::Down => {
                     self.table.next_wrap(1);

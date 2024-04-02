@@ -26,24 +26,24 @@ impl Default for SourcesPopup {
 }
 
 impl Widget for SourcesPopup {
-    fn draw(&mut self, f: &mut Frame, app: &Context, area: Rect) {
+    fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
         let buf = f.buffer_mut();
         let center = super::centered_rect(30, self.table.items.len() as u16 + 2, area);
         let clear = super::centered_rect(center.width + 2, center.height, area);
         let items = self.table.items.iter().enumerate().map(|(i, item)| {
-            Row::new(vec![match i == app.src.to_owned() as usize {
+            Row::new(vec![match i == ctx.src.to_owned() as usize {
                 true => format!("  {}", item.to_owned()),
                 false => format!("   {}", item.to_owned()),
             }])
         });
-        super::clear(clear, buf, app.theme.bg);
+        super::clear(clear, buf, ctx.theme.bg);
         let table = Table::new(items, [Constraint::Percentage(100)])
-            .block(border_block(app.theme, true).title("Source"))
-            .highlight_style(style!(bg:app.theme.hl_bg));
+            .block(border_block(ctx.theme, true).title("Source"))
+            .highlight_style(style!(bg:ctx.theme.hl_bg));
         table.render(center, buf, &mut self.table.state);
     }
 
-    fn handle_event(&mut self, app: &mut crate::app::Context, e: &crossterm::event::Event) {
+    fn handle_event(&mut self, ctx: &mut Context, e: &Event) {
         if let Event::Key(KeyEvent {
             code,
             kind: KeyEventKind::Press,
@@ -52,7 +52,7 @@ impl Widget for SourcesPopup {
         {
             match code {
                 KeyCode::Esc | KeyCode::Char('s') | KeyCode::Char('q') => {
-                    app.mode = Mode::Normal;
+                    ctx.mode = Mode::Normal;
                 }
                 KeyCode::Char('j') | KeyCode::Down => {
                     self.table.next_wrap(1);
@@ -68,12 +68,12 @@ impl Widget for SourcesPopup {
                 }
                 KeyCode::Enter => {
                     if let Some(i) = Sources::iter().nth(self.table.state.selected().unwrap_or(0)) {
-                        app.src = *i;
-                        app.config.source = *i;
-                        app.mode = Mode::Loading(LoadType::Searching);
-                        match app.config.clone().store() {
-                            Ok(_) => app.notify(format!("Updated source to \"{}\"", i.to_string())),
-                            Err(e) => app.show_error(format!(
+                        ctx.src = *i;
+                        ctx.config.source = *i;
+                        ctx.mode = Mode::Loading(LoadType::Searching);
+                        match ctx.config.clone().store() {
+                            Ok(_) => ctx.notify(format!("Updated source to \"{}\"", i.to_string())),
+                            Err(e) => ctx.show_error(format!(
                                 "Failed to update default source in config file:\n{}",
                                 e
                             )),

@@ -43,7 +43,7 @@ impl Widget for ClientsPopup {
         table.render(center, buf, &mut self.table.state);
     }
 
-    fn handle_event(&mut self, app: &mut Context, e: &Event) {
+    fn handle_event(&mut self, ctx: &mut Context, e: &Event) {
         if let Event::Key(KeyEvent {
             code,
             kind: KeyEventKind::Press,
@@ -52,7 +52,7 @@ impl Widget for ClientsPopup {
         {
             match code {
                 KeyCode::Esc | KeyCode::Char('d') | KeyCode::Char('q') => {
-                    app.mode = Mode::Normal;
+                    ctx.mode = Mode::Normal;
                 }
                 KeyCode::Char('j') | KeyCode::Down => {
                     self.table.next_wrap(1);
@@ -68,18 +68,18 @@ impl Widget for ClientsPopup {
                 }
                 KeyCode::Enter => {
                     if let Some(c) = Client::iter().nth(self.table.state.selected().unwrap_or(0)) {
-                        app.client = *c;
-                        match c.load_config(app) {
-                            Ok(_) => app.notify(format!(
+                        ctx.client = *c;
+                        match c.load_config(ctx) {
+                            Ok(_) => ctx.notify(format!(
                                 "Updated download client to \"{}\"",
                                 c.to_string()
                             )),
-                            Err(e) => app.show_error(format!(
+                            Err(e) => ctx.show_error(format!(
                                 "Failed to update download client in config file:\n{}",
                                 e
                             )),
                         };
-                        app.mode = Mode::Normal;
+                        ctx.mode = Mode::Normal;
                     }
                 }
                 _ => {}
