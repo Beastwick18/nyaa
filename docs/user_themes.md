@@ -50,7 +50,7 @@ The use of each value is defined as:
 
 ### Named colors
 - The defined named colors are:
-  - `Reset`
+  - `Reset` (transparent)
   - `White`
   - `Black`
   - `Red`
