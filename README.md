@@ -199,9 +199,9 @@ timeout = 30
 
 ## 🗺️ Planned Features
 
-- [ ] User-defined themes
 - [ ] Mouse support
 - [ ] Sources other than nyaa/Custom user-defined sources
+- [x] ~~User-defined themes~~
 - [x] ~~Integration with torrent clients~~
 - [x] ~~RPM Release~~
 - [x] ~~Nyaa proxies/mirrors support~~

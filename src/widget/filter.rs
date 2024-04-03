@@ -48,7 +48,7 @@ impl Widget for FilterPopup {
         });
         super::clear(clear, f.buffer_mut(), ctx.theme.bg);
         Table::new(items, [Constraint::Percentage(100)])
-            .block(border_block(ctx.theme, true).title("Filter"))
+            .block(border_block(&ctx.theme, true).title("Filter"))
             .highlight_style(style!(bg:ctx.theme.hl_bg))
             .render(center, f.buffer_mut(), &mut self.table.state);
     }

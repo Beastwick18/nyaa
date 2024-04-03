@@ -5,13 +5,14 @@ use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Stylize as _},
-    widgets::{Block, Borders, Clear, ScrollbarState, TableState, Widget as _},
+    widgets::{
+        Block, Borders, Clear, Scrollbar, ScrollbarOrientation, ScrollbarState, TableState,
+        Widget as _,
+    },
     Frame,
 };
 
-use crate::{app::Context, style};
-
-use self::theme::Theme;
+use crate::{app::Context, style, theme::Theme};
 
 pub mod batch;
 pub mod category;
@@ -25,7 +26,7 @@ pub mod results;
 pub mod search;
 pub mod sort;
 pub mod sources;
-pub mod theme;
+pub mod themes;
 pub mod user;
 
 pub trait Widget {
@@ -72,6 +73,21 @@ pub fn border_block(theme: &Theme, focused: bool) -> Block {
         .fg(theme.fg)
         .borders(Borders::ALL)
         .border_type(theme.border)
+}
+
+pub fn scrollbar(ctx: &Context, orientation: ScrollbarOrientation) -> Scrollbar<'_> {
+    let set = ctx.theme.border.to_border_set();
+    let track = match orientation {
+        ScrollbarOrientation::VerticalRight => set.vertical_right,
+        ScrollbarOrientation::VerticalLeft => set.vertical_left,
+        ScrollbarOrientation::HorizontalBottom => set.horizontal_bottom,
+        ScrollbarOrientation::HorizontalTop => set.horizontal_top,
+    };
+    Scrollbar::default()
+        .orientation(orientation)
+        .track_symbol(Some(track))
+        .begin_symbol(None)
+        .end_symbol(None)
 }
 
 pub fn clear(area: Rect, buf: &mut Buffer, fill: Color) {
@@ -157,17 +173,17 @@ impl VirtualStatefulTable {
         }
     }
 
-    // pub fn next_wrap(&mut self, length: usize, amt: isize) {
-    //     if length == 0 {
-    //         return;
-    //     }
-    //     let i = match self.state.selected() {
-    //         Some(i) => (i as isize + amt).rem_euclid(length as isize),
-    //         None => 0,
-    //     };
-    //     self.state.select(Some(i as usize));
-    //     self.scrollbar_state = self.scrollbar_state.position(i as usize);
-    // }
+    pub fn next_wrap(&mut self, length: usize, amt: isize) {
+        if length == 0 {
+            return;
+        }
+        let i = match self.state.selected() {
+            Some(i) => (i as isize + amt).rem_euclid(length as isize),
+            None => 0,
+        };
+        self.state.select(Some(i as usize));
+        self.scrollbar_state = self.scrollbar_state.position(i as usize);
+    }
 
     pub fn next(&mut self, length: usize, amt: isize) {
         if length == 0 {

@@ -1,6 +1,7 @@
 use std::{collections::VecDeque, error::Error};
 
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
+use indexmap::IndexMap;
 use ratatui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout},
@@ -12,8 +13,8 @@ use crate::{
     clip,
     config::Config,
     source::{Item, Sources},
+    theme::{self, Theme},
     widget::{
-        self,
         batch::BatchWidget,
         category::CategoryPopup,
         clients::ClientsPopup,
@@ -25,7 +26,7 @@ use crate::{
         search::SearchWidget,
         sort::{SortDir, SortPopup},
         sources::SourcesPopup,
-        theme::{Theme, ThemePopup},
+        themes::ThemePopup,
         user::UserPopup,
         Widget,
     },
@@ -90,7 +91,8 @@ pub struct App {
 
 pub struct Context {
     pub mode: Mode,
-    pub theme: &'static Theme,
+    pub themes: IndexMap<String, Theme>,
+    pub theme: Theme,
     pub config: Config,
     pub errors: VecDeque<String>,
     pub notification: Option<String>,
@@ -120,9 +122,11 @@ impl Context {
 
 impl Default for Context {
     fn default() -> Self {
+        let themes = theme::default_themes();
         Context {
             mode: Mode::Loading(LoadType::Searching),
-            theme: widget::theme::THEMES[0],
+            themes,
+            theme: Theme::default(),
             config: Config::default(),
             errors: VecDeque::new(),
             notification: None,

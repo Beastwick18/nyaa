@@ -45,7 +45,7 @@ impl Widget for ErrorPopup {
         let clear = super::centered_rect(center.width + 2, center.height, area);
         let p = Paragraph::new(self.error.to_owned())
             .block(
-                border_block(ctx.theme, true)
+                border_block(&ctx.theme, true)
                     .fg(ctx.theme.remake)
                     .title(format!(
                         "Error ({}): Press any key to dismiss",

@@ -2,9 +2,7 @@ use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::{
     layout::{Constraint, Margin, Rect},
     style::{Style, Stylize},
-    widgets::{
-        Clear, Paragraph, Row, Scrollbar, ScrollbarOrientation, StatefulWidget, Table, Widget,
-    },
+    widgets::{Clear, Paragraph, Row, ScrollbarOrientation, StatefulWidget, Table, Widget},
     Frame,
 };
 use unicode_width::UnicodeWidthStr as _;
@@ -28,7 +26,7 @@ impl Default for BatchWidget {
 impl super::Widget for BatchWidget {
     fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
         let buf = f.buffer_mut();
-        let block = border_block(ctx.theme, ctx.mode == Mode::Batch).title("Batch");
+        let block = border_block(&ctx.theme, ctx.mode == Mode::Batch).title("Batch");
         let rows = ctx
             .batch
             .iter()
@@ -48,11 +46,7 @@ impl super::Widget for BatchWidget {
         Clear.render(area, buf);
         StatefulWidget::render(table, area, buf, &mut self.table.state);
         if ctx.batch.len() + 2 > area.height as usize {
-            let sb = Scrollbar::default()
-                .orientation(ScrollbarOrientation::VerticalRight)
-                .track_symbol(Some("│"))
-                .begin_symbol(None)
-                .end_symbol(None);
+            let sb = super::scrollbar(ctx, ScrollbarOrientation::VerticalRight);
             let sb_area = area.inner(&Margin {
                 vertical: 1,
                 horizontal: 0,

@@ -29,7 +29,7 @@ impl Default for SearchWidget {
 impl super::Widget for SearchWidget {
     fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
         let buf = f.buffer_mut();
-        let block = border_block(ctx.theme, ctx.mode == Mode::Search).title("Search");
+        let block = border_block(&ctx.theme, ctx.mode == Mode::Search).title("Search");
         Clear.render(area, buf);
         block.render(area, buf);
         let input_area = area.inner(&Margin {
@@ -38,7 +38,6 @@ impl super::Widget for SearchWidget {
         });
 
         if area.right() >= 23 {
-            // let bold = style!(bold);
             let text = Paragraph::new(Line::from(vec![
                 "Press ".into(),
                 "F1".bold(),

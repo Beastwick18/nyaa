@@ -1,14 +1,16 @@
+use std::path::PathBuf;
+
 use crate::{
     app::{Context, Widgets, APP_NAME},
     client::{Client, ClientConfig},
     clip::ClipboardConfig,
     source::Sources,
+    theme::{self, Theme},
     widget::{
         category::{self, ALL_CATEGORIES},
         filter::Filter,
         results::ColumnsConfig,
         sort::Sort,
-        theme::{self, THEMES},
     },
 };
 use confy::ConfyError;
@@ -51,7 +53,7 @@ impl Default for Config {
             default_sort: Sort::Date,
             source: Sources::NyaaHtml,
             download_client: Client::Cmd,
-            theme: THEMES[0].name.to_owned(),
+            theme: Theme::default().name,
             default_search: "".to_owned(),
             date_format: "%Y-%m-%d %H:%M".to_owned(),
             base_url: "https://nyaa.si/".to_owned(),
@@ -71,6 +73,15 @@ impl Config {
     pub fn store(self) -> Result<(), ConfyError> {
         confy::store::<Config>(APP_NAME, CONFIG_FILE, self)
     }
+    pub fn path() -> Result<PathBuf, ConfyError> {
+        confy::get_configuration_file_path(APP_NAME, None).and_then(|p| {
+            p.parent()
+                .ok_or(ConfyError::BadConfigDirectory(
+                    "Config directory does not have a parent folder".to_owned(),
+                ))
+                .map(|p| p.to_path_buf())
+        })
+    }
     pub fn apply(&self, ctx: &mut Context, w: &mut Widgets) {
         ctx.config = self.to_owned();
         w.search.input.input = ctx.config.default_search.to_owned();
@@ -79,9 +90,15 @@ impl Config {
         w.filter.selected = ctx.config.default_filter.to_owned();
         ctx.client = ctx.config.download_client.to_owned();
         ctx.src = ctx.config.source.to_owned();
-        if let Some((i, theme)) = theme::find_theme(ctx.config.theme.to_owned()) {
+
+        // Load user-defined themes
+        if let Err(e) = theme::load_user_themes(ctx) {
+            ctx.show_error(e);
+        }
+
+        if let Some((i, _, theme)) = ctx.themes.get_full(&self.theme) {
             w.theme.selected = i;
-            ctx.theme = theme;
+            ctx.theme = theme.to_owned();
         }
         if let Some(ent) = category::find_category(ctx.config.default_category.to_owned()) {
             w.category.category = ent.id;

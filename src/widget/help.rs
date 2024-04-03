@@ -4,7 +4,7 @@ use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     layout::{Alignment, Constraint, Margin, Rect},
     text::Line,
-    widgets::{Row, Scrollbar, ScrollbarOrientation, StatefulWidget as _, Table},
+    widgets::{Row, ScrollbarOrientation, StatefulWidget as _, Table},
     Frame,
 };
 
@@ -69,7 +69,7 @@ impl Widget for HelpPopup {
         .bottom_margin(0);
         let table = Table::new(items, [Constraint::Percentage(100)])
             .block(
-                border_block(ctx.theme, true)
+                border_block(&ctx.theme, true)
                     .title(format!("Help: {}", self.prev_mode.to_string())),
             )
             .header(header)
@@ -81,11 +81,8 @@ impl Widget for HelpPopup {
 
         // Only show scrollbar if content overflows
         if self.table.items.len() as u16 + 2 >= center.height {
-            let sb = Scrollbar::default()
-                .orientation(ScrollbarOrientation::VerticalRight)
-                .track_symbol(Some("│"))
-                .begin_symbol(Some(""))
-                .end_symbol(None);
+            let sb =
+                super::scrollbar(ctx, ScrollbarOrientation::VerticalRight).begin_symbol(Some(""));
             let sb_area = center.inner(&Margin {
                 vertical: 1,
                 horizontal: 0,

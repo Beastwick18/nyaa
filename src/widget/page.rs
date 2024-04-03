@@ -32,7 +32,8 @@ impl Widget for PagePopup {
         let center = super::centered_rect(13, 3, area);
         let clear = super::centered_rect(center.width + 2, center.height, area);
         let page_p = Paragraph::new(self.input.input.clone());
-        let indicator = Paragraph::new(">").block(border_block(ctx.theme, true).title("Goto Page"));
+        let indicator =
+            Paragraph::new(">").block(border_block(&ctx.theme, true).title("Goto Page"));
         super::clear(clear, buf, ctx.theme.bg);
         indicator.render(center, buf);
 

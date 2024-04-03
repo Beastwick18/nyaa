@@ -14,6 +14,7 @@ mod clip;
 mod config;
 mod macros;
 mod source;
+mod theme;
 mod widget;
 
 #[tokio::main()]

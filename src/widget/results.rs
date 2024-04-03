@@ -6,9 +6,7 @@ use ratatui::{
     style::{Style, Stylize},
     symbols::{self},
     text::Line,
-    widgets::{
-        Clear, Paragraph, Row, Scrollbar, ScrollbarOrientation, StatefulWidget, Table, Widget,
-    },
+    widgets::{Clear, Paragraph, Row, ScrollbarOrientation, StatefulWidget, Table, Widget},
     Frame,
 };
 use serde::{Deserialize, Serialize};
@@ -201,11 +199,8 @@ impl super::Widget for ResultsWidget {
                 })
                 .collect(),
         };
-        let sb = Scrollbar::default()
-            .orientation(ScrollbarOrientation::VerticalRight)
-            .track_symbol(Some("│"))
-            .begin_symbol(Some(""))
-            .end_symbol(None);
+
+        let sb = super::scrollbar(ctx, ScrollbarOrientation::VerticalRight).begin_symbol(Some(""));
         let sb_area = area.inner(&Margin {
             vertical: 1,
             horizontal: 0,
@@ -216,7 +211,7 @@ impl super::Widget for ResultsWidget {
         let focused = matches!(ctx.mode, Mode::Normal | Mode::KeyCombo(_));
         let table = Table::new(items, binding)
             .header(header)
-            .block(border_block(ctx.theme, focused).title(format!(
+            .block(border_block(&ctx.theme, focused).title(format!(
                 "Results {}-{} ({} total): Page {}/{}",
                 first_item + 1,
                 num_items + first_item,
@@ -236,7 +231,7 @@ impl super::Widget for ResultsWidget {
                     Line::from(
                         match selected_ids.contains(&i.id) {
                             true => symbols::border::QUADRANT_BLOCK,
-                            false => symbols::line::VERTICAL,
+                            false => ctx.theme.border.to_border_set().vertical_left,
                         }
                         .to_owned(),
                     )
@@ -261,11 +256,6 @@ impl super::Widget for ResultsWidget {
 
         if let Mode::KeyCombo(keys) = ctx.mode.to_owned() {
             let b_right_str: String = keys.into_iter().collect();
-            // let b_right_str = keys
-            //     .iter()
-            //     .map(|c| c.to_string())
-            //     .collect::<Vec<String>>()
-            //     .join("");
             if area.right() > b_right_str.width() as u16 {
                 let text = Paragraph::new(b_right_str.clone());
                 let right = Rect::new(

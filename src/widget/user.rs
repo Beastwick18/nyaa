@@ -31,7 +31,7 @@ impl Widget for UserPopup {
         let clear = super::centered_rect(center.width + 2, center.height, area);
         let page_p = Paragraph::new(self.input.input.clone());
         let indicator =
-            Paragraph::new(">").block(border_block(ctx.theme, true).title("Posts by User"));
+            Paragraph::new(">").block(border_block(&ctx.theme, true).title("Posts by User"));
         super::clear(clear, buf, ctx.theme.bg);
         indicator.render(center, buf);
 

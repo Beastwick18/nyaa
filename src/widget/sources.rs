@@ -38,7 +38,7 @@ impl Widget for SourcesPopup {
         });
         super::clear(clear, buf, ctx.theme.bg);
         let table = Table::new(items, [Constraint::Percentage(100)])
-            .block(border_block(ctx.theme, true).title("Source"))
+            .block(border_block(&ctx.theme, true).title("Source"))
             .highlight_style(style!(bg:ctx.theme.hl_bg));
         table.render(center, buf, &mut self.table.state);
     }

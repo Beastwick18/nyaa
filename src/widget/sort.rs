@@ -66,7 +66,7 @@ impl Widget for SortPopup {
             }])
         });
         let table = Table::new(items, [Constraint::Percentage(100)])
-            .block(border_block(ctx.theme, true).title(
+            .block(border_block(&ctx.theme, true).title(
                 match ctx.mode == Mode::Sort(SortDir::Asc) {
                     true => "Sort Ascending",
                     false => "Sort Descending",

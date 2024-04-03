@@ -83,24 +83,17 @@ macro_rules! style {
     };
 }
 
-// #[macro_export]
-// macro_rules! styled {
-//     (
-//         $text:expr,
-//         $($method:ident:$value:expr),* $(,)?
-//     ) => {
-//         {
-//             let style = Style::new()
-//                 $(.$method($value))?
-//                 // $(.add_modifier(Modifier::UNDERLINED))?
-//                 // $(.add_modifier(Modifier::BOLD))?
-//                 // $(.add_modifier(Modifier::ITALIC))?
-//                 ;
-//             let text = Text::styled($text, style);
-//             text
-//         }
-//     };
-// }
+#[macro_export]
+macro_rules! collection {
+    // map-like
+    ($($k:expr => $v:expr),* $(,)?) => {{
+        core::convert::From::from([$(($k, $v),)*])
+    }};
+    // set-like
+    ($($v:expr),* $(,)?) => {{
+        core::convert::From::from([$($v,)*])
+    }};
+}
 
 #[macro_export]
 macro_rules! raw {
