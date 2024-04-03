@@ -27,6 +27,7 @@
 - [Proxies](#-proxies)
 - [Configuration](#%EF%B8%8F-configuration)
   - [Download Client Integration](#download-client-integration)
+- [Custom Themes](#-custom-themes)
 - [Planned Features](#%EF%B8%8F-planned-features)
 
 ## ⚡ Installation
@@ -196,6 +197,9 @@ timeout = 30
   - [Download to folder](https://github.com/Beastwick18/nyaa/wiki/Download-to-folder)
   - [Open with default app](https://github.com/Beastwick18/nyaa/wiki/Open-with-default-app)
   - [Run command](https://github.com/Beastwick18/nyaa/wiki/Run-command)
+
+# 🎨 Custom Themes
+Check the wiki for how to add (User-defined Themes)[https://github.com/Beastwick18/nyaa/wiki/User%E2%80%90defined-Themes]
 
 ## 🗺️ Planned Features
 
