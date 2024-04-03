@@ -199,7 +199,7 @@ timeout = 30
   - [Run command](https://github.com/Beastwick18/nyaa/wiki/Run-command)
 
 # 🎨 Custom Themes
-Check the wiki for how to add (User-defined Themes)[https://github.com/Beastwick18/nyaa/wiki/User%E2%80%90defined-Themes]
+Check the wiki for how to add [User-defined Themes](https://github.com/Beastwick18/nyaa/wiki/User%E2%80%90defined-Themes)
 
 ## 🗺️ Planned Features
 
