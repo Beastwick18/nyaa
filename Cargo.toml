@@ -33,6 +33,8 @@ open = "5.1.2"
 cli-clipboard = "0.4.0"
 dirs = "5.0.1"
 shellexpand = "3.1.0"
+indexmap = "2.2.6"
+color-to-tui = "0.3.0"
 
 [package.metadata.deb]
 maintainer = "Steven Culwell <bradculwell@pm.me>"

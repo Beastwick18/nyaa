@@ -216,6 +216,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "color-to-tui"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fbb7fe3c2fe4e88669ff503b2502dffc2f69125f276ae8ecb79439c3dd22f292"
+dependencies = [
+ "ratatui",
+ "serde",
+]
+
+[[package]]
 name = "compact_str"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -836,9 +846,9 @@ dependencies = [
 
 [[package]]
 name = "indexmap"
-version = "2.2.5"
+version = "2.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b0b929d511467233429c45a44ac1dcaa21ba0f5ba11e4879e6ed28ddb4f9df4"
+checksum = "168fb715dda47215e360912c096649d23d58bf392ac62f73919e831745e40f26"
 dependencies = [
  "equivalent",
  "hashbrown",
@@ -1089,9 +1099,11 @@ version = "0.7.0"
 dependencies = [
  "chrono",
  "cli-clipboard",
+ "color-to-tui",
  "confy",
  "crossterm",
  "dirs",
+ "indexmap",
  "open",
  "ratatui",
  "regex",
