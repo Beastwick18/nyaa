@@ -1,8 +1,4 @@
 # User-defined Themes
-
-> [!WARNING]
-> User-defined themes are only available on the up-to-date main branch
-
 You can add your own user-defined themes by creating a new toml file in the folder:
 
 | Platform | Path |
