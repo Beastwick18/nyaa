@@ -167,9 +167,17 @@ impl super::Widget for ResultsWidget {
 
         Clear.render(area, buf);
         let items: Vec<Row> = match ctx.mode {
-            Mode::Loading(_) => {
-                let area = centered_rect(8, 1, size);
-                Paragraph::new("Loading…").render(area, buf);
+            Mode::Loading(loadtype) => {
+                let message = match loadtype {
+                    LoadType::Searching => "Searching…",
+                    LoadType::Sorting => "Sorting…",
+                    LoadType::Filtering => "Filtering…",
+                    LoadType::Categorizing => "Categorizing…",
+                    LoadType::Batching => "Downloading batch…",
+                    LoadType::Downloading => "Downloading…",
+                };
+                let load_area = centered_rect(message.len() as u16, 1, size);
+                Paragraph::new(message).render(load_area, buf);
                 vec![]
             }
             _ => self
@@ -223,6 +231,16 @@ impl super::Widget for ResultsWidget {
         StatefulWidget::render(table, area, buf, &mut self.table.state);
         StatefulWidget::render(sb, sb_area, buf, &mut self.table.scrollbar_state);
 
+        match ctx.mode {
+            Mode::Loading(_) => {}
+            _ => {
+                if num_items == 0 {
+                    let center = centered_rect(10, 1, size);
+                    Paragraph::new("No results").render(center, buf);
+                }
+            }
+        }
+
         if let Some(visible_items) = self.table.items.get(self.table.state.offset()..) {
             let selected_ids: Vec<usize> = ctx.batch.iter().map(|i| i.id).collect();
             let lines = visible_items
@@ -273,16 +291,6 @@ impl super::Widget for ResultsWidget {
             let minw = std::cmp::min(area.right() - 2, bottom_str.width() as u16);
             let bottom = Rect::new(area.left() + 1, area.bottom() - 1, minw, 1);
             f.render_widget(text, bottom);
-        }
-
-        match ctx.mode {
-            Mode::Loading(_) => {}
-            _ => {
-                if num_items == 0 {
-                    let center = centered_rect(10, 1, f.size());
-                    f.render_widget(Paragraph::new("No results"), center);
-                }
-            }
         }
     }
 
