@@ -113,14 +113,14 @@ cargo install --path .
 
 Like modal text editors such as Vim, there are several modes. Each have their own keybinds, which can be found out by pressing `F1` or `?` while in that mode. Some of the important ones are:
 
-- `hjkl` or arrow keys for general navigation
-- `/` or `i` to search
-- `c` to open category popup
-- `s` to open sort popup
-- `f` to open filter popup
-- `t` to open theme popup
-- `n`, `p` or `l`, `h` for next and previous page
-- `q` to quit
+- <kbd>hjkl</kbd> or arrow keys for general navigation
+- <kbd>/</kbd> or <kbd>i</kbd> to search
+- <kbd>c</kbd> to open category popup
+- <kbd>s</kbd> to open sort popup
+- <kbd>f</kbd> to open filter popup
+- <kbd>t</kbd> to open theme popup
+- <kbd>n</kbd>, <kbd>p</kbd> or <kbd>l</kbd>, <kbd>h</kbd> for next and previous page
+- <kbd>q</kbd> to quit
 
 For a list of all modes and their respective keybinds, check [Keybinds](https://github.com/Beastwick18/nyaa/wiki/Keybinds) on the wiki.
 
@@ -163,7 +163,7 @@ base_url = "https://nyaa.si/"
 request_proxy = "localhost:8118" # None by default
 timeout = 30
 
-# ... client configurations
+# ...
 ```
 
 `default_category` refers to the category selected by default when the app is opened. Possible values are defined in the [Wiki](https://github.com/Beastwick18/nyaa/wiki/Category-Values).
