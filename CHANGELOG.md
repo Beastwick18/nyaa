@@ -1,3 +1,29 @@
+# v0.8.0
+## Adds:
+- User-defined custom themes (see [wiki](https://github.com/Beastwick18/nyaa/wiki/User%E2%80%90defined-Themes))
+  - Can be added in `{config path}/themes/`
+- Filter by user
+  - <kbd>u</kbd> in results mode
+- Add nix support (#12) (see [Using nix (flakes)](https://github.com/Beastwick18/nyaa#using-nix-flakes))
+- Batch download
+  - <kbd>Space</kbd> to toggle selection
+  - <kbd>Ctrl</kbd> + <kbd>Space</kbd> select multiple
+  - <kbd>Tab</kbd> to switch between results and batch pane
+  - <kbd>Ctrl</kbd> + <kbd>A</kbd> (while focused on batch pane) to download entire batch
+- Enable/disable individual columns in the result panel (see [wiki](https://github.com/Beastwick18/nyaa/wiki/Enable-Disable-Columns))
+- Proxy requests through custom URL
+  - `request_proxy = "localhost:1234"` in `config.toml`
+- Add separate loading message for each load type
+- Configuration for x11 clipboard:
+```toml
+[clipboard]
+x11_selection = "clipboard" # or primary
+```
+## Fixes:
+- Address compilation error when building on macOS due to unresolved imports specific for Linux systems (#14)
+- Re-add delete key in insert mode as suggested by help menu
+
+
 # v0.7.0
 ## Adds
 - Torrent client support for:
