@@ -1,8 +1,4 @@
 # Download to Folder Configuration
-
-> [!WARNING]
-> These changes are only present on the up-to-date main branch. The latest release `v0.6.3` does not support download clients.
-
 This "client" only downloads the torrent file to a specified directory.
 
 ## Default config

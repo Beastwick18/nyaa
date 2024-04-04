@@ -1,8 +1,4 @@
 # Run Command Configuration
-
-> [!WARNING]
-> These changes are only present on the up-to-date main branch. The latest release `v0.6.3` does not support download clients.
-
 This "client" only runs a command with substitutions on pressing Enter. The valid substitutions are:
 - `{torrent}` - The link to the torrent file hosted on nyaa.si
 - `{magnet}` - The magnet link associated with the torrent

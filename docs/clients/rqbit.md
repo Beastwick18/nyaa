@@ -1,8 +1,4 @@
 # rqbit Configuration
-
-> [!WARNING]
-> These changes are only present on the up-to-date main branch. The latest release `v0.6.3` does not support download clients.
-
 For nyaa to be able to send requests to rqbit, it must be running. You can either start it from the command line with:
 ```sh
 rqbit server start /path/to/Downloads

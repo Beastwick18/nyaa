@@ -1,8 +1,4 @@
 # qBittorrent Configuration
-
-> [!WARNING]
-> These changes are only present on the up-to-date main branch. The latest release `v0.6.3` does not support download clients.
-
 qBittorrent can connect to nyaa via its [WebUI-API](https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-4.1)).
 Currently, only the ability to add torrents is implemented. This is also only intended to work on qBittorrent version >=4.1.
 

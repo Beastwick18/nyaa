@@ -1,8 +1,4 @@
 # Transmission Configuration
-
-> [!WARNING]
-> These changes are only present on the up-to-date main branch. The latest release `v0.6.3` does not support download clients.
-
 For nyaa to be able to send requests to Transmission, remote control must be enabled. Depending on which version of Transmission you have installed, the process may be different.
 
 ## Enabling Remote Control
