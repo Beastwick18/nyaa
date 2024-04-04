@@ -183,11 +183,8 @@ pub async fn batch_download(
     conf: ClientConfig,
     timeout: u64,
 ) -> Result<String, String> {
-    let qbit = match conf.qbit.clone() {
-        Some(q) => q,
-        None => {
-            return Err("Failed to get qBittorrent config".to_owned());
-        }
+    let Some(qbit) = conf.qbit.to_owned() else {
+        return Err("Failed to get qBittorrent config".to_owned());
     };
     if let Some(labels) = qbit.tags.clone() {
         if let Some(bad) = labels.iter().find(|l| l.contains(',')) {
@@ -198,9 +195,7 @@ pub async fn batch_download(
     let timeout = Duration::from_secs(timeout);
     let sid = match login(&qbit, timeout).await {
         Ok(s) => s,
-        Err(e) => {
-            return Err(format!("Failed to get SID:\n{}", e));
-        }
+        Err(e) => return Err(format!("Failed to get SID:\n{}", e)),
     };
     let links = match qbit.use_magnet.unwrap_or(true) {
         true => items
@@ -214,8 +209,9 @@ pub async fn batch_download(
             .collect::<Vec<String>>()
             .join("\n"),
     };
-    let Ok(res) = add_torrent(&qbit, sid.to_owned(), links, timeout).await else {
-        return Err("Failed to get response".to_owned());
+    let res = match add_torrent(&qbit, sid.to_owned(), links, timeout).await {
+        Ok(res) => res,
+        Err(e) => return Err(format!("Failed to get response:\n{}", e)),
     };
     if res.status() != StatusCode::OK {
         return Err(format!(

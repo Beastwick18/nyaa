@@ -94,11 +94,8 @@ pub fn load_config(app: &mut Context) {
 }
 
 pub async fn download(item: Item, conf: ClientConfig, timeout: u64) -> Result<String, String> {
-    let conf = match conf.transmission.clone() {
-        Some(c) => c,
-        None => {
-            return Err("Failed to get configuration for transmission".to_owned());
-        }
+    let Some(conf) = conf.transmission.clone() else {
+        return Err("Failed to get configuration for transmission".to_owned());
     };
 
     if let Some(labels) = conf.labels.clone() {
