@@ -8,8 +8,8 @@
 - Batch download
   - <kbd>Space</kbd> to toggle selection
   - <kbd>Ctrl</kbd> + <kbd>Space</kbd> select multiple
-  - <kbd>Tab</kbd> to switch between results and batch pane
-  - <kbd>Ctrl</kbd> + <kbd>A</kbd> (while focused on batch pane) to download entire batch
+  - <kbd>Tab</kbd> to switch between results and batch panel
+  - <kbd>Ctrl</kbd> + <kbd>A</kbd> (while focused on batch panel) to download entire batch
 - Enable/disable individual columns in the result panel (see [wiki](https://github.com/Beastwick18/nyaa/wiki/Enable-Disable-Columns))
 - Proxy requests through custom URL
   - `request_proxy = "localhost:1234"` in `config.toml`
