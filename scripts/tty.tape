@@ -7,7 +7,7 @@ Set Height 720
 Set Shell zsh
 Set TypingSpeed 100ms
 Set Padding 10
-Set Theme "tokyonight"
+Set Theme "Dracula"
 
 Hide
 Type@0ms "clear"
@@ -78,6 +78,21 @@ Sleep 1s
 Type "j"
 Sleep 1s
 Enter
+Sleep 2s
+
+Type@500ms " "
+Sleep 500ms
+Type@500ms "jj"
+Type@500ms " "
+Type@500ms "jj"
+Type@500ms " "
+Sleep 1s
+Tab
+Sleep 500ms
+Type@500ms "jj"
+Type@500ms "kk"
+Sleep 1s
+Tab
 Sleep 2s
 
 Type "t"
