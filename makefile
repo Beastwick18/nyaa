@@ -28,11 +28,11 @@ deb:
 	@echo Go grab a coffee...
 	docker stop nyaa-deb || true
 	docker rm nyaa-deb || true
-	VERSION=$(VERSION) docker compose up
+	cd scripts; VERSION=$(VERSION) docker compose up
 	cp "scripts/docker-deb/nyaa-$(VERSION)-x86_64.deb" "release/$(VERSION)/"
 
 gh:
-	$(shell ./scripts/notes.sh) | gh release create v$(VERSION) release/$(VERSION)/* --draft -F - --title v$(VERSION) --latest
+	gh release create v$(VERSION) release/$(VERSION)/* --draft --title v$(VERSION) --latest
 
 changelog:
 	@echo "Adds:"
