@@ -103,10 +103,6 @@ macro_rules! title {
             $($arg,)*
             " ".into(),
         ];
-        // let res = std::fmt::format(format_args!($($arg)*));
-        // let res = format!(" {} ", format!($($arg)*));
-        // let res = format!("{} {} {}", ratatui::symbols::line::VERTICAL_LEFT, res, ratatui::symbols::line::VERTICAL_RIGHT);
-        // let res = format!("{} {} {}", ratatui::symbols::line::VERTICAL_LEFT, format!($($arg)*), ratatui::symbols::line::VERTICAL_RIGHT);
         res
     }};
 }
@@ -136,14 +132,17 @@ macro_rules! raw {
 #[macro_export]
 macro_rules! cond_vec {
     ($($cond:expr => $x:expr),+ $(,)?) => {{
-            let mut v = vec![];
-            $(if $cond { v.push($x); })*
-            v
+        let v = vec![$(($cond, $x)),*].iter().filter_map(|(c, x)| {
+            if *c { Some(x.to_owned()) } else { None }
+        }).collect::<Vec<_>>();
+        v
     }};
     ($cond:expr ; $x:expr) => {{
-            let v = $cond.iter().zip($x).filter_map(|(c, val)| {
-                if *c { Some(val.to_owned()) } else { None }
-            }).collect::<Vec<_>>();
-            v
+        let v = $cond
+            .iter()
+            .zip($x)
+            .filter_map(|(c, val)| if *c { Some(val.to_owned()) } else { None })
+            .collect::<Vec<_>>();
+        v
     }};
 }

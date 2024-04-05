@@ -1,4 +1,5 @@
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+use human_bytes::human_bytes;
 use ratatui::{
     layout::{Constraint, Margin, Rect},
     style::{Style, Stylize},
@@ -61,7 +62,8 @@ impl super::Widget for BatchWidget {
             );
         }
 
-        let right_str = format!("Total: {}", ctx.batch.len());
+        let size = human_bytes(ctx.batch.iter().fold(0, |acc, i| acc + i.bytes) as f64);
+        let right_str = title!("Size({}): {}", ctx.batch.len(), size);
         let text = Paragraph::new(right_str.clone());
         let right = Rect::new(
             area.right() - 1 - right_str.width() as u16,

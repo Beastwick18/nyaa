@@ -98,12 +98,12 @@ impl Default for ResultsWidget {
     }
 }
 
-fn shorten_number(mut n: u32) -> String {
+fn shorten_number(n: u32) -> String {
     if n >= 10000 {
-        n /= 1000;
-        return n.to_string() + "K";
+        format!("{}K", n / 1000)
+    } else {
+        n.to_string()
     }
-    n.to_string()
 }
 
 impl super::Widget for ResultsWidget {
@@ -259,9 +259,8 @@ impl super::Widget for ResultsWidget {
         }
 
         let right_str = title!(
-            "D:{}{}S:{}",
+            "dl: {}, src: {}",
             ctx.client.to_string(),
-            symbols::line::HORIZONTAL,
             ctx.src.to_string()
         );
         if area.right() > right_str.width() as u16 {
