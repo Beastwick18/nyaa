@@ -15,6 +15,7 @@ mod config;
 mod macros;
 mod source;
 mod theme;
+mod util;
 mod widget;
 
 #[tokio::main()]

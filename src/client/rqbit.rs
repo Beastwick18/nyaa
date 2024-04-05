@@ -4,10 +4,7 @@ use reqwest::{Response, StatusCode, Url};
 use serde::{Deserialize, Serialize};
 use urlencoding::encode;
 
-use crate::{
-    app::Context,
-    source::{add_protocol, Item},
-};
+use crate::{app::Context, source::Item, util::add_protocol};
 
 use super::ClientConfig;
 

@@ -7,10 +7,11 @@ use urlencoding::encode;
 
 use crate::{
     app::{Context, Widgets},
+    util::to_bytes,
     widget::{category::CatEntry, sort::Sort},
 };
 
-use super::{add_protocol, nyaa_html::to_bytes, Item, ItemType, Source};
+use super::{add_protocol, Item, ItemType, Source};
 
 pub struct NyaaRssSource;
 

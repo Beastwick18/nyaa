@@ -66,20 +66,20 @@ pub enum Mode {
 impl ToString for Mode {
     fn to_string(&self) -> String {
         match self {
-            Mode::Normal | Mode::KeyCombo(_) => "Normal".to_string(),
-            Mode::Batch => "Batch".to_string(),
-            Mode::Search => "Search".to_string(),
-            Mode::Category => "Category".to_string(),
-            Mode::Sort(_) => "Sort".to_string(),
-            Mode::Filter => "Filter".to_string(),
-            Mode::Theme => "Theme".to_string(),
-            Mode::Sources => "Sources".to_string(),
-            Mode::Clients => "Clients".to_string(),
-            Mode::Loading(_) => "Loading".to_string(),
-            Mode::Error => "Error".to_string(),
+            Mode::Normal | Mode::KeyCombo(_) => "Normal".to_owned(),
+            Mode::Batch => "Batch".to_owned(),
+            Mode::Search => "Search".to_owned(),
+            Mode::Category => "Category".to_owned(),
+            Mode::Sort(_) => "Sort".to_owned(),
+            Mode::Filter => "Filter".to_owned(),
+            Mode::Theme => "Theme".to_owned(),
+            Mode::Sources => "Sources".to_owned(),
+            Mode::Clients => "Clients".to_owned(),
+            Mode::Loading(_) => "Loading".to_owned(),
+            Mode::Error => "Error".to_owned(),
             Mode::Page => "Page".to_owned(),
             Mode::User => "User".to_owned(),
-            Mode::Help => "Help".to_string(),
+            Mode::Help => "Help".to_owned(),
         }
     }
 }
@@ -104,6 +104,7 @@ pub struct Context {
     pub src: Sources,
     pub client: Client,
     pub batch: Vec<Item>,
+    pub last_key: String,
     should_quit: bool,
 }
 
@@ -111,6 +112,7 @@ impl Context {
     pub fn show_error<S: ToString>(&mut self, error: S) {
         self.errors.push_back(error.to_string());
     }
+
     pub fn notify<S: ToString>(&mut self, notification: S) {
         self.notification = Some(notification.to_string());
     }
@@ -138,6 +140,7 @@ impl Default for Context {
             src: Sources::NyaaHtml,
             client: Client::Cmd,
             batch: vec![],
+            last_key: "".to_owned(),
             should_quit: false,
         }
     }

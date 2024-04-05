@@ -7,27 +7,13 @@ use urlencoding::encode;
 
 use crate::{
     app::{Context, Widgets},
+    util::to_bytes,
     widget::category::CatEntry,
 };
 
 use super::{add_protocol, Item, ItemType, Source};
 
 pub struct NyaaHtmlSource;
-
-pub fn to_bytes(size: &str) -> usize {
-    let mut split = size.split_whitespace();
-    let b = split.next().unwrap_or("0");
-    let unit = split.last().unwrap_or("B");
-    let f = b.parse::<f64>().unwrap_or(0.0);
-    let power = match unit.chars().next().unwrap_or('B') {
-        'T' => 4,
-        'G' => 3,
-        'M' => 2,
-        'K' => 1,
-        _ => 0,
-    };
-    (1024_f64.powi(power) * f) as usize
-}
 
 fn inner(e: ElementRef, s: &Selector, default: &str) -> String {
     e.select(s)

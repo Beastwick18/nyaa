@@ -17,6 +17,7 @@ use crate::{
     cond_vec,
     source::{Item, ItemType},
     title,
+    util::shorten_number,
     widget::sort::SortDir,
 };
 
@@ -95,14 +96,6 @@ impl Default for ResultsWidget {
             raw_date_width: 4,
             control_space: false,
         }
-    }
-}
-
-fn shorten_number(n: u32) -> String {
-    if n >= 10000 {
-        format!("{}K", n / 1000)
-    } else {
-        n.to_string()
     }
 }
 

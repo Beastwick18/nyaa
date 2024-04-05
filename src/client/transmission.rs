@@ -7,10 +7,7 @@ use transmission_rpc::{
     TransClient,
 };
 
-use crate::{
-    app::Context,
-    source::{add_protocol, Item},
-};
+use crate::{app::Context, source::Item, util::add_protocol};
 
 use super::ClientConfig;
 
