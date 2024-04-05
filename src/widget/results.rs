@@ -177,7 +177,7 @@ impl super::Widget for ResultsWidget {
                     LoadType::Batching => "Downloading batch…",
                     LoadType::Downloading => "Downloading…",
                 };
-                let load_area = centered_rect(message.len() as u16, 1, size);
+                let load_area = centered_rect(message.len() as u16, 1, area);
                 Paragraph::new(message).render(load_area, buf);
                 vec![]
             }
