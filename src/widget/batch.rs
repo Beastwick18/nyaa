@@ -9,6 +9,7 @@ use unicode_width::UnicodeWidthStr as _;
 
 use crate::{
     app::{Context, LoadType, Mode},
+    source::ItemType,
     title,
 };
 
@@ -34,12 +35,10 @@ impl super::Widget for BatchWidget {
             .batch
             .iter()
             .map(|i| {
-                Row::new([i.title.to_owned()]).fg(if i.trusted {
-                    ctx.theme.trusted
-                } else if i.remake {
-                    ctx.theme.remake
-                } else {
-                    ctx.theme.fg
+                Row::new([i.title.to_owned()]).fg(match i.item_type {
+                    ItemType::Trusted => ctx.theme.trusted,
+                    ItemType::Remake => ctx.theme.remake,
+                    ItemType::None => ctx.theme.fg,
                 })
             })
             .collect::<Vec<Row>>();

@@ -10,7 +10,7 @@ use crate::{
     widget::{category::CatEntry, sort::Sort},
 };
 
-use super::{add_protocol, nyaa_html::to_bytes, Item, Source};
+use super::{add_protocol, nyaa_html::to_bytes, Item, ItemType, Source};
 
 pub struct NyaaRssSource;
 
@@ -101,6 +101,13 @@ impl Source for NyaaRssSource {
                     .join(&format!("/download/{}.torrent", id))
                     .map(|u| u.to_string())
                     .unwrap_or("null".to_owned());
+                let trusted = get_ext_value::<String>(ext, "trusted").eq("Yes");
+                let remake = get_ext_value::<String>(ext, "remake").eq("Yes");
+                let item_type = match (trusted, remake) {
+                    (true, _) => ItemType::Trusted,
+                    (_, true) => ItemType::Remake,
+                    _ => ItemType::None,
+                };
 
                 Some(Item {
                     id: id_usize,
@@ -115,8 +122,7 @@ impl Source for NyaaRssSource {
                     magnet_link: item.link().unwrap_or("???").to_owned(),
                     post_link: post,
                     file_name: format!("{}.torrent", id),
-                    trusted: get_ext_value::<String>(ext, "trusted").eq("Yes"),
-                    remake: get_ext_value::<String>(ext, "remake").eq("Yes"),
+                    item_type,
                     category,
                     icon,
                 })

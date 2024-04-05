@@ -39,6 +39,13 @@ pub fn request_client(ctx: &Context) -> Result<reqwest::Client, reqwest::Error> 
     client.build()
 }
 
+#[derive(Clone, Copy)]
+pub enum ItemType {
+    Trusted,
+    Remake,
+    None,
+}
+
 #[derive(Clone)]
 pub struct Item {
     pub id: usize,
@@ -55,8 +62,7 @@ pub struct Item {
     pub file_name: String,
     pub category: usize,
     pub icon: CatIcon,
-    pub trusted: bool,
-    pub remake: bool,
+    pub item_type: ItemType,
 }
 
 popup_enum! {

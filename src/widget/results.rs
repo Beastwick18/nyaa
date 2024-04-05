@@ -15,7 +15,7 @@ use unicode_width::UnicodeWidthStr;
 use crate::{
     app::{Context, LoadType, Mode},
     cond_vec,
-    source::Item,
+    source::{Item, ItemType},
     title,
     widget::sort::SortDir,
 };
@@ -188,13 +188,10 @@ impl super::Widget for ResultsWidget {
                 .map(|item| {
                     Row::new(cond_vec!(cols ; [
                         item.icon.label.fg(item.icon.color),
-                            item.title.to_owned().fg(
-                            if item.trusted {
-                                ctx.theme.trusted
-                            } else if item.remake {
-                                ctx.theme.remake
-                            } else {
-                                ctx.theme.fg
+                            item.title.to_owned().fg(match item.item_type {
+                                ItemType::Trusted => ctx.theme.trusted,
+                                ItemType::Remake => ctx.theme.remake,
+                                ItemType::None => ctx.theme.fg,
                             }),
                         format!("{:>9}", item.size).into(),
                         format!("{:<14}", item.date).into(),

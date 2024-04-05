@@ -10,7 +10,7 @@ use crate::{
     widget::category::CatEntry,
 };
 
-use super::{add_protocol, Item, Source};
+use super::{add_protocol, Item, ItemType, Source};
 
 pub struct NyaaHtmlSource;
 
@@ -152,6 +152,14 @@ impl Source for NyaaHtmlSource {
                     .map(|url| url.to_string())
                     .unwrap_or("null".to_owned());
 
+                let trusted = e.value().classes().any(|e| e == "success");
+                let remake = e.value().classes().any(|e| e == "danger");
+                let item_type = match (trusted, remake) {
+                    (true, _) => ItemType::Trusted,
+                    (_, true) => ItemType::Remake,
+                    _ => ItemType::None,
+                };
+
                 Some(Item {
                     id,
                     date,
@@ -167,8 +175,7 @@ impl Source for NyaaHtmlSource {
                     file_name: file_name.to_owned(),
                     category,
                     icon,
-                    trusted: e.value().classes().any(|e| e == "success"),
-                    remake: e.value().classes().any(|e| e == "danger"),
+                    item_type,
                 })
             })
             .collect())
