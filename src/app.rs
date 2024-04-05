@@ -233,7 +233,10 @@ impl App {
         .split(f.size());
         let layout_horizontal = Layout::new(
             Direction::Horizontal,
-            [Constraint::Ratio(3, 4), Constraint::Ratio(1, 4)],
+            match ctx.mode {
+                Mode::Batch => [Constraint::Ratio(1, 2), Constraint::Ratio(1, 2)],
+                _ => [Constraint::Ratio(3, 4), Constraint::Ratio(1, 4)],
+            },
         )
         .split(layout_vertical[1]);
 
