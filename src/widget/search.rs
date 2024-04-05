@@ -48,17 +48,9 @@ impl super::Widget for SearchWidget {
             " for help".into();
         ));
         if area.right() as usize >= help_title.width() {
+            let width = help_title.width() as u16;
+            let right = Rect::new(area.right() - 1 - width, area.top(), width, 1);
             let text = Paragraph::new(help_title);
-            // let text = Paragraph::new(Line::from(vec![
-            //     format!("{}", symbols::line::TOP_RIGHT).into(),
-            //     "Press ".into(),
-            //     "F1".bold(),
-            //     " or ".into(),
-            //     "?".bold(),
-            //     " for help".into(),
-            //     format!("{}", symbols::line::TOP_LEFT).into(),
-            // ]));
-            let right = Rect::new(area.right() - 23, area.top(), 23, 1);
             text.render(right, buf);
         }
 
