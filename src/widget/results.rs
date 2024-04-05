@@ -267,8 +267,9 @@ impl super::Widget for ResultsWidget {
             f.render_widget(text, right);
         }
 
-        if let Mode::KeyCombo(keys) = ctx.mode.to_owned() {
-            let b_right_str = title!(keys.into_iter().collect::<String>());
+        // if let Mode::KeyCombo(keys) = ctx.mode.to_owned() {
+        if ctx.last_key.len() > 0 {
+            let b_right_str = title!(ctx.last_key);
             if area.right() > b_right_str.width() as u16 {
                 let text = Paragraph::new(b_right_str.clone());
                 let right = Rect::new(
@@ -280,6 +281,7 @@ impl super::Widget for ResultsWidget {
                 f.render_widget(text, right);
             }
         }
+        // }
 
         if let Some(bottom_str) = ctx.notification.clone() {
             if area.right() >= 2 {

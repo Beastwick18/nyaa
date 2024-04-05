@@ -14,6 +14,7 @@ use crate::{
     config::Config,
     source::{Item, Sources},
     theme::{self, Theme},
+    util::key_to_string,
     widget::{
         batch::BatchWidget,
         category::CategoryPopup,
@@ -267,6 +268,20 @@ impl App {
     }
 
     fn on(&mut self, evt: &Event, w: &mut Widgets, ctx: &mut Context) {
+        if let Event::Key(KeyEvent {
+            code,
+            kind: KeyEventKind::Press,
+            modifiers,
+            ..
+        }) = evt
+        {
+            match ctx.mode.to_owned() {
+                Mode::KeyCombo(keys) => {
+                    ctx.last_key = keys.into_iter().collect::<String>();
+                }
+                _ => ctx.last_key = key_to_string(*code, *modifiers),
+            };
+        }
         match ctx.mode.to_owned() {
             Mode::Category => w.category.handle_event(ctx, evt),
             Mode::Sort(_) => w.sort.handle_event(ctx, evt),
@@ -373,7 +388,8 @@ impl App {
                     ),
                 }
             }
-            _ => ctx.mode = Mode::KeyCombo(keys),
+            _ => ctx.mode = Mode::KeyCombo(keys.to_owned()),
         }
+        ctx.last_key = keys.into_iter().collect();
     }
 }
