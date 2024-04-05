@@ -8,7 +8,7 @@ use ratatui::{
 use crate::{
     app::{Context, Mode},
     client::Client,
-    style,
+    style, title,
 };
 
 use super::{border_block, EnumIter, StatefulTable, Widget};
@@ -38,7 +38,7 @@ impl Widget for ClientsPopup {
         });
         super::clear(clear, buf, ctx.theme.bg);
         let table = Table::new(items, [Constraint::Percentage(100)])
-            .block(border_block(&ctx.theme, true).title("Download Client"))
+            .block(border_block(&ctx.theme, true).title(title!("Download Client")))
             .highlight_style(style!(bg:ctx.theme.hl_bg));
         table.render(center, buf, &mut self.table.state);
     }

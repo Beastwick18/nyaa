@@ -10,7 +10,7 @@ use ratatui::{
 
 use crate::{
     app::{Context, Mode},
-    style,
+    style, title,
 };
 
 use super::{border_block, StatefulTable, Widget};
@@ -70,7 +70,7 @@ impl Widget for HelpPopup {
         let table = Table::new(items, [Constraint::Percentage(100)])
             .block(
                 border_block(&ctx.theme, true)
-                    .title(format!("Help: {}", self.prev_mode.to_string())),
+                    .title(title!("Help: {}", self.prev_mode.to_string())),
             )
             .header(header)
             .widths(Constraint::from_lengths([key_min, 1, map_min]))

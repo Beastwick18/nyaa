@@ -122,7 +122,6 @@ impl Default for Theme {
             solid_fg: Color::Black,
             trusted: Color::Green,
             remake: Color::Red,
-            // warning: Color::Yellow,
         }
     }
 }
@@ -148,7 +147,6 @@ pub fn default_themes() -> IndexMap<String, Theme> {
             solid_bg: Color::Rgb(139, 233, 253),
             trusted: Color::Rgb(80, 250, 123),
             remake: Color::Rgb(255, 85, 85),
-            // warning: Color::Rgb(255, 255, 129),
         },
         "Gruvbox".to_owned() => Theme {
             name: "Gruvbox".to_owned(),
@@ -162,7 +160,6 @@ pub fn default_themes() -> IndexMap<String, Theme> {
             solid_fg: Color::Rgb(235, 219, 178),
             trusted: Color::Rgb(152, 151, 26),
             remake: Color::Rgb(204, 36, 29),
-            // warning: Color::Rgb(250, 189, 47),
         },
         "Catppuccin Macchiato".to_owned() => Theme {
             name: "Catppuccin Macchiato".to_owned(),
@@ -176,7 +173,6 @@ pub fn default_themes() -> IndexMap<String, Theme> {
             solid_fg: Color::Rgb(24, 25, 38),
             trusted: Color::Rgb(166, 218, 149),
             remake: Color::Rgb(237, 135, 150),
-            // warning: Color::Rgb(238, 212, 159),
         },
     ]
 }

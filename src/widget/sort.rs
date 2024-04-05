@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     app::{Context, LoadType, Mode},
-    popup_enum, style,
+    popup_enum, style, title,
 };
 
 use super::{border_block, EnumIter, StatefulTable, Widget};
@@ -66,12 +66,12 @@ impl Widget for SortPopup {
             }])
         });
         let table = Table::new(items, [Constraint::Percentage(100)])
-            .block(border_block(&ctx.theme, true).title(
-                match ctx.mode == Mode::Sort(SortDir::Asc) {
-                    true => "Sort Ascending",
-                    false => "Sort Descending",
-                },
-            ))
+            .block(border_block(&ctx.theme, true).title(title!(match ctx.mode
+                == Mode::Sort(SortDir::Asc)
+            {
+                true => "Sort Ascending",
+                false => "Sort Descending",
+            })))
             .highlight_style(style!(bg:ctx.theme.hl_bg));
         super::clear(clear, buf, ctx.theme.bg);
         table.render(center, buf, &mut self.table.state);

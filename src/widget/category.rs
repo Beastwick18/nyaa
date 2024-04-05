@@ -9,7 +9,7 @@ use ratatui::{
 
 use crate::{
     app::{Context, LoadType, Mode},
-    categories, style,
+    categories, style, title,
 };
 
 use super::{border_block, Widget};
@@ -190,7 +190,7 @@ impl Widget for CategoryPopup {
             let clear = super::centered_rect(center.width + 2, center.height, area);
             super::clear(clear, f.buffer_mut(), ctx.theme.bg);
             Table::new(tbl, [Constraint::Percentage(100)])
-                .block(border_block(&ctx.theme, true).title("Category"))
+                .block(border_block(&ctx.theme, true).title(title!("Category")))
                 .render(center, f.buffer_mut());
         }
     }

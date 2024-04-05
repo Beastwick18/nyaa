@@ -72,15 +72,43 @@ macro_rules! popup_enum {
 macro_rules! style {
     (
         $($method:ident$(:$value:expr)?),* $(,)?
-    ) => {
-        {
+    ) => {{
             #[allow(unused_imports)]
             use ratatui::style::Stylize;
+
             let style = ratatui::style::Style::new()
                 $(.$method($($value)?))?;
             style
-        }
-    };
+    }};
+}
+
+#[macro_export]
+macro_rules! title {
+    // Single input
+    ($arg:expr) => {{
+        let res = format!(" {} ", $arg);
+        res
+    }};
+
+    // format-like
+    ($($arg:expr),*$(,)?) => {{
+        let res = format!(" {} ", format!($($arg),*));
+        res
+    }};
+
+    // vec-like
+    ($($arg:expr);*$(;)?) => {{
+        let res = vec![
+            " ".into(),
+            $($arg,)*
+            " ".into(),
+        ];
+        // let res = std::fmt::format(format_args!($($arg)*));
+        // let res = format!(" {} ", format!($($arg)*));
+        // let res = format!("{} {} {}", ratatui::symbols::line::VERTICAL_LEFT, res, ratatui::symbols::line::VERTICAL_RIGHT);
+        // let res = format!("{} {} {}", ratatui::symbols::line::VERTICAL_LEFT, format!($($arg)*), ratatui::symbols::line::VERTICAL_RIGHT);
+        res
+    }};
 }
 
 #[macro_export]
@@ -107,22 +135,15 @@ macro_rules! raw {
 
 #[macro_export]
 macro_rules! cond_vec {
-    ($($cond:expr => $x:expr),+ $(,)?) => {
-        {
+    ($($cond:expr => $x:expr),+ $(,)?) => {{
             let mut v = vec![];
             $(if $cond { v.push($x); })*
             v
-        }
-    };
-    ($cond:expr ; $x:expr) => {
-        {
-            let mut v = vec![];
-            for (c, val) in $cond.iter().zip($x) {
-                if *c {
-                    v.push(val.to_owned());
-                }
-            }
+    }};
+    ($cond:expr ; $x:expr) => {{
+            let v = $cond.iter().zip($x).filter_map(|(c, val)| {
+                if *c { Some(val.to_owned()) } else { None }
+            }).collect::<Vec<_>>();
             v
-        }
-    };
+    }};
 }

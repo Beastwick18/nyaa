@@ -16,6 +16,7 @@ use crate::{
     app::{Context, LoadType, Mode},
     cond_vec,
     source::Item,
+    title,
     widget::sort::SortDir,
 };
 
@@ -219,13 +220,13 @@ impl super::Widget for ResultsWidget {
         let focused = matches!(ctx.mode, Mode::Normal | Mode::KeyCombo(_));
         let table = Table::new(items, binding)
             .header(header)
-            .block(border_block(&ctx.theme, focused).title(format!(
+            .block(border_block(&ctx.theme, focused).title(title!(
                 "Results {}-{} ({} total): Page {}/{}",
                 first_item + 1,
                 num_items + first_item,
                 ctx.total_results,
                 ctx.page,
-                ctx.last_page
+                ctx.last_page,
             )))
             .highlight_style(Style::default().bg(ctx.theme.hl_bg));
         StatefulWidget::render(table, area, buf, &mut self.table.state);
@@ -260,7 +261,12 @@ impl super::Widget for ResultsWidget {
             para.render(pararea, buf);
         }
 
-        let right_str = format!("D:{}─S:{}", ctx.client.to_string(), ctx.src.to_string());
+        let right_str = title!(
+            "D:{}{}S:{}",
+            ctx.client.to_string(),
+            symbols::line::HORIZONTAL,
+            ctx.src.to_string()
+        );
         if area.right() > right_str.width() as u16 {
             let text = Paragraph::new(right_str.clone());
             let right = Rect::new(
@@ -273,7 +279,7 @@ impl super::Widget for ResultsWidget {
         }
 
         if let Mode::KeyCombo(keys) = ctx.mode.to_owned() {
-            let b_right_str: String = keys.into_iter().collect();
+            let b_right_str = title!(keys.into_iter().collect::<String>());
             if area.right() > b_right_str.width() as u16 {
                 let text = Paragraph::new(b_right_str.clone());
                 let right = Rect::new(
@@ -287,10 +293,13 @@ impl super::Widget for ResultsWidget {
         }
 
         if let Some(bottom_str) = ctx.notification.clone() {
-            let text = Paragraph::new(bottom_str.clone());
-            let minw = std::cmp::min(area.right() - 2, bottom_str.width() as u16);
-            let bottom = Rect::new(area.left() + 1, area.bottom() - 1, minw, 1);
-            f.render_widget(text, bottom);
+            if area.right() >= 2 {
+                let bottom_str = title!(bottom_str);
+                let minw = std::cmp::min(area.right() - 2, bottom_str.width() as u16);
+                let bottom = Rect::new(area.left() + 1, area.bottom() - 1, minw, 1);
+                let text = Paragraph::new(bottom_str);
+                f.render_widget(text, bottom);
+            }
         }
     }
 

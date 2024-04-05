@@ -8,7 +8,10 @@ use ratatui::{
     Frame,
 };
 
-use crate::app::{Context, Mode};
+use crate::{
+    app::{Context, Mode},
+    title,
+};
 
 use super::{border_block, Widget};
 
@@ -47,7 +50,7 @@ impl Widget for ErrorPopup {
             .block(
                 border_block(&ctx.theme, true)
                     .fg(ctx.theme.remake)
-                    .title(format!(
+                    .title(title!(
                         "Error ({}): Press any key to dismiss",
                         ctx.errors.len() + 1
                     )),

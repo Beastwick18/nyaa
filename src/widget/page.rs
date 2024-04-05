@@ -1,6 +1,9 @@
 use std::cmp::{max, min};
 
-use crate::app::{Context, LoadType, Mode};
+use crate::{
+    app::{Context, LoadType, Mode},
+    title,
+};
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     layout::{Margin, Rect},
@@ -33,7 +36,7 @@ impl Widget for PagePopup {
         let clear = super::centered_rect(center.width + 2, center.height, area);
         let page_p = Paragraph::new(self.input.input.clone());
         let indicator =
-            Paragraph::new(">").block(border_block(&ctx.theme, true).title("Goto Page"));
+            Paragraph::new(">").block(border_block(&ctx.theme, true).title(title!("Goto Page")));
         super::clear(clear, buf, ctx.theme.bg);
         indicator.render(center, buf);
 

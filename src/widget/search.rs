@@ -7,7 +7,10 @@ use ratatui::{
     Frame,
 };
 
-use crate::app::{Context, LoadType, Mode};
+use crate::{
+    app::{Context, LoadType, Mode},
+    title,
+};
 
 use super::{
     border_block,
@@ -29,7 +32,7 @@ impl Default for SearchWidget {
 impl super::Widget for SearchWidget {
     fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
         let buf = f.buffer_mut();
-        let block = border_block(&ctx.theme, ctx.mode == Mode::Search).title("Search");
+        let block = border_block(&ctx.theme, ctx.mode == Mode::Search).title(title!("Search"));
         Clear.render(area, buf);
         block.render(area, buf);
         let input_area = area.inner(&Margin {
@@ -37,14 +40,24 @@ impl super::Widget for SearchWidget {
             horizontal: 1,
         });
 
-        if area.right() >= 23 {
-            let text = Paragraph::new(Line::from(vec![
-                "Press ".into(),
-                "F1".bold(),
-                " or ".into(),
-                "?".bold(),
-                " for help".into(),
-            ]));
+        let help_title = Line::from(title!(
+            "Press ".into();
+            "F1".bold();
+            " or ".into();
+            "?".bold();
+            " for help".into();
+        ));
+        if area.right() as usize >= help_title.width() {
+            let text = Paragraph::new(help_title);
+            // let text = Paragraph::new(Line::from(vec![
+            //     format!("{}", symbols::line::TOP_RIGHT).into(),
+            //     "Press ".into(),
+            //     "F1".bold(),
+            //     " or ".into(),
+            //     "?".bold(),
+            //     " for help".into(),
+            //     format!("{}", symbols::line::TOP_LEFT).into(),
+            // ]));
             let right = Rect::new(area.right() - 23, area.top(), 23, 1);
             text.render(right, buf);
         }

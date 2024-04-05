@@ -7,7 +7,10 @@ use ratatui::{
 };
 use unicode_width::UnicodeWidthStr as _;
 
-use crate::app::{Context, LoadType, Mode};
+use crate::{
+    app::{Context, LoadType, Mode},
+    title,
+};
 
 use super::{border_block, VirtualStatefulTable};
 
@@ -26,7 +29,7 @@ impl Default for BatchWidget {
 impl super::Widget for BatchWidget {
     fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
         let buf = f.buffer_mut();
-        let block = border_block(&ctx.theme, ctx.mode == Mode::Batch).title("Batch");
+        let block = border_block(&ctx.theme, ctx.mode == Mode::Batch).title(title!("Batch"));
         let rows = ctx
             .batch
             .iter()

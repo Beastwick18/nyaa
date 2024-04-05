@@ -9,7 +9,7 @@ use ratatui::{
 
 use crate::{
     app::{Context, Mode},
-    style,
+    style, title,
 };
 
 use super::{border_block, VirtualStatefulTable, Widget};
@@ -44,7 +44,7 @@ impl Widget for ThemePopup {
             ])
         });
         let table = Table::new(items, [Constraint::Percentage(100)])
-            .block(border_block(&ctx.theme, true).title("Theme"))
+            .block(border_block(&ctx.theme, true).title(title!("Theme")))
             .highlight_style(style!(bg:ctx.theme.hl_bg));
         super::clear(clear, buf, ctx.theme.bg);
         table.render(center, buf, &mut self.table.state);
