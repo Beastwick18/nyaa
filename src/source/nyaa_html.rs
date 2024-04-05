@@ -20,13 +20,13 @@ pub fn to_bytes(size: &str) -> usize {
     let unit = split.last().unwrap_or("B");
     let f = b.parse::<f64>().unwrap_or(0.0);
     let power = match unit.chars().next().unwrap_or('B') {
-        'T' => 12,
-        'G' => 9,
-        'M' => 6,
-        'K' => 3,
-        _ => 1,
+        'T' => 4,
+        'G' => 3,
+        'M' => 2,
+        'K' => 1,
+        _ => 0,
     };
-    (f64::powi(10.0, power) * f) as usize
+    (1024_f64.powi(power) * f) as usize
 }
 
 fn inner(e: ElementRef, s: &Selector, default: &str) -> String {
