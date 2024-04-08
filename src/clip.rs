@@ -12,7 +12,8 @@ pub enum X11Selection {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ClipboardConfig {
-    // pub clipboard_cmd: Option<String>,
+    pub cmd: Option<String>,
+    pub shell_cmd: Option<String>,
     pub x11_selection: Option<X11Selection>,
 }
 
@@ -25,13 +26,27 @@ use cli_clipboard::{
 #[cfg(not(target_os = "linux"))]
 use cli_clipboard::ClipboardContext;
 
+use crate::util::CommandBuilder;
+
 pub fn copy_to_clipboard(
     link: String,
-    #[cfg(target_os = "linux")] conf: Option<ClipboardConfig>,
-    #[cfg(not(target_os = "linux"))] _conf: Option<ClipboardConfig>,
+    conf: Option<ClipboardConfig>,
 ) -> Result<(), Box<dyn Error>> {
     #[cfg(target_os = "linux")]
     {
+        if let Some(conf) = conf.clone() {
+            if let Some(cmd) = conf.cmd {
+                // let shell = conf.shell_cmd.unwrap_or(CommandBuilder::default_shell());
+                return match CommandBuilder::new(cmd)
+                    .sub("{content}", &link)
+                    .run(conf.shell_cmd)
+                {
+                    Ok(_) => Ok(()),
+                    Err(e) => Err(e.into()),
+                };
+            }
+        }
+
         let sel = conf
             .and_then(|sel| sel.x11_selection)
             .unwrap_or(X11Selection::Clipboard);

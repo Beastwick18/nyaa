@@ -1,5 +1,70 @@
+use std::{
+    io::{BufReader, Read as _},
+    process::{Command, Stdio},
+};
+
 use crossterm::event::{KeyCode, KeyModifiers, MediaKeyCode, ModifierKeyCode};
 use regex::Regex;
+
+pub struct CommandBuilder {
+    cmd: String,
+}
+
+impl CommandBuilder {
+    pub fn new(cmd: String) -> Self {
+        CommandBuilder { cmd }
+    }
+
+    pub fn sub(&mut self, pattern: &str, sub: &str) -> &mut Self {
+        self.cmd = self.cmd.replace(pattern, sub);
+        self
+    }
+
+    pub fn run<S: Into<Option<String>>>(&self, shell: S) -> Result<String, String> {
+        let shell = Into::<Option<String>>::into(shell).unwrap_or(Self::default_shell());
+        let cmds = shell.split_whitespace().collect::<Vec<&str>>();
+        if let [base_cmd, args @ ..] = cmds.as_slice() {
+            let cmd = Command::new(base_cmd)
+                .args(args)
+                .arg(&self.cmd)
+                .stdin(Stdio::null())
+                .stdout(Stdio::null())
+                .stderr(Stdio::piped())
+                .spawn();
+
+            let child = match cmd {
+                Ok(child) => child,
+                Err(e) => return Err(format!("{}:\nFailed to run:\n{}", self.cmd, e).to_owned()),
+            };
+            let output = match child.wait_with_output() {
+                Ok(output) => output,
+                Err(e) => {
+                    return Err(format!("{}:\nFailed to get output:\n{}", self.cmd, e).to_owned())
+                }
+            };
+
+            if output.status.code() != Some(0) {
+                let mut err = BufReader::new(&*output.stderr);
+                let mut err_str = String::new();
+                err.read_to_string(&mut err_str).unwrap_or(0);
+                return Err(format!(
+                    "{}:\nExited with status code {}:\n{}",
+                    self.cmd, output.status, err_str
+                ));
+            }
+            Ok("Successfully ran command".to_owned())
+        } else {
+            Err(format!("Shell command is not properly formatted:\n{}", shell).to_owned())
+        }
+    }
+
+    pub fn default_shell() -> String {
+        #[cfg(windows)]
+        return "powershell.exe -Command".to_owned();
+        #[cfg(unix)]
+        return "sh -c".to_owned();
+    }
+}
 
 pub fn add_protocol<S: Into<String>>(url: S, default_https: bool) -> String {
     let protocol = match default_https {
@@ -99,8 +164,7 @@ pub fn key_to_string(key: KeyCode, modifier: KeyModifiers) -> String {
             ModifierKeyCode::IsoLevel3Shift => "IsoLevel3Shift".to_owned(),
             ModifierKeyCode::IsoLevel5Shift => "IsoLevel5Shift".to_owned(),
         },
-    }
-    .to_owned();
+    };
     let modifier = match modifier {
         KeyModifiers::CONTROL => "C-",
         KeyModifiers::SHIFT => "S-",
@@ -110,5 +174,5 @@ pub fn key_to_string(key: KeyCode, modifier: KeyModifiers) -> String {
         KeyModifiers::HYPER => "H-",
         _ => "",
     };
-    return format!("<{}{}>", modifier, key);
+    format!("<{}{}>", modifier, key)
 }
