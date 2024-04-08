@@ -1,4 +1,5 @@
 use std::{
+    error::Error,
     io::{BufReader, Read as _},
     process::{Command, Stdio},
 };
@@ -20,7 +21,7 @@ impl CommandBuilder {
         self
     }
 
-    pub fn run<S: Into<Option<String>>>(&self, shell: S) -> Result<String, String> {
+    pub fn run<S: Into<Option<String>>>(&self, shell: S) -> Result<(), Box<dyn Error>> {
         let shell = Into::<Option<String>>::into(shell).unwrap_or(Self::default_shell());
         let cmds = shell.split_whitespace().collect::<Vec<&str>>();
         if let [base_cmd, args @ ..] = cmds.as_slice() {
@@ -34,13 +35,11 @@ impl CommandBuilder {
 
             let child = match cmd {
                 Ok(child) => child,
-                Err(e) => return Err(format!("{}:\nFailed to run:\n{}", self.cmd, e).to_owned()),
+                Err(e) => return Err(format!("{}:\nFailed to run:\n{}", self.cmd, e).into()),
             };
             let output = match child.wait_with_output() {
                 Ok(output) => output,
-                Err(e) => {
-                    return Err(format!("{}:\nFailed to get output:\n{}", self.cmd, e).to_owned())
-                }
+                Err(e) => return Err(format!("{}:\nFailed to get output:\n{}", self.cmd, e).into()),
             };
 
             if output.status.code() != Some(0) {
@@ -50,11 +49,12 @@ impl CommandBuilder {
                 return Err(format!(
                     "{}:\nExited with status code {}:\n{}",
                     self.cmd, output.status, err_str
-                ));
+                )
+                .into());
             }
-            Ok("Successfully ran command".to_owned())
+            Ok(())
         } else {
-            Err(format!("Shell command is not properly formatted:\n{}", shell).to_owned())
+            Err(format!("Shell command is not properly formatted:\n{}", shell).into())
         }
     }
 

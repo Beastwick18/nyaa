@@ -48,58 +48,14 @@ pub async fn download(item: Item, conf: ClientConfig) -> Result<String, String> 
             return Err("Failed to get cmd config".to_owned());
         }
     };
-    CommandBuilder::new(cmd.cmd)
+    match CommandBuilder::new(cmd.cmd)
         .sub("{magnet}", &item.magnet_link)
         .sub("{torrent}", &item.torrent_link)
         .sub("{title}", &item.title)
         .sub("{file}", &item.file_name)
         .run(cmd.shell_cmd)
-    // let cmd_str = cmd
-    //     .cmd
-    //     .replace("{magnet}", &item.magnet_link)
-    //     .replace("{torrent}", &item.torrent_link)
-    //     .replace("{title}", &item.title)
-    //     .replace("{file}", &item.file_name);
-
-    // let cmds = cmd.shell_cmd.split_whitespace().collect::<Vec<&str>>();
-    // if let [base_cmd, args @ ..] = cmds.as_slice() {
-    //     let cmd = Command::new(base_cmd)
-    //         .args(args)
-    //         .arg(&cmd_str)
-    //         .stdin(Stdio::null())
-    //         .stdout(Stdio::null())
-    //         .stderr(Stdio::piped())
-    //         .spawn();
-    //
-    //     let child = match cmd {
-    //         Ok(child) => child,
-    //         Err(e) => {
-    //             return Err(format!("{}:\nFailed to run:\n{}", cmd_str, e).to_owned());
-    //         }
-    //     };
-    //     let output = match child.wait_with_output() {
-    //         Ok(output) => output,
-    //         Err(e) => {
-    //             return Err(format!("{}:\nFailed to get output:\n{}", cmd_str, e).to_owned());
-    //         }
-    //     };
-    //
-    //     if output.status.code() != Some(0) {
-    //         let mut err = BufReader::new(&*output.stderr);
-    //         let mut err_str = String::new();
-    //         err.read_to_string(&mut err_str).unwrap_or(0);
-    //         return Err(format!(
-    //             "{}:\nExited with status code {}:\n{}",
-    //             cmd_str, output.status, err_str
-    //         )
-    //         .to_owned());
-    //     }
-    //     Ok("Successfully ran command".to_owned())
-    // } else {
-    //     Err(format!(
-    //         "Shell command is not properly formatted:\n{}",
-    //         cmd.shell_cmd,
-    //     )
-    //     .to_owned())
-    // }
+    {
+        Ok(_) => Ok("Successfully ran command".to_owned()),
+        Err(e) => Err(e.to_string()),
+    }
 }

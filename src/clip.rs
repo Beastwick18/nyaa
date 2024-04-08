@@ -32,21 +32,21 @@ pub fn copy_to_clipboard(
     link: String,
     conf: Option<ClipboardConfig>,
 ) -> Result<(), Box<dyn Error>> {
+    if let Some(conf) = conf.clone() {
+        if let Some(cmd) = conf.cmd {
+            // let shell = conf.shell_cmd.unwrap_or(CommandBuilder::default_shell());
+            return match CommandBuilder::new(cmd)
+                .sub("{content}", &link)
+                .run(conf.shell_cmd)
+            {
+                Ok(_) => Ok(()),
+                Err(e) => Err(e.into()),
+            };
+        }
+    }
+
     #[cfg(target_os = "linux")]
     {
-        if let Some(conf) = conf.clone() {
-            if let Some(cmd) = conf.cmd {
-                // let shell = conf.shell_cmd.unwrap_or(CommandBuilder::default_shell());
-                return match CommandBuilder::new(cmd)
-                    .sub("{content}", &link)
-                    .run(conf.shell_cmd)
-                {
-                    Ok(_) => Ok(()),
-                    Err(e) => Err(e.into()),
-                };
-            }
-        }
-
         let sel = conf
             .and_then(|sel| sel.x11_selection)
             .unwrap_or(X11Selection::Clipboard);
