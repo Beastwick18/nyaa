@@ -34,14 +34,9 @@ pub fn copy_to_clipboard(
 ) -> Result<(), Box<dyn Error>> {
     if let Some(conf) = conf.clone() {
         if let Some(cmd) = conf.cmd {
-            // let shell = conf.shell_cmd.unwrap_or(CommandBuilder::default_shell());
-            return match CommandBuilder::new(cmd)
+            return CommandBuilder::new(cmd)
                 .sub("{content}", &link)
-                .run(conf.shell_cmd)
-            {
-                Ok(_) => Ok(()),
-                Err(e) => Err(e.into()),
-            };
+                .run(conf.shell_cmd);
         }
     }
 
