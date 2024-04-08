@@ -1,7 +1,5 @@
 use std::error::Error;
 
-use cli_clipboard::ClipboardProvider;
-
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -21,10 +19,11 @@ pub struct ClipboardConfig {
 use cli_clipboard::{
     linux_clipboard::LinuxClipboardContext,
     x11_clipboard::{Clipboard, Primary, X11ClipboardContext},
+    ClipboardProvider as _,
 };
 
 #[cfg(not(target_os = "linux"))]
-use cli_clipboard::ClipboardContext;
+use cli_clipboard::{ClipboardContext, ClipboardProvider};
 
 use crate::util::CommandBuilder;
 
@@ -32,7 +31,7 @@ pub fn copy_to_clipboard(
     link: String,
     conf: Option<ClipboardConfig>,
 ) -> Result<(), Box<dyn Error>> {
-    if let Some(conf) = conf.clone() {
+    if let Some(conf) = conf.to_owned() {
         if let Some(cmd) = conf.cmd {
             return CommandBuilder::new(cmd)
                 .sub("{content}", &link)
@@ -42,43 +41,32 @@ pub fn copy_to_clipboard(
 
     #[cfg(target_os = "linux")]
     {
-        let sel = conf
-            .and_then(|sel| sel.x11_selection)
-            .unwrap_or(X11Selection::Clipboard);
-        if X11Selection::Clipboard == sel {
-            if let Ok(ctx) = &mut X11ClipboardContext::<Clipboard>::new() {
-                if let Err(e) = ctx.set_contents(link.clone()) {
-                    return Err(format!("Failed to copy to \"clipboard\" selection:\n{}", e).into());
-                }
-                return Ok(());
+        match conf.and_then(|sel| sel.x11_selection) {
+            Some(X11Selection::Primary) => {
+                return X11ClipboardContext::<Primary>::new()
+                    .map_err(|e| format!("Failed to get context \"primary\" selection:\n{}", e))?
+                    .set_contents(link)
+                    .map_err(|e| format!("Failed to copy to clipboard:\n{}", e).into());
             }
-        } else if X11Selection::Primary == sel {
-            if let Ok(ctx) = &mut X11ClipboardContext::<Primary>::new() {
-                if let Err(e) = ctx.set_contents(link.clone()) {
-                    return Err(format!("Failed to copy to \"primary\" selection:\n{}", e).into());
-                }
-                return Ok(());
+            Some(X11Selection::Clipboard) => {
+                return X11ClipboardContext::<Clipboard>::new()
+                    .map_err(|e| format!("Failed to get context \"clipboard\" selection:\n{}", e))?
+                    .set_contents(link)
+                    .map_err(|e| format!("Failed to copy to clipboard:\n{}", e).into());
             }
+            _ => {}
         }
-        if let Ok(ctx) = &mut LinuxClipboardContext::new() {
-            if let Err(e) = ctx.set_contents(link.clone()) {
-                return Err(format!("Failed to copy to clipboard:\n{}", e).into());
-            }
-        } else {
-            return Err("Failed to copy to linux clipboard".into());
-        }
+
+        LinuxClipboardContext::new()
+            .map_err(|e| format!("Failed to get linux clipboard context:\n{}", e))?
+            .set_contents(link)
+            .map_err(|e| format!("Failed to copy to clipboard:\n{}", e).into())
     }
     #[cfg(not(target_os = "linux"))]
     {
-        let mut ctx: ClipboardContext = match ClipboardProvider::new() {
-            Ok(ctx) => ctx,
-            Err(e) => {
-                return Err(format!("Failed to copy to clipboard:\n{}", e).into());
-            }
-        };
-        if let Err(e) = ctx.set_contents(link.clone()) {
-            return Err(format!("Failed to copy to clipboard:\n{}", e).into());
-        }
+        ClipboardContext::new()
+            .map_err(|e| format!("Failed to get clipboard context:\n{}", e))?
+            .set_contents(link)
+            .map_err(|e| format!("Failed to copy to clipboard:\n{}", e).into())
     }
-    Ok(())
 }
