@@ -1,5 +1,6 @@
 use std::error::Error;
 
+use cli_clipboard::ClipboardProvider;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -19,7 +20,6 @@ pub struct ClipboardConfig {
 use cli_clipboard::{
     linux_clipboard::LinuxClipboardContext,
     x11_clipboard::{Clipboard, Primary, X11ClipboardContext},
-    ClipboardProvider as _,
 };
 
 #[cfg(not(target_os = "linux"))]
@@ -42,31 +42,21 @@ pub fn copy_to_clipboard(
     #[cfg(target_os = "linux")]
     {
         match conf.and_then(|sel| sel.x11_selection) {
-            Some(X11Selection::Primary) => {
-                return X11ClipboardContext::<Primary>::new()
-                    .map_err(|e| format!("Failed to get context \"primary\" selection:\n{}", e))?
-                    .set_contents(link)
-                    .map_err(|e| format!("Failed to copy to clipboard:\n{}", e).into());
-            }
-            Some(X11Selection::Clipboard) => {
-                return X11ClipboardContext::<Clipboard>::new()
-                    .map_err(|e| format!("Failed to get context \"clipboard\" selection:\n{}", e))?
-                    .set_contents(link)
-                    .map_err(|e| format!("Failed to copy to clipboard:\n{}", e).into());
-            }
-            _ => {}
+            Some(X11Selection::Primary) => X11ClipboardContext::<Primary>::new()
+                .and_then(|mut s| s.set_contents(link))
+                .map_err(|e| format!("Failed to copy to x11 \"primary\":\n{}", e).into()),
+            Some(X11Selection::Clipboard) => X11ClipboardContext::<Clipboard>::new()
+                .and_then(|mut s| s.set_contents(link))
+                .map_err(|e| format!("Failed to copy to x11 \"clipboard\":\n{}", e).into()),
+            _ => LinuxClipboardContext::new()
+                .and_then(|mut s| s.set_contents(link))
+                .map_err(|e| format!("Failed to copy to clipboard:\n{}", e).into()),
         }
-
-        LinuxClipboardContext::new()
-            .map_err(|e| format!("Failed to get linux clipboard context:\n{}", e))?
-            .set_contents(link)
-            .map_err(|e| format!("Failed to copy to clipboard:\n{}", e).into())
     }
     #[cfg(not(target_os = "linux"))]
     {
         ClipboardContext::new()
-            .map_err(|e| format!("Failed to get clipboard context:\n{}", e))?
-            .set_contents(link)
+            .and_then(|mut s| s.set_contents(link))
             .map_err(|e| format!("Failed to copy to clipboard:\n{}", e).into())
     }
 }
