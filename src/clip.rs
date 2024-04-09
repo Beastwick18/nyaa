@@ -1,6 +1,5 @@
 use std::error::Error;
 
-use cli_clipboard::ClipboardProvider;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -20,6 +19,7 @@ pub struct ClipboardConfig {
 use cli_clipboard::{
     linux_clipboard::LinuxClipboardContext,
     x11_clipboard::{Clipboard, Primary, X11ClipboardContext},
+    ClipboardProvider as _,
 };
 
 #[cfg(not(target_os = "linux"))]
