@@ -3,6 +3,7 @@ use std::{env, io::stdout};
 use app::App;
 use crossterm::{
     cursor::SetCursorStyle,
+    event::{DisableBracketedPaste, EnableBracketedPaste},
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
 };
@@ -32,6 +33,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
     enable_raw_mode()?;
+    stdout().execute(EnableBracketedPaste)?;
     stdout().execute(EnterAlternateScreen)?;
     stdout().execute(SetCursorStyle::SteadyBar)?;
     let backend = CrosstermBackend::new(stdout());
@@ -44,6 +46,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     disable_raw_mode()?;
     stdout().execute(SetCursorStyle::DefaultUserShape)?;
     stdout().execute(LeaveAlternateScreen)?;
+    stdout().execute(DisableBracketedPaste)?;
     terminal.show_cursor()?;
 
     Ok(())

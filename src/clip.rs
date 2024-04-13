@@ -15,15 +15,16 @@ pub struct ClipboardConfig {
     pub x11_selection: Option<X11Selection>,
 }
 
+use cli_clipboard::ClipboardProvider as _;
+
 #[cfg(target_os = "linux")]
 use cli_clipboard::{
     linux_clipboard::LinuxClipboardContext,
     x11_clipboard::{Clipboard, Primary, X11ClipboardContext},
-    ClipboardProvider as _,
 };
 
 #[cfg(not(target_os = "linux"))]
-use cli_clipboard::{ClipboardContext, ClipboardProvider};
+use cli_clipboard::ClipboardContext;
 
 use crate::util::CommandBuilder;
 
@@ -48,7 +49,7 @@ pub fn copy_to_clipboard(
             Some(X11Selection::Clipboard) => X11ClipboardContext::<Clipboard>::new()
                 .and_then(|mut s| s.set_contents(link))
                 .map_err(|e| format!("Failed to copy to x11 \"clipboard\":\n{}", e).into()),
-            _ => LinuxClipboardContext::new()
+            None => LinuxClipboardContext::new()
                 .and_then(|mut s| s.set_contents(link))
                 .map_err(|e| format!("Failed to copy to clipboard:\n{}", e).into()),
         }

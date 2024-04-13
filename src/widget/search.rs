@@ -77,11 +77,10 @@ impl super::Widget for SearchWidget {
                     ctx.mode = Mode::Loading(LoadType::Searching);
                     ctx.page = 1; // Go back to first page
                 }
-                _ => {
-                    self.input.handle_event(ctx, evt);
-                }
+                _ => {}
             };
         }
+        self.input.handle_event(ctx, evt);
     }
 
     fn get_help() -> Option<Vec<(&'static str, &'static str)>> {

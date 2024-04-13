@@ -76,11 +76,10 @@ impl Widget for PagePopup {
                     self.input.input = "".to_owned();
                     self.input.cursor = 0;
                 }
-                _ => {
-                    self.input.handle_event(ctx, e);
-                }
+                _ => {}
             }
         }
+        self.input.handle_event(ctx, e);
     }
 
     fn get_help() -> Option<Vec<(&'static str, &'static str)>> {

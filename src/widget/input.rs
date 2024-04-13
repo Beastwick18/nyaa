@@ -139,6 +139,22 @@ impl super::Widget for InputWidget {
                 _ => {}
             };
         }
+        if let Event::Paste(mut p) = evt.to_owned() {
+            if let Some(validator) = self.validator {
+                // Remove invalid chars
+                p = p.chars().filter(|c| validator(*c)).collect();
+            }
+            self.input = format!(
+                "{}{}{}",
+                &self.input[..self.cursor],
+                p,
+                &self.input[self.cursor..]
+            );
+            if self.input.len() > self.max_len {
+                self.input = self.input[..self.max_len].to_owned();
+            }
+            self.cursor = min(self.cursor + p.len(), self.max_len);
+        }
     }
 
     fn get_help() -> Option<Vec<(&'static str, &'static str)>> {
