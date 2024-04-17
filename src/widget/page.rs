@@ -67,13 +67,16 @@ impl Widget for PagePopup {
             match code {
                 KeyCode::Esc => {
                     ctx.mode = Mode::Normal;
+                    // Clear input on Esc
+                    self.input.input.clear();
+                    self.input.cursor = 0;
                 }
                 KeyCode::Enter => {
                     ctx.page = max(min(self.input.input.parse().unwrap_or(1), ctx.last_page), 1);
                     ctx.mode = Mode::Loading(LoadType::Searching);
 
-                    // Clear input on enter
-                    self.input.input = "".to_owned();
+                    // Clear input on Enter
+                    self.input.input.clear();
                     self.input.cursor = 0;
                 }
                 _ => {}

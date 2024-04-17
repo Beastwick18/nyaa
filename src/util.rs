@@ -1,11 +1,59 @@
 use std::{
     error::Error,
-    io::{BufReader, Read as _},
+    io::{stdout, BufReader, Read as _},
     process::{Command, Stdio},
 };
 
-use crossterm::event::{KeyCode, KeyModifiers, MediaKeyCode, ModifierKeyCode};
+use crossterm::{
+    cursor::SetCursorStyle,
+    event::{
+        DisableBracketedPaste, EnableBracketedPaste, KeyCode, KeyModifiers, MediaKeyCode,
+        ModifierKeyCode,
+    },
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    ExecutableCommand as _,
+};
+use nix::{
+    sys::signal::{self, Signal},
+    unistd::Pid,
+};
+use ratatui::{backend::Backend, Terminal};
 use regex::Regex;
+
+pub fn setup_terminal() -> Result<(), Box<dyn Error>> {
+    enable_raw_mode()?;
+    stdout().execute(EnableBracketedPaste)?;
+    stdout().execute(EnterAlternateScreen)?;
+    stdout().execute(SetCursorStyle::SteadyBar)?;
+    Ok(())
+}
+
+pub fn reset_terminal() -> Result<(), Box<dyn Error>> {
+    disable_raw_mode()?;
+    stdout().execute(SetCursorStyle::DefaultUserShape)?;
+    stdout().execute(LeaveAlternateScreen)?;
+    stdout().execute(DisableBracketedPaste)?;
+    Ok(())
+}
+
+#[cfg(unix)]
+pub fn suspend_self<B: Backend>(terminal: &mut Terminal<B>) -> Result<(), Box<dyn Error>> {
+    // Make sure cursor is drawn
+    terminal.draw(|f| f.set_cursor(0, 0))?;
+
+    reset_terminal()?;
+
+    signal::kill(Pid::from_raw(std::process::id() as i32), Signal::SIGTSTP)?;
+    Ok(())
+}
+
+#[cfg(unix)]
+pub fn continue_self<B: Backend>(terminal: &mut Terminal<B>) -> Result<(), Box<dyn Error>> {
+    setup_terminal()?;
+
+    Terminal::clear(terminal)?;
+    Ok(())
+}
 
 pub struct CommandBuilder {
     cmd: String,

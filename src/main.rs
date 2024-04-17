@@ -1,12 +1,6 @@
 use std::{env, io::stdout};
 
 use app::App;
-use crossterm::{
-    cursor::SetCursorStyle,
-    event::{DisableBracketedPaste, EnableBracketedPaste},
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
-    ExecutableCommand,
-};
 use ratatui::{backend::CrosstermBackend, Terminal};
 
 mod app;
@@ -32,10 +26,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             return Ok(());
         }
     }
-    enable_raw_mode()?;
-    stdout().execute(EnableBracketedPaste)?;
-    stdout().execute(EnterAlternateScreen)?;
-    stdout().execute(SetCursorStyle::SteadyBar)?;
+    util::setup_terminal()?;
     let backend = CrosstermBackend::new(stdout());
     let mut terminal = Terminal::new(backend)?;
 
@@ -43,10 +34,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     app.run_app(&mut terminal).await?;
 
-    disable_raw_mode()?;
-    stdout().execute(SetCursorStyle::DefaultUserShape)?;
-    stdout().execute(LeaveAlternateScreen)?;
-    stdout().execute(DisableBracketedPaste)?;
+    util::reset_terminal()?;
     terminal.show_cursor()?;
 
     Ok(())

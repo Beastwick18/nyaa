@@ -1,6 +1,7 @@
+use core::panic;
 use std::{collections::VecDeque, error::Error};
 
-use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
+use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use indexmap::IndexMap;
 use ratatui::{
     backend::Backend,
@@ -32,6 +33,9 @@ use crate::{
         Widget,
     },
 };
+
+#[cfg(unix)]
+use crate::util::{continue_self, suspend_self};
 
 pub static APP_NAME: &str = "nyaa";
 
@@ -220,7 +224,7 @@ impl App {
             }
 
             let evt = event::read()?;
-            self.on(&evt, w, ctx);
+            self.on(&evt, w, ctx, terminal);
         }
         Ok(())
     }
@@ -270,7 +274,13 @@ impl App {
         }
     }
 
-    fn on(&mut self, evt: &Event, w: &mut Widgets, ctx: &mut Context) {
+    fn on<B: Backend>(
+        &mut self,
+        evt: &Event,
+        w: &mut Widgets,
+        ctx: &mut Context,
+        terminal: &mut Terminal<B>,
+    ) {
         if let Event::Key(KeyEvent {
             code,
             kind: KeyEventKind::Press,
@@ -278,6 +288,17 @@ impl App {
             ..
         }) = evt
         {
+            #[cfg(unix)]
+            if let (KeyCode::Char('z'), &KeyModifiers::CONTROL) = (code, modifiers) {
+                if let Err(e) = suspend_self(terminal) {
+                    ctx.show_error(format!("Failed to suspend:\n{}", e));
+                }
+                // If we fail to continue the process, panic
+                if continue_self(terminal).is_err() {
+                    panic!("Failed to continue program");
+                }
+                return;
+            }
             match ctx.mode.to_owned() {
                 Mode::KeyCombo(keys) => {
                     ctx.last_key = keys.into_iter().collect::<String>();

@@ -15,8 +15,11 @@ strip = true
 lto = true
 
 [dependencies]
-reqwest = { version = "0.11.24", features=["gzip", "rustls-tls"], default-features = false }
-tokio = { version = "1.36.0", features=["rt", "macros", "rt-multi-thread"] }
+reqwest = { version = "0.11.24", features = [
+    "gzip",
+    "rustls-tls",
+], default-features = false }
+tokio = { version = "1.36.0", features = ["rt", "macros", "rt-multi-thread"] }
 urlencoding = "2.1.0"
 ratatui = "0.26.1"
 crossterm = "0.27.0"
@@ -37,6 +40,9 @@ indexmap = "2.2.6"
 color-to-tui = "0.3.0"
 human_bytes = "0.4.3"
 
+[target.'cfg(unix)'.dependencies]
+nix = { version = "0.28.0", features = ["signal"] }
+
 [package.metadata.deb]
 maintainer = "Steven Culwell <bradculwell@pm.me>"
 copyright = "2024, Steven Culwell <bradculwell@pm.me>"
@@ -46,11 +52,19 @@ depends = "$auto"
 section = "utility"
 priority = "optional"
 assets = [
-    ["target/release/nyaa", "usr/bin/", "755"],
-    ["README.md", "usr/share/doc/nyaa/README", "644"],
+    [
+        "target/release/nyaa",
+        "usr/bin/",
+        "755",
+    ],
+    [
+        "README.md",
+        "usr/share/doc/nyaa/README",
+        "644",
+    ],
 ]
 
 [package.metadata.generate-rpm]
 assets = [
-    { source = "target/release/nyaa", dest = "/usr/bin/nyaa", mode = "755" }
+    { source = "target/release/nyaa", dest = "/usr/bin/nyaa", mode = "755" },
 ]
