@@ -227,7 +227,7 @@ impl App {
             #[cfg(unix)]
             self.on(&evt, w, ctx, terminal);
             #[cfg(not(unix))]
-            self.on(&evt, w, ctx);
+            self.on::<B>(&evt, w, ctx);
         }
         Ok(())
     }

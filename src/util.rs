@@ -1,6 +1,6 @@
 use std::{
     error::Error,
-    io::{stdout, BufReader, Read as _},
+    io::{self, stdout, BufReader, Read as _},
     process::{Command, Stdio},
 };
 
@@ -21,7 +21,7 @@ use nix::{
 use ratatui::{backend::Backend, Terminal};
 use regex::Regex;
 
-pub fn setup_terminal() -> Result<(), Box<dyn Error>> {
+pub fn setup_terminal() -> io::Result<()> {
     enable_raw_mode()?;
     stdout().execute(EnableBracketedPaste)?;
     stdout().execute(EnterAlternateScreen)?;
@@ -29,7 +29,7 @@ pub fn setup_terminal() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-pub fn reset_terminal() -> Result<(), Box<dyn Error>> {
+pub fn reset_terminal() -> io::Result<()> {
     disable_raw_mode()?;
     stdout().execute(SetCursorStyle::DefaultUserShape)?;
     stdout().execute(LeaveAlternateScreen)?;
