@@ -224,7 +224,10 @@ impl App {
             }
 
             let evt = event::read()?;
+            #[cfg(unix)]
             self.on(&evt, w, ctx, terminal);
+            #[cfg(not(unix))]
+            self.on(&evt, w, ctx);
         }
         Ok(())
     }
@@ -279,7 +282,7 @@ impl App {
         evt: &Event,
         w: &mut Widgets,
         ctx: &mut Context,
-        terminal: &mut Terminal<B>,
+        #[cfg(unix)] terminal: &mut Terminal<B>,
     ) {
         if let Event::Key(KeyEvent {
             code,

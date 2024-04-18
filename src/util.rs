@@ -13,6 +13,7 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand as _,
 };
+#[cfg(unix)]
 use nix::{
     sys::signal::{self, Signal},
     unistd::Pid,
