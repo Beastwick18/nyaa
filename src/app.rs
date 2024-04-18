@@ -1,7 +1,6 @@
-use core::panic;
 use std::{collections::VecDeque, error::Error};
 
-use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
 use indexmap::IndexMap;
 use ratatui::{
     backend::Backend,
@@ -33,6 +32,11 @@ use crate::{
         Widget,
     },
 };
+
+#[cfg(unix)]
+use core::panic;
+#[cfg(unix)]
+use crossterm::event::KeyModifiers;
 
 #[cfg(unix)]
 use crate::util::{continue_self, suspend_self};

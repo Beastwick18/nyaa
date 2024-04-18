@@ -18,6 +18,7 @@ use nix::{
     sys::signal::{self, Signal},
     unistd::Pid,
 };
+#[cfg(unix)]
 use ratatui::{backend::Backend, Terminal};
 use regex::Regex;
 
