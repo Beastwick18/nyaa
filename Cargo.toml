@@ -18,6 +18,7 @@ lto = true
 reqwest = { version = "0.11.24", features = [
     "gzip",
     "rustls-tls",
+    "socks",
 ], default-features = false }
 tokio = { version = "1.36.0", features = ["rt", "macros", "rt-multi-thread"] }
 urlencoding = "2.1.0"
