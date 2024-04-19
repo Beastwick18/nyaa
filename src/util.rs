@@ -122,7 +122,7 @@ pub fn add_protocol<S: Into<String>>(url: S, default_https: bool) -> String {
         false => "http",
     };
     let url = url.into();
-    let re = Regex::new(r"^(https|socks5)?://.+$").unwrap();
+    let re = Regex::new(r"^(https?|socks5)?://.+$").unwrap();
     match re.is_match(&url) {
         true => url,
         // Assume http(s) if not present
