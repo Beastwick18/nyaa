@@ -201,12 +201,10 @@ impl App {
                 ctx.mode = Mode::Normal;
                 match load_type {
                     LoadType::Downloading => {
-                        if load_type == LoadType::Downloading {
-                            if let Some(i) = w.results.table.selected() {
-                                ctx.client.clone().download(i.to_owned(), ctx).await;
-                            }
-                            continue;
+                        if let Some(i) = w.results.table.selected() {
+                            ctx.client.clone().download(i.to_owned(), ctx).await;
                         }
+                        continue;
                     }
                     LoadType::Batching => {
                         ctx.client

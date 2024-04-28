@@ -32,20 +32,44 @@ impl super::Widget for BatchWidget {
     fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
         let buf = f.buffer_mut();
         let block = border_block(&ctx.theme, ctx.mode == Mode::Batch).title(title!("Batch"));
+        let focus_color = match ctx.mode {
+            Mode::Batch => ctx.theme.border_focused_color,
+            _ => ctx.theme.border_color,
+        };
         let rows = ctx
             .batch
             .iter()
             .map(|i| {
-                Row::new([i.title.to_owned()]).fg(match i.item_type {
-                    ItemType::Trusted => ctx.theme.trusted,
-                    ItemType::Remake => ctx.theme.remake,
-                    ItemType::None => ctx.theme.fg,
-                })
+                Row::new([
+                    i.icon.label.fg(i.icon.color),
+                    i.title.to_owned().fg(match i.item_type {
+                        ItemType::Trusted => ctx.theme.trusted,
+                        ItemType::Remake => ctx.theme.remake,
+                        ItemType::None => ctx.theme.fg,
+                    }),
+                    format!("{:>9}", i.size).fg(ctx.theme.fg),
+                ])
             })
             .collect::<Vec<Row>>();
-        let table = Table::new(rows.to_owned(), [Constraint::Percentage(100)])
-            .block(block)
-            .highlight_style(Style::default().bg(ctx.theme.hl_bg));
+
+        let header = ["Cat", "Name", "  Size"];
+        let header = Row::new(header)
+            .fg(focus_color)
+            .bold()
+            .underlined()
+            .height(1)
+            .bottom_margin(0);
+        let table = Table::new(
+            rows.to_owned(),
+            [
+                Constraint::Length(3),
+                Constraint::Min(1),
+                Constraint::Length(9),
+            ],
+        )
+        .block(block)
+        .header(header)
+        .highlight_style(Style::default().bg(ctx.theme.hl_bg));
         Clear.render(area, buf);
         StatefulWidget::render(table, area, buf, &mut self.table.state);
         if ctx.batch.len() + 2 > area.height as usize {
@@ -71,7 +95,7 @@ impl super::Widget for BatchWidget {
             right_str.width() as u16,
             1,
         );
-        f.render_widget(text, right);
+        text.render(right, buf);
     }
 
     fn handle_event(&mut self, ctx: &mut Context, evt: &Event) {

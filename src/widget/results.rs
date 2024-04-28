@@ -234,13 +234,14 @@ impl super::Widget for ResultsWidget {
 
         if let Some(visible_items) = self.table.items.get(self.table.state.offset()..) {
             let selected_ids: Vec<usize> = ctx.batch.iter().map(|i| i.id).collect();
+            let vert_left = ctx.theme.border.to_border_set().vertical_left;
             let lines = visible_items
                 .iter()
                 .map(|i| {
                     Line::from(
                         match selected_ids.contains(&i.id) {
                             true => symbols::border::QUADRANT_BLOCK,
-                            false => ctx.theme.border.to_border_set().vertical_left,
+                            false => vert_left,
                         }
                         .to_owned(),
                     )
