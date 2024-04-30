@@ -1,6 +1,0 @@
-[submodule "aur"]
-	path = aur
-	url = ssh://aur@aur.archlinux.org/nyaa.git
-[submodule "aur-bin"]
-	path = aur-bin
-	url = ssh://aur@aur.archlinux.org/nyaa-bin.git
