@@ -22,7 +22,7 @@ reqwest = { version = "0.11.24", features = [
 ], default-features = false }
 tokio = { version = "1.36.0", features = ["rt", "macros", "rt-multi-thread"] }
 urlencoding = "2.1.0"
-ratatui = "0.26.1"
+ratatui = "=0.26.1"
 crossterm = "0.27.0"
 unicode-width = "0.1.5"
 confy = "0.6.0"
