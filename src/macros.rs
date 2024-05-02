@@ -86,22 +86,20 @@ macro_rules! style {
 macro_rules! title {
     // Single input
     ($arg:expr) => {{
-        let res = format!(" {} ", $arg);
+        let res = format!("{}", $arg);
         res
     }};
 
     // format-like
     ($($arg:expr),*$(,)?) => {{
-        let res = format!(" {} ", format!($($arg),*));
+        let res = format!("{}", format!($($arg),*));
         res
     }};
 
     // vec-like
     ($($arg:expr);*$(;)?) => {{
         let res = vec![
-            " ".into(),
             $($arg,)*
-            " ".into(),
         ];
         res
     }};
