@@ -21,7 +21,11 @@ use crate::{
     widget::sort::SortDir,
 };
 
-use super::{border_block, centered_rect, sort::Sort, StatefulTable};
+use super::{
+    border_block, centered_rect,
+    sort::{SelectedSort, Sort},
+    StatefulTable,
+};
 
 #[derive(Clone, Copy, Serialize, Deserialize, Default)]
 pub struct ColumnsConfig {
@@ -50,14 +54,14 @@ impl ColumnsConfig {
 
 pub struct ResultsWidget {
     pub table: StatefulTable<Item>,
-    sort: Sort,
+    sort: SelectedSort,
     raw_date_width: u16,
     date_width: u16,
     control_space: bool,
 }
 
 impl ResultsWidget {
-    pub fn with_items(&mut self, items: Vec<Item>, sort: Sort) {
+    pub fn with_items(&mut self, items: Vec<Item>, sort: SelectedSort) {
         self.table.with_items(items);
         self.sort = sort;
         self.raw_date_width = self.table.items.first().map(|i| i.date.len()).unwrap_or(10) as u16;
@@ -91,7 +95,7 @@ impl Default for ResultsWidget {
     fn default() -> Self {
         ResultsWidget {
             table: StatefulTable::empty(),
-            sort: Sort::Date,
+            sort: SelectedSort::default(),
             date_width: 6,
             raw_date_width: 4,
             control_space: false,
@@ -120,11 +124,11 @@ impl super::Widget for ResultsWidget {
             format!(" {}", ""),
             format!(" {}", ""),
         ];
-        let direction = match ctx.ascending {
-            true => "▲",
-            false => "▼",
+        let direction = match self.sort.dir {
+            SortDir::Asc => "▲",
+            SortDir::Desc => "▼",
         };
-        let sort_idx = match self.sort {
+        let sort_idx = match self.sort.sort {
             Sort::Date => 3,
             Sort::Size => 2,
             Sort::Seeders => 4,
@@ -132,7 +136,7 @@ impl super::Widget for ResultsWidget {
             Sort::Downloads => 6,
         };
         let sort_text = format!("{} {}", header_slice[sort_idx].trim(), direction);
-        let sort_fmt = match self.sort {
+        let sort_fmt = match self.sort.sort {
             Sort::Size => format!("  {:<8}", sort_text),
             Sort::Date => format!(
                 "{:^width$}",

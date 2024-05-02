@@ -86,7 +86,7 @@ impl Config {
         ctx.config = self.to_owned();
         w.search.input.input = ctx.config.default_search.to_owned();
         w.search.input.cursor = w.search.input.input.len();
-        w.sort.selected = ctx.config.default_sort.to_owned();
+        w.sort.selected.sort = ctx.config.default_sort.to_owned();
         w.filter.selected = ctx.config.default_filter.to_owned();
         ctx.client = ctx.config.download_client.to_owned();
         ctx.src = ctx.config.source.to_owned();

@@ -22,10 +22,35 @@ popup_enum! {
     (4, Size, "Size");
 }
 
-#[derive(PartialEq, Clone)]
+#[derive(Clone, Copy)]
+pub struct SelectedSort {
+    pub sort: Sort,
+    pub dir: SortDir,
+}
+
+impl Default for SelectedSort {
+    fn default() -> Self {
+        Self {
+            sort: Sort::Date,
+            dir: SortDir::Desc,
+        }
+    }
+}
+
+#[derive(PartialEq, Clone, Copy)]
 pub enum SortDir {
     Desc,
     Asc,
+}
+
+impl SortDir {
+    pub fn to_url(self) -> String {
+        match self {
+            SortDir::Desc => "desc",
+            SortDir::Asc => "asc",
+        }
+        .to_owned()
+    }
 }
 
 impl Sort {
@@ -42,14 +67,14 @@ impl Sort {
 
 pub struct SortPopup {
     pub table: StatefulTable<String>,
-    pub selected: Sort,
+    pub selected: SelectedSort,
 }
 
 impl Default for SortPopup {
     fn default() -> Self {
         SortPopup {
             table: StatefulTable::new(Sort::iter().map(|item| item.to_string()).collect()),
-            selected: Sort::Date,
+            selected: SelectedSort::default(),
         }
     }
 }
@@ -60,7 +85,7 @@ impl Widget for SortPopup {
         let center = super::centered_rect(30, self.table.items.len() as u16 + 2, area);
         let clear = super::centered_rect(center.width + 2, center.height, area);
         let items = self.table.items.iter().enumerate().map(|(i, item)| {
-            Row::new([match i == self.selected.to_owned() as usize {
+            Row::new([match i == self.selected.sort as usize {
                 true => format!("  {}", item),
                 false => format!("   {}", item),
             }])
@@ -102,8 +127,12 @@ impl Widget for SortPopup {
                 }
                 KeyCode::Enter => {
                     if let Some(i) = Sort::iter().nth(self.table.state.selected().unwrap_or(0)) {
-                        self.selected = i.to_owned();
-                        ctx.ascending = ctx.mode == Mode::Sort(SortDir::Asc);
+                        self.selected.sort = i.to_owned();
+                        self.selected.dir = match ctx.mode == Mode::Sort(SortDir::Asc) {
+                            true => SortDir::Asc,
+                            false => SortDir::Desc,
+                        };
+                        // ctx.ascending = ctx.mode == Mode::Sort(SortDir::Asc);
                         ctx.mode = Mode::Loading(LoadType::Sorting);
                         ctx.notify(format!("Sort by \"{}\"", i.to_string()));
                     }

@@ -8,7 +8,10 @@ use urlencoding::encode;
 use crate::{
     app::{Context, Widgets},
     util::to_bytes,
-    widget::{category::CatEntry, sort::Sort},
+    widget::{
+        category::CatEntry,
+        sort::{SelectedSort, Sort, SortDir},
+    },
 };
 
 use super::{add_protocol, Item, ItemType, Source};
@@ -26,8 +29,8 @@ pub fn get_ext_value<T: Default + FromStr>(ext_map: &ExtensionMap, key: &str) ->
         .unwrap_or_default()
 }
 
-fn sort_items(items: &mut [Item], sort: Sort, ascending: bool) {
-    let f: fn(&Item, &Item) -> Ordering = match sort {
+fn sort_items(items: &mut [Item], sort: SelectedSort) {
+    let f: fn(&Item, &Item) -> Ordering = match sort.sort {
         Sort::Date => |a, b| a.id.cmp(&b.id),
         Sort::Downloads => |a, b| b.downloads.cmp(&a.downloads),
         Sort::Seeders => |a, b| b.seeders.cmp(&a.seeders),
@@ -35,15 +38,15 @@ fn sort_items(items: &mut [Item], sort: Sort, ascending: bool) {
         Sort::Size => |a, b| b.bytes.cmp(&a.bytes),
     };
     items.sort_by(f);
-    if ascending {
+    if sort.dir == SortDir::Asc {
         items.reverse();
     }
 }
 
 impl Source for NyaaRssSource {
-    async fn sort(app: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
+    async fn sort(_: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
         let mut items = w.results.table.items.clone();
-        sort_items(&mut items, w.sort.selected, app.ascending);
+        sort_items(&mut items, w.sort.selected);
         Ok(items)
     }
 
@@ -130,7 +133,7 @@ impl Source for NyaaRssSource {
             })
             .collect();
         ctx.total_results = results.len();
-        sort_items(&mut results, w.sort.selected, ctx.ascending);
+        sort_items(&mut results, w.sort.selected);
         Ok(results)
     }
 
