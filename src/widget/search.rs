@@ -3,7 +3,7 @@ use ratatui::{
     layout::{Margin, Rect},
     style::Stylize,
     text::Line,
-    widgets::{Clear, Paragraph, Widget},
+    widgets::{Clear, Widget},
     Frame,
 };
 
@@ -15,6 +15,7 @@ use crate::{
 use super::{
     border_block,
     input::{self, InputWidget},
+    TitlePosition,
 };
 
 pub struct SearchWidget {
@@ -47,11 +48,8 @@ impl super::Widget for SearchWidget {
             "?".bold();
             " for help".into();
         ));
-        if area.right() as usize >= help_title.width() {
-            let width = help_title.width() as u16;
-            let right = Rect::new(area.right() - 1 - width, area.top(), width, 1);
-            let text = Paragraph::new(help_title);
-            text.render(right, buf);
+        if let Some((tr, area)) = TitlePosition::TopRight.try_title(help_title, area) {
+            tr.render(area, buf);
         }
 
         self.input.draw(f, ctx, input_area);

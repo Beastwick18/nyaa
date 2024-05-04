@@ -10,21 +10,20 @@ use ratatui::{
     Frame,
 };
 use serde::{Deserialize, Serialize};
-use unicode_width::UnicodeWidthStr;
 
 use crate::{
     app::{Context, LoadType, Mode},
     cond_vec,
     source::{Item, ItemType},
     title,
-    util::shorten_number,
+    util::conv::shorten_number,
     widget::sort::SortDir,
 };
 
 use super::{
     border_block, centered_rect,
     sort::{SelectedSort, Sort},
-    StatefulTable,
+    StatefulTable, TitlePosition,
 };
 
 #[derive(Clone, Copy, Serialize, Deserialize, Default)]
@@ -226,14 +225,9 @@ impl super::Widget for ResultsWidget {
         StatefulWidget::render(table, area, buf, &mut self.table.state);
         StatefulWidget::render(sb, sb_area, buf, &mut self.table.scrollbar_state);
 
-        match ctx.mode {
-            Mode::Loading(_) => {}
-            _ => {
-                if num_items == 0 {
-                    let center = centered_rect(10, 1, size);
-                    Paragraph::new("No results").render(center, buf);
-                }
-            }
+        if !matches!(ctx.mode, Mode::Loading(_)) && num_items == 0 {
+            let center = centered_rect(10, 1, size);
+            Paragraph::new("No results").render(center, buf);
         }
 
         if let Some(visible_items) = self.table.items.get(self.table.state.offset()..) {
@@ -256,43 +250,25 @@ impl super::Widget for ResultsWidget {
             para.render(pararea, buf);
         }
 
-        let right_str = title!(
+        let dl_src = title!(
             "dl: {}, src: {}",
             ctx.client.to_string(),
             ctx.src.to_string()
         );
-        if area.right() > right_str.width() as u16 {
-            let text = Paragraph::new(right_str.clone());
-            let right = Rect::new(
-                area.right() - 1 - right_str.width() as u16,
-                area.top(),
-                right_str.width() as u16,
-                1,
-            );
-            f.render_widget(text, right);
+        if let Some((tr, area)) = TitlePosition::TopRight.try_title(dl_src, area) {
+            f.render_widget(tr, area);
         }
 
         if !ctx.last_key.is_empty() {
-            let b_right_str = title!(ctx.last_key);
-            if area.right() > b_right_str.width() as u16 {
-                let text = Paragraph::new(b_right_str.clone());
-                let right = Rect::new(
-                    area.right() - 1 - b_right_str.width() as u16,
-                    area.bottom() - 1,
-                    b_right_str.width() as u16,
-                    1,
-                );
-                f.render_widget(text, right);
+            let key_str = title!(ctx.last_key);
+            if let Some((br, area)) = TitlePosition::BottomRight.try_title(key_str, area) {
+                f.render_widget(br, area);
             }
         }
 
-        if let Some(bottom_str) = ctx.notification.clone() {
-            if area.right() >= 2 {
-                let bottom_str = title!(bottom_str);
-                let minw = std::cmp::min(area.right() - 2, bottom_str.width() as u16);
-                let bottom = Rect::new(area.left() + 1, area.bottom() - 1, minw, 1);
-                let text = Paragraph::new(bottom_str);
-                f.render_widget(text, bottom);
+        if let Some(notif) = ctx.notification.clone() {
+            if let Some((bl, area)) = TitlePosition::BottomLeft.try_title(notif, area) {
+                f.render_widget(bl, area);
             }
         }
     }

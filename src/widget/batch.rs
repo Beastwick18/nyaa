@@ -3,10 +3,9 @@ use human_bytes::human_bytes;
 use ratatui::{
     layout::{Constraint, Margin, Rect},
     style::{Style, Stylize},
-    widgets::{Clear, Paragraph, Row, ScrollbarOrientation, StatefulWidget, Table, Widget},
+    widgets::{Clear, Row, ScrollbarOrientation, StatefulWidget, Table, Widget},
     Frame,
 };
-use unicode_width::UnicodeWidthStr as _;
 
 use crate::{
     app::{Context, LoadType, Mode},
@@ -14,7 +13,7 @@ use crate::{
     title,
 };
 
-use super::{border_block, VirtualStatefulTable};
+use super::{border_block, TitlePosition, VirtualStatefulTable};
 
 pub struct BatchWidget {
     table: VirtualStatefulTable,
@@ -88,14 +87,9 @@ impl super::Widget for BatchWidget {
 
         let size = human_bytes(ctx.batch.iter().fold(0, |acc, i| acc + i.bytes) as f64);
         let right_str = title!("Size({}): {}", ctx.batch.len(), size);
-        let text = Paragraph::new(right_str.clone());
-        let right = Rect::new(
-            area.right() - 1 - right_str.width() as u16,
-            area.top(),
-            right_str.width() as u16,
-            1,
-        );
-        text.render(right, buf);
+        if let Some((tr, area)) = TitlePosition::TopRight.try_title(right_str, area) {
+            tr.render(area, buf);
+        }
     }
 
     fn handle_event(&mut self, ctx: &mut Context, evt: &Event) {
