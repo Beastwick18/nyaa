@@ -6,7 +6,7 @@ use reqwest::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{app::Context, source::Item, util::add_protocol};
+use crate::{app::Context, source::Item, util::conv::add_protocol};
 
 use super::ClientConfig;
 

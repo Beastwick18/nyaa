@@ -26,7 +26,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             return Ok(());
         }
     }
-    util::setup_terminal()?;
+    util::term::setup_terminal()?;
     let backend = CrosstermBackend::new(stdout());
     let mut terminal = Terminal::new(backend)?;
 
@@ -34,7 +34,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     app.run_app(&mut terminal).await?;
 
-    util::reset_terminal()?;
+    util::term::reset_terminal()?;
     terminal.show_cursor()?;
 
     Ok(())

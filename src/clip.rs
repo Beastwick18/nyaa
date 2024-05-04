@@ -26,7 +26,7 @@ use cli_clipboard::{
 #[cfg(not(target_os = "linux"))]
 use cli_clipboard::ClipboardContext;
 
-use crate::util::CommandBuilder;
+use crate::util::cmd::CommandBuilder;
 
 pub fn copy_to_clipboard(
     link: String,

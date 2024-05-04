@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     app::{Context, LoadType, Widgets},
     popup_enum,
-    util::add_protocol,
+    util::conv::add_protocol,
     widget::{category::CatIcon, EnumIter},
 };
 

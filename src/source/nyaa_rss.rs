@@ -7,7 +7,7 @@ use urlencoding::encode;
 
 use crate::{
     app::{Context, Widgets},
-    util::to_bytes,
+    util::conv::to_bytes,
     widget::{
         category::CatEntry,
         sort::{SelectedSort, Sort, SortDir},

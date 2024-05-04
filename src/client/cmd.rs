@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{app::Context, source::Item, util::CommandBuilder};
+use crate::{app::Context, source::Item, util::cmd::CommandBuilder};
 
 use super::ClientConfig;
 
@@ -20,10 +20,6 @@ impl Default for CmdConfig {
             cmd: "curl \"{torrent}\" > ~/{file}".to_owned(),
 
             shell_cmd: CommandBuilder::default_shell(),
-            // #[cfg(windows)]
-            // shell_cmd: "powershell.exe -Command".to_owned(),
-            // #[cfg(unix)]
-            // shell_cmd: "sh -c".to_owned(),
         }
     }
 }

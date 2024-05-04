@@ -14,7 +14,7 @@ use crate::{
     config::Config,
     source::{Item, Sources},
     theme::{self, Theme},
-    util::key_to_string,
+    util::conv::key_to_string,
     widget::{
         batch::BatchWidget,
         category::CategoryPopup,
@@ -39,7 +39,7 @@ use core::panic;
 use crossterm::event::KeyModifiers;
 
 #[cfg(unix)]
-use crate::util::{continue_self, suspend_self};
+use crate::util::term;
 
 pub static APP_NAME: &str = "nyaa";
 
@@ -295,11 +295,11 @@ impl App {
         {
             #[cfg(unix)]
             if let (KeyCode::Char('z'), &KeyModifiers::CONTROL) = (code, modifiers) {
-                if let Err(e) = suspend_self(terminal) {
+                if let Err(e) = term::suspend_self(terminal) {
                     ctx.show_error(format!("Failed to suspend:\n{}", e));
                 }
                 // If we fail to continue the process, panic
-                if continue_self(terminal).is_err() {
+                if term::continue_self(terminal).is_err() {
                     panic!("Failed to continue program");
                 }
                 return;
