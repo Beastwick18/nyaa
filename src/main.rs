@@ -15,6 +15,13 @@ mod widget;
 
 #[tokio::main()]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let default_panic = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        default_panic(info);
+        // Try to reset terminal on panic
+        let _ = util::term::reset_terminal();
+    }));
+
     // TODO: Use real command line package
     let args: Vec<String> = env::args().collect();
     for arg in args {
