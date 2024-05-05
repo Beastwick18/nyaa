@@ -44,17 +44,18 @@ pub enum TitlePosition {
     TopRight,
     BottomLeft,
     BottomRight,
-    // Top Left is default for ratatui, no extra logic needed
+    // TopLeft, // Top Left is default for ratatui, no extra logic needed
 }
 
 impl TitlePosition {
     pub fn try_title<'a, L: Into<Line<'a>>>(self, text: L, area: Rect) -> Option<(Line<'a>, Rect)> {
         let line: Line = text.into();
-        if area.width <= line.width() as u16 + 1 {
+        if area.width < line.width() as u16 + 2 {
             // Too small
             return None;
         }
         let (left, y) = match self {
+            // TitlePosition::TopLeft => (area.left() + 1, area.top()),
             TitlePosition::TopRight => (area.right() - 1 - line.width() as u16, area.top()),
             TitlePosition::BottomLeft => (area.left() + 1, area.bottom() - 1),
             TitlePosition::BottomRight => {
@@ -65,30 +66,6 @@ impl TitlePosition {
         Some((line, right))
     }
 }
-//
-// if !ctx.last_key.is_empty() {
-//     let b_right_str = title!(ctx.last_key);
-//     if area.right() > b_right_str.width() as u16 {
-//         let text = Line::from(b_right_str.clone());
-//         let right = Rect::new(
-//             area.right() - 1 - b_right_str.width() as u16,
-//             area.bottom() - 1,
-//             b_right_str.width() as u16,
-//             1,
-//         );
-//         f.render_widget(text, right);
-//     }
-// }
-//
-// if let Some(bottom_str) = ctx.notification.clone() {
-//     if area.right() >= 2 {
-//         let bottom_str = title!(bottom_str);
-//         let minw = std::cmp::min(area.right() - 2, bottom_str.width() as u16);
-//         let bottom = Rect::new(area.left() + 1, area.bottom() - 1, minw, 1);
-//         let text = Paragraph::new(bottom_str);
-//         f.render_widget(text, bottom);
-//     }
-// }
 
 pub fn centered_rect(mut x_len: u16, mut y_len: u16, r: Rect) -> Rect {
     x_len = min(x_len, r.width);

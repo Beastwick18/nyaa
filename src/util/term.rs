@@ -7,8 +7,6 @@ use crossterm::{
     ExecutableCommand as _,
 };
 
-use std::error::Error;
-
 #[cfg(unix)]
 use nix::{
     sys::signal::{self, Signal},
@@ -16,6 +14,8 @@ use nix::{
 };
 #[cfg(unix)]
 use ratatui::{backend::Backend, Terminal};
+#[cfg(unix)]
+use std::error::Error;
 
 pub fn setup_terminal() -> io::Result<()> {
     enable_raw_mode()?;
