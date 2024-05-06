@@ -6,12 +6,7 @@ use crate::{
     clip::ClipboardConfig,
     source::Sources,
     theme::{self, Theme},
-    widget::{
-        category::{self, ALL_CATEGORIES},
-        filter::Filter,
-        results::ColumnsConfig,
-        sort::Sort,
-    },
+    widget::{filter::Filter, results::ColumnsConfig, sort::Sort},
 };
 use confy::ConfyError;
 use serde::{Deserialize, Serialize};
@@ -48,7 +43,7 @@ impl Default for Config {
     fn default() -> Config {
         Config {
             torrent_client_cmd: None,
-            default_category: ALL_CATEGORIES[0].entries[0].cfg.to_owned(),
+            default_category: "0_0".to_owned(), // TODO: Deprecate, seperate default for each source
             default_filter: Filter::NoFilter,
             default_sort: Sort::Date,
             source: Sources::NyaaHtml,
@@ -90,6 +85,7 @@ impl Config {
         w.filter.selected = ctx.config.default_filter.to_owned();
         ctx.client = ctx.config.download_client.to_owned();
         ctx.src = ctx.config.source.to_owned();
+        ctx.categories = ctx.src.categories();
 
         // Load user-defined themes
         if let Err(e) = theme::load_user_themes(ctx) {
@@ -100,8 +96,12 @@ impl Config {
             w.theme.selected = i;
             ctx.theme = theme.to_owned();
         }
-        if let Some(ent) = category::find_category(ctx.config.default_category.to_owned()) {
-            w.category.category = ent.id;
+        if let Some(ent) = ctx
+            .categories
+            .to_owned()
+            .find_category(ctx.config.default_category.to_owned())
+        {
+            ctx.category = ent.id;
         }
 
         if let Err(e) = ctx.client.clone().load_config(ctx) {

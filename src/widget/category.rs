@@ -9,14 +9,20 @@ use ratatui::{
 
 use crate::{
     app::{Context, LoadType, Mode},
-    categories, style, title,
+    style, title,
 };
 
 use super::{border_block, Widget};
 
+#[derive(Clone)]
+pub struct Categories {
+    pub cats: Vec<CatStruct>,
+}
+
+#[derive(Clone)]
 pub struct CatEntry {
-    name: &'static str,
-    pub cfg: &'static str,
+    pub name: String,
+    pub cfg: String,
     pub id: usize,
     pub icon: CatIcon,
 }
@@ -36,109 +42,64 @@ impl Default for CatIcon {
     }
 }
 
-impl CatEntry {
-    pub fn from_str(s: &str) -> &Self {
+impl Categories {
+    pub fn entry_from_str(self, s: &str) -> CatEntry {
         let split: Vec<&str> = s.split('_').collect();
         let high = split.first().unwrap_or(&"1").parse().unwrap_or(1);
         let low = split.last().unwrap_or(&"0").parse().unwrap_or(0);
         let id = high * 10 + low;
-        for cat in ALL_CATEGORIES {
+        for cat in self.cats.iter() {
             if let Some(ent) = cat.entries.iter().find(|ent| ent.id == id) {
-                return ent;
+                return ent.clone();
             }
         }
-        &ALL_CATEGORIES[0].entries[0]
+        self.cats[0].entries[0].clone()
+        // &ALL_CATEGORIES[0].entries[0]
+    }
+
+    pub fn find_category<S: Into<String>>(self, name: S) -> Option<CatEntry> {
+        let name = name.into();
+        for cat in self.cats {
+            if let Some(ent) = cat
+                .entries
+                .iter()
+                .find(|ent| ent.cfg.eq_ignore_ascii_case(&name))
+            {
+                return Some(ent.to_owned());
+            }
+        }
+        None
     }
 }
 
 impl CatEntry {
-    const fn new(
-        name: &'static str,
-        cfg: &'static str,
-        id: usize,
-        label: &'static str,
-        color: Color,
-    ) -> Self {
+    pub fn new(name: &str, cfg: &str, id: usize, label: &'static str, color: Color) -> Self {
         CatEntry {
-            name,
-            cfg,
+            name: name.to_string(),
+            cfg: cfg.to_string(),
             id,
             icon: CatIcon { label, color },
         }
     }
 }
 
+#[derive(Clone)]
 pub struct CatStruct {
-    name: &'static str,
-    pub entries: &'static [CatEntry],
-}
-
-categories! {
-    ALL_CATEGORIES;
-    (ALL: "All Categories") => {
-        0 => ("---", "All Categories", "AllCategories", White);
-    }
-    (ANIME: "Anime") => {
-        10 => ("Ani", "All Anime", "AllAnime", Gray);
-        12 => ("Sub", "English Translated", "AnimeEnglishTranslated", LightMagenta);
-        13 => ("Sub", "Non-English Translated", "AnimeNonEnglishTranslated", LightGreen);
-        14 => ("Raw", "Raw", "AnimeRaw", Gray);
-        11 => ("AMV", "Anime Music Video", "AnimeMusicVideo", Magenta);
-    }
-    (AUDIO: "Audio") => {
-        20 => ("Aud", "All Audio", "AllAudio", Gray);
-        21 => ("Aud", "Lossless", "AudioLossless", Red);
-        22 => ("Aud", "Lossy", "AudioLossy", Yellow);
-    }
-    (LITERATURE: "Literature") => {
-        30 => ("Lit", "All Literature", "AllLiterature", Gray);
-        31 => ("Lit", "English Translated", "LitEnglishTranslated", LightGreen);
-        32 => ("Lit", "Non-English Translated", "LitNonEnglishTranslated", Yellow);
-        33 => ("Lit", "Raw", "LitRaw", Gray);
-    }
-    (LIVE_ACTION: "Live Action") => {
-        40 => ("Liv", "All Live Action", "AllLiveAction", Gray);
-        41 => ("Liv", "English Translated", "LiveEnglishTranslated", Yellow);
-        43 => ("Liv", "Non-English Translated", "LiveNonEnglishTranslated", LightCyan);
-        42 => ("Liv", "Idol/Promo Video", "LiveIdolPromoVideo", LightYellow);
-        44 => ("Liv", "Raw", "LiveRaw", Gray);
-    }
-    (PICTURES: "Pictures") => {
-        50 => ("Pic", "All Pictures", "AllPictures", Gray);
-        51 => ("Pic", "Graphics", "PicGraphics", LightMagenta);
-        52 => ("Pic", "Photos", "PicPhotos", Magenta);
-    }
-    (SOFTWARE: "Software") => {
-        60 => ("Sof", "All Software", "AllSoftware", Gray);
-        61 => ("Sof", "Applications", "SoftApplications", Blue);
-        62 => ("Sof", "Games", "SoftGames", LightBlue);
-    }
-}
-
-pub fn find_category<S: Into<String>>(name: S) -> Option<&'static CatEntry> {
-    let name = name.into();
-    for cat in ALL_CATEGORIES {
-        if let Some(ent) = cat
-            .entries
-            .iter()
-            .find(|ent| ent.cfg.eq_ignore_ascii_case(&name))
-        {
-            return Some(ent);
-        }
-    }
-    None
+    pub name: String,
+    pub entries: Vec<CatEntry>,
 }
 
 #[derive(Default)]
 pub struct CategoryPopup {
-    pub category: usize,
+    // pub category: usize,
     pub major: usize,
     pub minor: usize,
+    pub max_cat: usize,
 }
 
 impl CategoryPopup {
     fn next_tab(&mut self) {
-        self.major = match self.major + 1 >= ALL_CATEGORIES.len() {
+        self.major = match self.major + 1 >= self.max_cat {
             true => 0,
             false => self.major + 1,
         };
@@ -147,7 +108,7 @@ impl CategoryPopup {
 
     fn prev_tab(&mut self) {
         self.major = match self.major == 0 {
-            true => ALL_CATEGORIES.len() - 1,
+            true => self.max_cat - 1,
             false => self.major - 1,
         };
         self.minor = 0;
@@ -156,8 +117,11 @@ impl CategoryPopup {
 
 impl Widget for CategoryPopup {
     fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
-        if let Some(cat) = ALL_CATEGORIES.get(self.major) {
-            let mut tbl: Vec<Row> = ALL_CATEGORIES
+        self.max_cat = ctx.categories.cats.len(); // TODO: Bad
+        if let Some(cat) = ctx.categories.cats.get(self.major) {
+            let mut tbl: Vec<Row> = ctx
+                .categories
+                .cats
                 .iter()
                 .enumerate()
                 .map(|(i, e)| match i == self.major {
@@ -169,14 +133,14 @@ impl Widget for CategoryPopup {
 
             let cat_rows = cat.entries.iter().enumerate().map(|(i, e)| {
                 let row = Row::new(vec![Line::from(vec![
-                    match e.id == self.category {
+                    match e.id == ctx.category {
                         true => "  ",
                         false => "   ",
                     }
                     .into(),
                     e.icon.label.fg(e.icon.color),
                     " ".into(),
-                    e.name.into(),
+                    e.name.to_owned().into(),
                 ])]);
                 match i == self.minor {
                     true => row.bg(ctx.theme.hl_bg),
@@ -204,9 +168,9 @@ impl Widget for CategoryPopup {
         {
             match code {
                 KeyCode::Enter => {
-                    if let Some(cat) = ALL_CATEGORIES.get(self.major) {
+                    if let Some(cat) = ctx.categories.cats.get(self.major) {
                         if let Some(item) = cat.entries.get(self.minor) {
-                            self.category = item.id;
+                            ctx.category = item.id;
                             ctx.notify(format!("Category \"{}\"", item.name));
                         }
                     }
@@ -216,7 +180,7 @@ impl Widget for CategoryPopup {
                     ctx.mode = Mode::Normal;
                 }
                 KeyCode::Char('j') | KeyCode::Down => {
-                    if let Some(cat) = ALL_CATEGORIES.get(self.major) {
+                    if let Some(cat) = ctx.categories.cats.get(self.major) {
                         self.minor = match self.minor + 1 >= cat.entries.len() {
                             true => {
                                 self.next_tab();
@@ -227,11 +191,11 @@ impl Widget for CategoryPopup {
                     }
                 }
                 KeyCode::Char('k') | KeyCode::Up => {
-                    if ALL_CATEGORIES.get(self.major).is_some() {
+                    if ctx.categories.cats.get(self.major).is_some() {
                         self.minor = match self.minor < 1 {
                             true => {
                                 self.prev_tab();
-                                match ALL_CATEGORIES.get(self.major) {
+                                match ctx.categories.cats.get(self.major) {
                                     Some(cat) => cat.entries.len() - 1,
                                     None => 0,
                                 }
@@ -241,7 +205,7 @@ impl Widget for CategoryPopup {
                     }
                 }
                 KeyCode::Char('G') => {
-                    if let Some(cat) = ALL_CATEGORIES.get(self.major) {
+                    if let Some(cat) = ctx.categories.cats.get(self.major) {
                         self.minor = cat.entries.len() - 1;
                     }
                 }

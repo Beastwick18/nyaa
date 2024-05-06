@@ -2,7 +2,6 @@ use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::{
     layout::{Margin, Rect},
     style::Stylize,
-    text::Line,
     widgets::{Clear, Widget},
     Frame,
 };
@@ -41,14 +40,14 @@ impl super::Widget for SearchWidget {
             horizontal: 1,
         });
 
-        let help_title = Line::from(title!(
+        let help_title = title!(
             "Press ".into();
             "F1".bold();
             " or ".into();
             "?".bold();
             " for help".into();
-        ));
-        if let Some((tr, area)) = TitlePosition::TopRight.try_title(help_title, area) {
+        );
+        if let Some((tr, area)) = TitlePosition::TopRight.try_widget(help_title, area) {
             tr.render(area, buf);
         }
 

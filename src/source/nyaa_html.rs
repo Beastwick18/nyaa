@@ -5,10 +5,12 @@ use reqwest::{StatusCode, Url};
 use scraper::{ElementRef, Html, Selector};
 use urlencoding::encode;
 
+use crate::widget::category::Categories;
+
 use crate::{
     app::{Context, Widgets},
+    categories,
     util::conv::to_bytes,
-    widget::category::CatEntry,
 };
 
 use super::{add_protocol, Item, ItemType, Source};
@@ -31,17 +33,8 @@ fn attr(e: ElementRef, s: &Selector, attr: &str) -> String {
 }
 
 impl Source for NyaaHtmlSource {
-    async fn filter(ctx: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
-        NyaaHtmlSource::search(ctx, w).await
-    }
-    async fn categorize(ctx: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
-        NyaaHtmlSource::search(ctx, w).await
-    }
-    async fn sort(ctx: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
-        NyaaHtmlSource::search(ctx, w).await
-    }
     async fn search(ctx: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
-        let cat = w.category.category;
+        let cat = ctx.category;
         let filter = w.filter.selected as u16;
         let page = ctx.page;
         let user = ctx.user.to_owned().unwrap_or_default();
@@ -98,7 +91,7 @@ impl Source for NyaaHtmlSource {
             .filter_map(|e| {
                 let cat_str = attr(e, icon_sel, "href");
                 let cat_str = cat_str.split('=').last().unwrap_or("");
-                let cat = CatEntry::from_str(cat_str);
+                let cat = NyaaHtmlSource::categories().entry_from_str(cat_str);
                 let category = cat.id;
                 let icon = cat.icon.clone();
 
@@ -162,5 +155,62 @@ impl Source for NyaaHtmlSource {
                 })
             })
             .collect())
+    }
+    async fn sort(ctx: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
+        NyaaHtmlSource::search(ctx, w).await
+    }
+    async fn filter(ctx: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
+        NyaaHtmlSource::search(ctx, w).await
+    }
+    async fn categorize(ctx: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
+        NyaaHtmlSource::search(ctx, w).await
+    }
+
+    fn categories() -> Categories {
+        categories! {
+            ALL_CATEGORIES;
+            (ALL: "All Categories".to_owned()) => {
+                0 => ("---", "All Categories", "AllCategories", White);
+            }
+            (ANIME: "Anime".to_owned()) => {
+                10 => ("Ani", "All Anime", "AllAnime", Gray);
+                12 => ("Sub", "English Translated", "AnimeEnglishTranslated", LightMagenta);
+                13 => ("Sub", "Non-English Translated", "AnimeNonEnglishTranslated", LightGreen);
+                14 => ("Raw", "Raw", "AnimeRaw", Gray);
+                11 => ("AMV", "Anime Music Video", "AnimeMusicVideo", Magenta);
+            }
+            (AUDIO: "Audio".to_owned()) => {
+                20 => ("Aud", "All Audio", "AllAudio", Gray);
+                21 => ("Aud", "Lossless", "AudioLossless", Red);
+                22 => ("Aud", "Lossy", "AudioLossy", Yellow);
+            }
+            (LITERATURE: "Literature".to_owned()) => {
+                30 => ("Lit", "All Literature", "AllLiterature", Gray);
+                31 => ("Lit", "English Translated", "LitEnglishTranslated", LightGreen);
+                32 => ("Lit", "Non-English Translated", "LitNonEnglishTranslated", Yellow);
+                33 => ("Lit", "Raw", "LitRaw", Gray);
+            }
+            (LIVE_ACTION: "Live Action".to_owned()) => {
+                40 => ("Liv", "All Live Action", "AllLiveAction", Gray);
+                41 => ("Liv", "English Translated", "LiveEnglishTranslated", Yellow);
+                43 => ("Liv", "Non-English Translated", "LiveNonEnglishTranslated", LightCyan);
+                42 => ("Liv", "Idol/Promo Video", "LiveIdolPromoVideo", LightYellow);
+                44 => ("Liv", "Raw", "LiveRaw", Gray);
+            }
+            (PICTURES: "Pictures".to_owned()) => {
+                50 => ("Pic", "All Pictures", "AllPictures", Gray);
+                51 => ("Pic", "Graphics", "PicGraphics", LightMagenta);
+                52 => ("Pic", "Photos", "PicPhotos", Magenta);
+            }
+            (SOFTWARE: "Software".to_owned()) => {
+                60 => ("Sof", "All Software", "AllSoftware", Gray);
+                61 => ("Sof", "Applications", "SoftApplications", Blue);
+                62 => ("Sof", "Games", "SoftGames", LightBlue);
+            }
+        }
+    }
+
+    fn default_category() -> usize {
+        0
     }
 }

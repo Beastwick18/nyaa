@@ -255,19 +255,19 @@ impl super::Widget for ResultsWidget {
             ctx.client.to_string(),
             ctx.src.to_string()
         );
-        if let Some((tr, area)) = TitlePosition::TopRight.try_title(dl_src, area) {
+        if let Some((tr, area)) = TitlePosition::TopRight.try_widget(dl_src, area) {
             f.render_widget(tr, area);
         }
 
         if !ctx.last_key.is_empty() {
             let key_str = title!(ctx.last_key);
-            if let Some((br, area)) = TitlePosition::BottomRight.try_title(key_str, area) {
+            if let Some((br, area)) = TitlePosition::BottomRight.try_widget(key_str, area) {
                 f.render_widget(br, area);
             }
         }
 
         if let Some(notif) = ctx.notification.clone() {
-            if let Some((bl, area)) = TitlePosition::BottomLeft.try_title(notif, area) {
+            if let Some((bl, area)) = TitlePosition::BottomLeft.try_widget(notif, area) {
                 f.render_widget(bl, area);
             }
         }

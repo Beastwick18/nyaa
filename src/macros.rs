@@ -5,25 +5,39 @@ macro_rules! categories {
         $(
             ($cat:ident: $cats:expr) => {$($idx:expr => ($icon:expr, $disp:expr, $conf:expr, $col:ident);)+}
         )+
-    ) => {
+    ) => {{
+        let v = $crate::widget::category::Categories {cats:vec![
         $(
-            pub static $cat: CatStruct = CatStruct {
+            $crate::widget::category::CatStruct {
                 name: $cats,
-                entries: &[$(CatEntry::new(
+                entries: vec![$($crate::widget::category::CatEntry::new(
                         $disp,
                         $conf,
                         $idx,
                         $icon,
-                        Color::$col,
+                        ratatui::style::Color::$col,
                     ),
                 )+],
-            };
+        },
+            // pub static $cat: CatStruct = CatStruct {
+            //     name: $cats,
+            //     entries: &[$(CatEntry::new(
+            //             $disp,
+            //             $conf,
+            //             $idx,
+            //             $icon,
+            //             Color::$col,
+            //         ),
+            //     )+],
+            // };
         )+
+        ]};
+        v
 
-        pub static $name: &[&CatStruct] = &[
-            $(&$cat,)+
-        ];
-    }
+        // pub static $name: &[&CatStruct] = &[
+        //     $(&$cat,)+
+        // ];
+    }}
 }
 
 #[macro_export]

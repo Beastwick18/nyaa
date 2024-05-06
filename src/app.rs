@@ -12,12 +12,12 @@ use crate::{
     client::Client,
     clip,
     config::Config,
-    source::{Item, Sources},
+    source::{nyaa_html::NyaaHtmlSource, Item, Source, Sources},
     theme::{self, Theme},
     util::conv::key_to_string,
     widget::{
         batch::BatchWidget,
-        category::CategoryPopup,
+        category::{Categories, CategoryPopup},
         clients::ClientsPopup,
         error::ErrorPopup,
         filter::FilterPopup,
@@ -101,6 +101,8 @@ pub struct App {
 pub struct Context {
     pub mode: Mode,
     pub themes: IndexMap<String, Theme>,
+    pub categories: Categories,
+    pub category: usize,
     pub theme: Theme,
     pub config: Config,
     pub errors: VecDeque<String>,
@@ -137,6 +139,8 @@ impl Default for Context {
         Context {
             mode: Mode::Loading(LoadType::Searching),
             themes,
+            categories: NyaaHtmlSource::categories(),
+            category: 0,
             theme: Theme::default(),
             config: Config::default(),
             errors: VecDeque::new(),

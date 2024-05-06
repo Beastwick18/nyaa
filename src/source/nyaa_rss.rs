@@ -9,12 +9,12 @@ use crate::{
     app::{Context, Widgets},
     util::conv::to_bytes,
     widget::{
-        category::CatEntry,
+        category::Categories,
         sort::{SelectedSort, Sort, SortDir},
     },
 };
 
-use super::{add_protocol, Item, ItemType, Source};
+use super::{add_protocol, nyaa_html::NyaaHtmlSource, Item, ItemType, Source};
 
 pub struct NyaaRssSource;
 
@@ -51,7 +51,7 @@ impl Source for NyaaRssSource {
     }
 
     async fn search(ctx: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
-        let cat = w.category.category;
+        let cat = ctx.category;
         let query = w.search.input.input.clone();
         let filter = w.filter.selected as usize;
         let user = ctx.user.to_owned().unwrap_or_default();
@@ -92,7 +92,7 @@ impl Source for NyaaRssSource {
                                                                             // `https://nyaa.si/view/{id}`
                 let id_usize = id.parse::<usize>().ok()?;
                 let category_str = get_ext_value::<String>(ext, "categoryId");
-                let cat = CatEntry::from_str(&category_str);
+                let cat = NyaaHtmlSource::categories().entry_from_str(&category_str);
                 let category = cat.id;
                 let icon = cat.icon.clone();
                 let size = get_ext_value::<String>(ext, "size")
@@ -143,5 +143,13 @@ impl Source for NyaaRssSource {
 
     async fn categorize(app: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
         NyaaRssSource::search(app, w).await
+    }
+
+    fn categories() -> Categories {
+        NyaaHtmlSource::categories()
+    }
+
+    fn default_category() -> usize {
+        0
     }
 }

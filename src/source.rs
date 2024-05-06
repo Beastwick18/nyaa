@@ -7,13 +7,17 @@ use crate::{
     app::{Context, LoadType, Widgets},
     popup_enum,
     util::conv::add_protocol,
-    widget::{category::CatIcon, EnumIter},
+    widget::{
+        category::{CatIcon, Categories},
+        EnumIter,
+    },
 };
 
-use self::{nyaa_html::NyaaHtmlSource, nyaa_rss::NyaaRssSource};
+use self::{nyaa_html::NyaaHtmlSource, nyaa_rss::NyaaRssSource, sukebei_nyaa::SubekiHtmlSource};
 
 pub mod nyaa_html;
 pub mod nyaa_rss;
+pub mod sukebei_nyaa;
 
 pub fn request_client(ctx: &Context) -> Result<reqwest::Client, reqwest::Error> {
     let mut client = reqwest::Client::builder()
@@ -55,6 +59,7 @@ popup_enum! {
     Sources;
     (0, NyaaHtml, "Nyaa HTML");
     (1, NyaaRss, "Nyaa RSS");
+    (2, SubekiNyaa, "Subeki");
 }
 
 pub trait Source {
@@ -62,6 +67,8 @@ pub trait Source {
     async fn sort(app: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>>;
     async fn filter(app: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>>;
     async fn categorize(app: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>>;
+    fn categories() -> Categories;
+    fn default_category() -> usize;
 }
 
 impl Sources {
@@ -86,6 +93,29 @@ impl Sources {
                 LoadType::Categorizing => NyaaRssSource::categorize(app, w).await,
                 LoadType::Downloading | LoadType::Batching => Ok(w.results.table.items.clone()),
             },
+            Sources::SubekiNyaa => match load_type {
+                LoadType::Searching => SubekiHtmlSource::search(app, w).await,
+                LoadType::Sorting => SubekiHtmlSource::sort(app, w).await,
+                LoadType::Filtering => SubekiHtmlSource::filter(app, w).await,
+                LoadType::Categorizing => SubekiHtmlSource::categorize(app, w).await,
+                LoadType::Downloading | LoadType::Batching => Ok(w.results.table.items.clone()),
+            },
+        }
+    }
+
+    pub fn categories(self) -> Categories {
+        match self {
+            Sources::NyaaHtml => NyaaHtmlSource::categories(),
+            Sources::NyaaRss => NyaaRssSource::categories(),
+            Sources::SubekiNyaa => SubekiHtmlSource::categories(),
+        }
+    }
+
+    pub fn default_category(self) -> usize {
+        match self {
+            Sources::NyaaHtml => NyaaHtmlSource::default_category(),
+            Sources::NyaaRss => NyaaRssSource::default_category(),
+            Sources::SubekiNyaa => SubekiHtmlSource::default_category(),
         }
     }
 }

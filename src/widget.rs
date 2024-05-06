@@ -48,7 +48,11 @@ pub enum TitlePosition {
 }
 
 impl TitlePosition {
-    pub fn try_title<'a, L: Into<Line<'a>>>(self, text: L, area: Rect) -> Option<(Line<'a>, Rect)> {
+    pub fn try_widget<'a, L: Into<Line<'a>>>(
+        self,
+        text: L,
+        area: Rect,
+    ) -> Option<(Line<'a>, Rect)> {
         let line: Line = text.into();
         if area.width < line.width() as u16 + 2 {
             // Too small
