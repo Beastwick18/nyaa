@@ -4,6 +4,7 @@ Set FontFamily "JetBrainsMono Nerd Font"
 Set FontSize 20
 Set Width 1280
 Set Height 720
+Set Framerate 30
 Set Shell zsh
 Set TypingSpeed 100ms
 Set Padding 10
@@ -25,7 +26,7 @@ Enter
 Sleep 1s
 Show
 
-Sleep 2s
+Sleep 1s
 Type@500ms "j"
 Type@500ms "j"
 Type@500ms "j"
@@ -33,14 +34,14 @@ Type@500ms "k"
 Type@500ms "k"
 Sleep 1s
 
-Type "?"
-Sleep 1s
-Type@500ms "j"
-Type@500ms "j"
-Type@500ms "k"
-Sleep 1s
-Escape
-Sleep 1s
+# Type "?"
+# Sleep 1s
+# Type@500ms "j"
+# Type@500ms "j"
+# Type@500ms "k"
+# Sleep 1s
+# Escape
+# Sleep 1s
 
 Type "/"
 Sleep 1s
@@ -81,14 +82,13 @@ Enter
 Sleep 2s
 
 Type@500ms " "
-Sleep 500ms
 Type@500ms "jj"
 Type@500ms " "
 Type@500ms "jj"
 Type@500ms " "
 Sleep 1s
 Tab
-Sleep 500ms
+Sleep 1s
 Type@500ms "jj"
 Type@500ms "kk"
 Sleep 1s
@@ -119,4 +119,3 @@ Sleep 3s
 
 Type "q"
 Sleep 1s
-
