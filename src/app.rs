@@ -12,12 +12,12 @@ use crate::{
     client::Client,
     clip,
     config::Config,
-    source::{nyaa_html::NyaaHtmlSource, Item, Source, Sources},
+    source::{nyaa_html::NyaaHtmlSource, request_client, Item, Source, SourceInfo, Sources},
     theme::{self, Theme},
     util::conv::key_to_string,
     widget::{
         batch::BatchWidget,
-        category::{Categories, CategoryPopup},
+        category::CategoryPopup,
         clients::ClientsPopup,
         error::ErrorPopup,
         filter::FilterPopup,
@@ -45,6 +45,7 @@ pub static APP_NAME: &str = "nyaa";
 
 #[derive(PartialEq, Clone, Copy)]
 pub enum LoadType {
+    Sourcing,
     Searching,
     Sorting,
     Filtering,
@@ -101,7 +102,7 @@ pub struct App {
 pub struct Context {
     pub mode: Mode,
     pub themes: IndexMap<String, Theme>,
-    pub categories: Categories,
+    pub src_info: SourceInfo,
     pub category: usize,
     pub theme: Theme,
     pub config: Config,
@@ -139,7 +140,7 @@ impl Default for Context {
         Context {
             mode: Mode::Loading(LoadType::Searching),
             themes,
-            categories: NyaaHtmlSource::categories(),
+            src_info: NyaaHtmlSource::info(),
             category: 0,
             theme: Theme::default(),
             config: Config::default(),
@@ -191,6 +192,9 @@ impl App {
             }
         };
         config.apply(ctx, w);
+
+        let client = request_client(ctx)?;
+
         while !ctx.should_quit {
             if !ctx.errors.is_empty() {
                 ctx.mode = Mode::Error;
@@ -217,10 +221,17 @@ impl App {
                             .await;
                         continue;
                     }
+                    LoadType::Sourcing => {
+                        // On sourcing, update info, reset things like category, etc.
+                        ctx.category = ctx.src.default_category();
+                        ctx.src_info = ctx.src.info();
+                        w.category.major = 0;
+                        w.category.minor = 0;
+                    }
                     _ => {}
                 }
 
-                let result = ctx.src.clone().load(load_type, ctx, w).await;
+                let result = ctx.src.clone().load(&client, load_type, ctx, w).await;
 
                 match result {
                     Ok(items) => w.results.with_items(items, w.sort.selected),

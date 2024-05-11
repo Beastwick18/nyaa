@@ -85,7 +85,7 @@ impl Config {
         w.filter.selected = ctx.config.default_filter.to_owned();
         ctx.client = ctx.config.download_client.to_owned();
         ctx.src = ctx.config.source.to_owned();
-        ctx.categories = ctx.src.categories();
+        ctx.src_info = ctx.src.info();
 
         // Load user-defined themes
         if let Err(e) = theme::load_user_themes(ctx) {
@@ -97,8 +97,7 @@ impl Config {
             ctx.theme = theme.to_owned();
         }
         if let Some(ent) = ctx
-            .categories
-            .to_owned()
+            .src_info
             .find_category(ctx.config.default_category.to_owned())
         {
             ctx.category = ent.id;

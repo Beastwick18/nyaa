@@ -7,12 +7,11 @@ use urlencoding::encode;
 
 use crate::{
     app::{Context, Widgets},
-    categories,
+    info,
     util::conv::to_bytes,
-    widget::category::Categories,
 };
 
-use super::{add_protocol, Item, ItemType, Source};
+use super::{add_protocol, Item, ItemType, Source, SourceInfo};
 
 pub struct SubekiHtmlSource;
 
@@ -32,23 +31,39 @@ fn attr(e: ElementRef, s: &Selector, attr: &str) -> String {
 }
 
 impl Source for SubekiHtmlSource {
-    async fn filter(ctx: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
-        SubekiHtmlSource::search(ctx, w).await
+    async fn filter(
+        client: &reqwest::Client,
+        ctx: &mut Context,
+        w: &Widgets,
+    ) -> Result<Vec<Item>, Box<dyn Error>> {
+        SubekiHtmlSource::search(client, ctx, w).await
     }
-    async fn categorize(ctx: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
-        SubekiHtmlSource::search(ctx, w).await
+    async fn categorize(
+        client: &reqwest::Client,
+        ctx: &mut Context,
+        w: &Widgets,
+    ) -> Result<Vec<Item>, Box<dyn Error>> {
+        SubekiHtmlSource::search(client, ctx, w).await
     }
-    async fn sort(ctx: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
-        SubekiHtmlSource::search(ctx, w).await
+    async fn sort(
+        client: &reqwest::Client,
+        ctx: &mut Context,
+        w: &Widgets,
+    ) -> Result<Vec<Item>, Box<dyn Error>> {
+        SubekiHtmlSource::search(client, ctx, w).await
     }
-    async fn search(ctx: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
+    async fn search(
+        client: &reqwest::Client,
+        ctx: &mut Context,
+        w: &Widgets,
+    ) -> Result<Vec<Item>, Box<dyn Error>> {
         let cat = ctx.category;
         let filter = w.filter.selected as u16;
         let page = ctx.page;
         let user = ctx.user.to_owned().unwrap_or_default();
         let sort = w.sort.selected.sort.to_url();
 
-        let base_url = add_protocol("https://sukebei.nyaa.si/", true);
+        let base_url = add_protocol("https://sukebei.nyaa.si/", true); // TODO: Load from config
         let (high, low) = (cat / 10, cat % 10);
         let query = encode(&w.search.input.input);
         let dir = w.sort.selected.dir.to_url();
@@ -59,7 +74,7 @@ impl Source for SubekiHtmlSource {
             query, high, low, filter, page, sort, dir, user
         )));
 
-        let client = super::request_client(ctx)?;
+        // let client = super::request_client(ctx)?;
         let response = client.get(url_query.to_owned()).send().await?;
         if response.status() != StatusCode::OK {
             // Throw error if response code is not OK
@@ -99,7 +114,7 @@ impl Source for SubekiHtmlSource {
             .filter_map(|e| {
                 let cat_str = attr(e, icon_sel, "href");
                 let cat_str = cat_str.split('=').last().unwrap_or("");
-                let cat = Self::categories().entry_from_str(cat_str);
+                let cat = Self::info().entry_from_str(cat_str);
                 let category = cat.id;
                 let icon = cat.icon.clone();
 
@@ -165,13 +180,12 @@ impl Source for SubekiHtmlSource {
             .collect())
     }
 
-    fn categories() -> Categories {
-        categories! {
-            ALL_CATEGORIES;
-            (ALL: "All Categories".to_owned()) => {
+    fn info() -> SourceInfo {
+        info! {
+            "All Categories" => {
                 0 => ("---", "All Categories", "AllCategories", White);
             }
-            (ANIME: "Art".to_owned()) => {
+            "Art" => {
                 10 => ("Art", "All Art", "AllArt", Gray);
                 11 => ("Ani", "Anime", "ArtAnime", Magenta);
                 12 => ("Dou", "Doujinshi", "ArtDoujinshi", LightMagenta);
@@ -179,7 +193,7 @@ impl Source for SubekiHtmlSource {
                 14 => ("Man", "Manga", "ArtManga", LightGreen);
                 15 => ("Pic", "Pictures", "ArtPictures", Gray);
             }
-            (AUDIO: "Real Life".to_owned()) => {
+            "Real Life" => {
                 20 => ("Rea", "All Real Life", "AllReal", Gray);
                 21 => ("Pho", "Photobooks and Pictures", "RealPhotos", Red);
                 22 => ("Vid", "Videos", "RealVideos", Yellow);

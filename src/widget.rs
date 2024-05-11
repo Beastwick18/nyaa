@@ -192,6 +192,7 @@ impl<T> StatefulTable<T> {
     }
 }
 
+#[derive(Default)]
 pub struct VirtualStatefulTable {
     pub state: TableState,
     pub scrollbar_state: ScrollbarState,

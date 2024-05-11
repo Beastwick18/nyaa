@@ -70,9 +70,7 @@ impl Widget for SourcesPopup {
                     if let Some(i) = Sources::iter().nth(self.table.state.selected().unwrap_or(0)) {
                         ctx.src = *i;
                         ctx.config.source = *i;
-                        ctx.mode = Mode::Loading(LoadType::Searching);
-                        ctx.category = ctx.src.default_category();
-                        ctx.categories = ctx.src.categories();
+                        ctx.mode = Mode::Loading(LoadType::Sourcing);
                         match ctx.config.clone().store() {
                             Ok(_) => ctx.notify(format!("Updated source to \"{}\"", i.to_string())),
                             Err(e) => ctx.show_error(format!(

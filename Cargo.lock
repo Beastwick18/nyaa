@@ -1141,6 +1141,7 @@ dependencies = [
  "shellwords",
  "tokio",
  "transmission-rpc",
+ "unicode-segmentation",
  "unicode-width",
  "urlencoding",
 ]

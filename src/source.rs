@@ -8,16 +8,58 @@ use crate::{
     popup_enum,
     util::conv::add_protocol,
     widget::{
-        category::{CatIcon, Categories},
+        category::{CatEntry, CatIcon, CatStruct},
         EnumIter,
     },
 };
 
-use self::{nyaa_html::NyaaHtmlSource, nyaa_rss::NyaaRssSource, sukebei_nyaa::SubekiHtmlSource};
+use self::{
+    nyaa_html::NyaaHtmlSource, nyaa_rss::NyaaRssSource, sukebei_nyaa::SubekiHtmlSource,
+    torrent_galaxy::TorrentGalaxyHtmlSource,
+};
 
 pub mod nyaa_html;
 pub mod nyaa_rss;
 pub mod sukebei_nyaa;
+pub mod torrent_galaxy;
+
+#[derive(Clone)]
+pub struct SourceInfo {
+    pub cats: Vec<CatStruct>,
+}
+
+impl SourceInfo {
+    pub fn entry_from_str(self, s: &str) -> CatEntry {
+        let split: Vec<&str> = s.split('_').collect();
+        let high = split.first().unwrap_or(&"1").parse().unwrap_or(1);
+        let low = split.last().unwrap_or(&"0").parse().unwrap_or(0);
+        let id = high * 10 + low;
+        self.entry_from_id(id)
+    }
+
+    pub fn entry_from_id(self, id: usize) -> CatEntry {
+        for cat in self.cats.iter() {
+            if let Some(ent) = cat.entries.iter().find(|ent| ent.id == id) {
+                return ent.clone();
+            }
+        }
+        self.cats[0].entries[0].clone()
+    }
+
+    pub fn find_category<S: Into<String>>(&self, name: S) -> Option<CatEntry> {
+        let name = name.into();
+        for cat in self.cats.iter() {
+            if let Some(ent) = cat
+                .entries
+                .iter()
+                .find(|ent| ent.cfg.eq_ignore_ascii_case(&name))
+            {
+                return Some(ent.to_owned());
+            }
+        }
+        None
+    }
+}
 
 pub fn request_client(ctx: &Context) -> Result<reqwest::Client, reqwest::Error> {
     let mut client = reqwest::Client::builder()
@@ -60,54 +102,88 @@ popup_enum! {
     (0, NyaaHtml, "Nyaa HTML");
     (1, NyaaRss, "Nyaa RSS");
     (2, SubekiNyaa, "Subeki");
+    (3, TorrentGalaxy, "TorrentGalaxy");
 }
 
 pub trait Source {
-    async fn search(app: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>>;
-    async fn sort(app: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>>;
-    async fn filter(app: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>>;
-    async fn categorize(app: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>>;
-    fn categories() -> Categories;
+    async fn search(
+        client: &reqwest::Client,
+        app: &mut Context,
+        w: &Widgets,
+    ) -> Result<Vec<Item>, Box<dyn Error>>;
+    async fn sort(
+        client: &reqwest::Client,
+        app: &mut Context,
+        w: &Widgets,
+    ) -> Result<Vec<Item>, Box<dyn Error>>;
+    async fn filter(
+        client: &reqwest::Client,
+        app: &mut Context,
+        w: &Widgets,
+    ) -> Result<Vec<Item>, Box<dyn Error>>;
+    async fn categorize(
+        client: &reqwest::Client,
+        app: &mut Context,
+        w: &Widgets,
+    ) -> Result<Vec<Item>, Box<dyn Error>>;
+    fn info() -> SourceInfo;
     fn default_category() -> usize;
 }
 
 impl Sources {
     pub async fn load(
         &self,
+        client: &reqwest::Client,
         load_type: LoadType,
-        app: &mut Context,
+        ctx: &mut Context,
         w: &Widgets,
     ) -> Result<Vec<Item>, Box<dyn Error>> {
         match self {
             Sources::NyaaHtml => match load_type {
-                LoadType::Searching => NyaaHtmlSource::search(app, w).await,
-                LoadType::Sorting => NyaaHtmlSource::sort(app, w).await,
-                LoadType::Filtering => NyaaHtmlSource::filter(app, w).await,
-                LoadType::Categorizing => NyaaHtmlSource::categorize(app, w).await,
+                LoadType::Searching | LoadType::Sourcing => {
+                    NyaaHtmlSource::search(client, ctx, w).await
+                }
+                LoadType::Sorting => NyaaHtmlSource::sort(client, ctx, w).await,
+                LoadType::Filtering => NyaaHtmlSource::filter(client, ctx, w).await,
+                LoadType::Categorizing => NyaaHtmlSource::categorize(client, ctx, w).await,
                 LoadType::Downloading | LoadType::Batching => Ok(w.results.table.items.clone()),
             },
             Sources::NyaaRss => match load_type {
-                LoadType::Searching => NyaaRssSource::search(app, w).await,
-                LoadType::Sorting => NyaaRssSource::sort(app, w).await,
-                LoadType::Filtering => NyaaRssSource::filter(app, w).await,
-                LoadType::Categorizing => NyaaRssSource::categorize(app, w).await,
+                LoadType::Searching | LoadType::Sourcing => {
+                    NyaaRssSource::search(client, ctx, w).await
+                }
+                LoadType::Sorting => NyaaRssSource::sort(client, ctx, w).await,
+                LoadType::Filtering => NyaaRssSource::filter(client, ctx, w).await,
+                LoadType::Categorizing => NyaaRssSource::categorize(client, ctx, w).await,
                 LoadType::Downloading | LoadType::Batching => Ok(w.results.table.items.clone()),
             },
             Sources::SubekiNyaa => match load_type {
-                LoadType::Searching => SubekiHtmlSource::search(app, w).await,
-                LoadType::Sorting => SubekiHtmlSource::sort(app, w).await,
-                LoadType::Filtering => SubekiHtmlSource::filter(app, w).await,
-                LoadType::Categorizing => SubekiHtmlSource::categorize(app, w).await,
+                LoadType::Searching | LoadType::Sourcing => {
+                    SubekiHtmlSource::search(client, ctx, w).await
+                }
+                LoadType::Sorting => SubekiHtmlSource::sort(client, ctx, w).await,
+                LoadType::Filtering => SubekiHtmlSource::filter(client, ctx, w).await,
+                LoadType::Categorizing => SubekiHtmlSource::categorize(client, ctx, w).await,
+                LoadType::Downloading | LoadType::Batching => Ok(w.results.table.items.clone()),
+            },
+            Sources::TorrentGalaxy => match load_type {
+                LoadType::Searching | LoadType::Sourcing => {
+                    TorrentGalaxyHtmlSource::search(client, ctx, w).await
+                }
+                LoadType::Sorting => TorrentGalaxyHtmlSource::sort(client, ctx, w).await,
+                LoadType::Filtering => TorrentGalaxyHtmlSource::filter(client, ctx, w).await,
+                LoadType::Categorizing => TorrentGalaxyHtmlSource::categorize(client, ctx, w).await,
                 LoadType::Downloading | LoadType::Batching => Ok(w.results.table.items.clone()),
             },
         }
     }
 
-    pub fn categories(self) -> Categories {
+    pub fn info(self) -> SourceInfo {
         match self {
-            Sources::NyaaHtml => NyaaHtmlSource::categories(),
-            Sources::NyaaRss => NyaaRssSource::categories(),
-            Sources::SubekiNyaa => SubekiHtmlSource::categories(),
+            Sources::NyaaHtml => NyaaHtmlSource::info(),
+            Sources::NyaaRss => NyaaRssSource::info(),
+            Sources::SubekiNyaa => SubekiHtmlSource::info(),
+            Sources::TorrentGalaxy => TorrentGalaxyHtmlSource::info(),
         }
     }
 
@@ -116,6 +192,7 @@ impl Sources {
             Sources::NyaaHtml => NyaaHtmlSource::default_category(),
             Sources::NyaaRss => NyaaRssSource::default_category(),
             Sources::SubekiNyaa => SubekiHtmlSource::default_category(),
+            Sources::TorrentGalaxy => TorrentGalaxyHtmlSource::default_category(),
         }
     }
 }

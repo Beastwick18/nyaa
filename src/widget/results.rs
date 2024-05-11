@@ -63,7 +63,14 @@ impl ResultsWidget {
     pub fn with_items(&mut self, items: Vec<Item>, sort: SelectedSort) {
         self.table.with_items(items);
         self.sort = sort;
-        self.raw_date_width = self.table.items.first().map(|i| i.date.len()).unwrap_or(10) as u16;
+        // self.raw_date_width = self.table.items.first().map(|i| i.date.len()).unwrap_or(10) as u16;
+        self.raw_date_width = self
+            .table
+            .items
+            .iter()
+            .map(|i| i.date.len())
+            .max()
+            .unwrap_or_default() as u16;
         self.date_width = max(self.raw_date_width, 6);
     }
 
@@ -166,6 +173,7 @@ impl super::Widget for ResultsWidget {
         let items: Vec<Row> = match ctx.mode {
             Mode::Loading(loadtype) => {
                 let message = match loadtype {
+                    LoadType::Sourcing => "Sourcing…",
                     LoadType::Searching => "Searching…",
                     LoadType::Sorting => "Sorting…",
                     LoadType::Filtering => "Filtering…",

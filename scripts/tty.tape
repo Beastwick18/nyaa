@@ -44,7 +44,7 @@ Sleep 1s
 
 Type "/"
 Sleep 1s
-Type "one punch man"
+Type@200ms "one punch man"
 Sleep 500ms
 Enter
 Sleep 2s

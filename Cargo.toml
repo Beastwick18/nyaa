@@ -25,6 +25,7 @@ urlencoding = "2.1.0"
 ratatui = "=0.26.1"
 crossterm = "0.27.0"
 unicode-width = "0.1.5"
+unicode-segmentation = "1.11.0"
 confy = "0.6.0"
 shellwords = "1.1.0"
 serde = { version = "1.0.152", features = ["derive"] }

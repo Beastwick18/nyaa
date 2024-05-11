@@ -1,9 +1,9 @@
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
-    layout::{Constraint, Rect},
-    style::{Color, Stylize as _},
+    layout::{Constraint, Margin, Rect},
+    style::{Color, Style, Stylize as _},
     text::{Line, Text},
-    widgets::{Row, Table, Widget as _},
+    widgets::{Row, ScrollbarOrientation, StatefulWidget, Table},
     Frame,
 };
 
@@ -12,12 +12,7 @@ use crate::{
     style, title,
 };
 
-use super::{border_block, Widget};
-
-#[derive(Clone)]
-pub struct Categories {
-    pub cats: Vec<CatStruct>,
-}
+use super::{border_block, VirtualStatefulTable, Widget};
 
 #[derive(Clone)]
 pub struct CatEntry {
@@ -39,36 +34,6 @@ impl Default for CatIcon {
             label: "???",
             color: Color::Gray,
         }
-    }
-}
-
-impl Categories {
-    pub fn entry_from_str(self, s: &str) -> CatEntry {
-        let split: Vec<&str> = s.split('_').collect();
-        let high = split.first().unwrap_or(&"1").parse().unwrap_or(1);
-        let low = split.last().unwrap_or(&"0").parse().unwrap_or(0);
-        let id = high * 10 + low;
-        for cat in self.cats.iter() {
-            if let Some(ent) = cat.entries.iter().find(|ent| ent.id == id) {
-                return ent.clone();
-            }
-        }
-        self.cats[0].entries[0].clone()
-        // &ALL_CATEGORIES[0].entries[0]
-    }
-
-    pub fn find_category<S: Into<String>>(self, name: S) -> Option<CatEntry> {
-        let name = name.into();
-        for cat in self.cats {
-            if let Some(ent) = cat
-                .entries
-                .iter()
-                .find(|ent| ent.cfg.eq_ignore_ascii_case(&name))
-            {
-                return Some(ent.to_owned());
-            }
-        }
-        None
     }
 }
 
@@ -95,6 +60,7 @@ pub struct CategoryPopup {
     pub major: usize,
     pub minor: usize,
     pub max_cat: usize,
+    table: VirtualStatefulTable,
 }
 
 impl CategoryPopup {
@@ -104,6 +70,9 @@ impl CategoryPopup {
             false => self.major + 1,
         };
         self.minor = 0;
+        if self.table.state.offset() > self.major {
+            *self.table.state.offset_mut() = self.major;
+        }
     }
 
     fn prev_tab(&mut self) {
@@ -117,10 +86,10 @@ impl CategoryPopup {
 
 impl Widget for CategoryPopup {
     fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
-        self.max_cat = ctx.categories.cats.len(); // TODO: Bad
-        if let Some(cat) = ctx.categories.cats.get(self.major) {
+        self.max_cat = ctx.src_info.cats.len(); // TODO: Bad
+        if let Some(cat) = ctx.src_info.cats.get(self.major) {
             let mut tbl: Vec<Row> = ctx
-                .categories
+                .src_info
                 .cats
                 .iter()
                 .enumerate()
@@ -131,8 +100,8 @@ impl Widget for CategoryPopup {
                 })
                 .collect();
 
-            let cat_rows = cat.entries.iter().enumerate().map(|(i, e)| {
-                let row = Row::new(vec![Line::from(vec![
+            let cat_rows = cat.entries.iter().map(|e| {
+                Row::new(vec![Line::from(vec![
                     match e.id == ctx.category {
                         true => "  ",
                         false => "   ",
@@ -141,21 +110,41 @@ impl Widget for CategoryPopup {
                     e.icon.label.fg(e.icon.color),
                     " ".into(),
                     e.name.to_owned().into(),
-                ])]);
-                match i == self.minor {
-                    true => row.bg(ctx.theme.hl_bg),
-                    false => row,
-                }
+                ])])
+                // match i == self.minor {
+                //     true => row.bg(ctx.theme.hl_bg),
+                //     false => row,
+                // }
             });
+            // self.table.select(self.major + self.minor + 1);
+            self.table.scrollbar_state = self
+                .table
+                .scrollbar_state
+                .content_length(cat.entries.len() + ctx.src_info.cats.len());
+            // let last_elem = self.major + cat.entries.len() + 1;
+            // if last_elem > center.height - 2 {
+            //
+            // }
+            // *self.table.state.offset_mut() = 0;
+            // self.table.scrollbar_state = self.table.scrollbar_state.position(0);
 
             tbl.splice(self.major + 1..self.major + 1, cat_rows);
 
             let center = super::centered_rect(33, 14, area);
             let clear = super::centered_rect(center.width + 2, center.height, area);
             super::clear(clear, f.buffer_mut(), ctx.theme.bg);
-            Table::new(tbl, [Constraint::Percentage(100)])
+            let table = Table::new(tbl, [Constraint::Percentage(100)])
                 .block(border_block(&ctx.theme, true).title(title!("Category")))
-                .render(center, f.buffer_mut());
+                .highlight_style(Style::default().bg(ctx.theme.hl_bg));
+            StatefulWidget::render(table, center, f.buffer_mut(), &mut self.table.state);
+
+            let sb = super::scrollbar(ctx, ScrollbarOrientation::VerticalRight);
+            let sb_area = center.inner(&Margin {
+                vertical: 1,
+                horizontal: 0,
+            });
+            StatefulWidget::render(sb, sb_area, f.buffer_mut(), &mut self.table.scrollbar_state);
+            // .render(center, f.buffer_mut());
         }
     }
 
@@ -168,7 +157,7 @@ impl Widget for CategoryPopup {
         {
             match code {
                 KeyCode::Enter => {
-                    if let Some(cat) = ctx.categories.cats.get(self.major) {
+                    if let Some(cat) = ctx.src_info.cats.get(self.major) {
                         if let Some(item) = cat.entries.get(self.minor) {
                             ctx.category = item.id;
                             ctx.notify(format!("Category \"{}\"", item.name));
@@ -180,7 +169,7 @@ impl Widget for CategoryPopup {
                     ctx.mode = Mode::Normal;
                 }
                 KeyCode::Char('j') | KeyCode::Down => {
-                    if let Some(cat) = ctx.categories.cats.get(self.major) {
+                    if let Some(cat) = ctx.src_info.cats.get(self.major) {
                         self.minor = match self.minor + 1 >= cat.entries.len() {
                             true => {
                                 self.next_tab();
@@ -188,35 +177,41 @@ impl Widget for CategoryPopup {
                             }
                             false => self.minor + 1,
                         };
+                        self.table.select(self.major + self.minor + 1);
                     }
                 }
                 KeyCode::Char('k') | KeyCode::Up => {
-                    if ctx.categories.cats.get(self.major).is_some() {
+                    if ctx.src_info.cats.get(self.major).is_some() {
                         self.minor = match self.minor < 1 {
                             true => {
                                 self.prev_tab();
-                                match ctx.categories.cats.get(self.major) {
+                                match ctx.src_info.cats.get(self.major) {
                                     Some(cat) => cat.entries.len() - 1,
                                     None => 0,
                                 }
                             }
                             false => self.minor - 1,
                         };
+                        self.table.select(self.major + self.minor + 1);
                     }
                 }
                 KeyCode::Char('G') => {
-                    if let Some(cat) = ctx.categories.cats.get(self.major) {
+                    if let Some(cat) = ctx.src_info.cats.get(self.major) {
                         self.minor = cat.entries.len() - 1;
+                        self.table.select(self.major + self.minor + 1);
                     }
                 }
                 KeyCode::Char('g') => {
                     self.minor = 0;
+                    self.table.select(self.major + self.minor + 1);
                 }
                 KeyCode::Tab | KeyCode::Char('J') => {
                     self.next_tab();
+                    self.table.select(self.major + self.minor + 1);
                 }
                 KeyCode::BackTab | KeyCode::Char('K') => {
                     self.prev_tab();
+                    self.table.select(self.major + self.minor + 1);
                 }
                 _ => {}
             }

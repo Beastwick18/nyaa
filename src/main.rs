@@ -17,19 +17,16 @@ mod widget;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let default_panic = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {
-        default_panic(info);
         // Try to reset terminal on panic
         let _ = util::term::reset_terminal();
+        default_panic(info);
     }));
 
     // TODO: Use real command line package
     let args: Vec<String> = env::args().collect();
     for arg in args {
         if arg == "--version" || arg == "-V" || arg == "-v" {
-            println!(
-                "nyaa v{}",
-                option_env!("CARGO_PKG_VERSION").unwrap_or("UNKNOWN")
-            );
+            println!("nyaa v{}", env!("CARGO_PKG_VERSION"));
             return Ok(());
         }
     }

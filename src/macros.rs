@@ -1,15 +1,14 @@
 #[macro_export]
-macro_rules! categories {
+macro_rules! info {
     (
-        $name:ident;
         $(
-            ($cat:ident: $cats:expr) => {$($idx:expr => ($icon:expr, $disp:expr, $conf:expr, $col:ident);)+}
+            $cats:expr => {$($idx:expr => ($icon:expr, $disp:expr, $conf:expr, $col:ident);)+}
         )+
     ) => {{
-        let v = $crate::widget::category::Categories {cats:vec![
+        let v = $crate::source::SourceInfo {cats:vec![
         $(
             $crate::widget::category::CatStruct {
-                name: $cats,
+                name: $cats.to_string(),
                 entries: vec![$($crate::widget::category::CatEntry::new(
                         $disp,
                         $conf,

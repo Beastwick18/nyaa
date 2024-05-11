@@ -8,13 +8,10 @@ use urlencoding::encode;
 use crate::{
     app::{Context, Widgets},
     util::conv::to_bytes,
-    widget::{
-        category::Categories,
-        sort::{SelectedSort, Sort, SortDir},
-    },
+    widget::sort::{SelectedSort, Sort, SortDir},
 };
 
-use super::{add_protocol, nyaa_html::NyaaHtmlSource, Item, ItemType, Source};
+use super::{add_protocol, nyaa_html::NyaaHtmlSource, Item, ItemType, Source, SourceInfo};
 
 pub struct NyaaRssSource;
 
@@ -44,13 +41,21 @@ fn sort_items(items: &mut [Item], sort: SelectedSort) {
 }
 
 impl Source for NyaaRssSource {
-    async fn sort(_: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
+    async fn sort(
+        _: &reqwest::Client,
+        _: &mut Context,
+        w: &Widgets,
+    ) -> Result<Vec<Item>, Box<dyn Error>> {
         let mut items = w.results.table.items.clone();
         sort_items(&mut items, w.sort.selected);
         Ok(items)
     }
 
-    async fn search(ctx: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
+    async fn search(
+        client: &reqwest::Client,
+        ctx: &mut Context,
+        w: &Widgets,
+    ) -> Result<Vec<Item>, Box<dyn Error>> {
         let cat = ctx.category;
         let query = w.search.input.input.clone();
         let filter = w.filter.selected as usize;
@@ -69,7 +74,7 @@ impl Source for NyaaRssSource {
         );
         url.set_query(Some(&query));
 
-        let client = super::request_client(ctx)?;
+        // let client = super::request_client(ctx)?;
 
         let response = client.get(url.to_owned()).send().await?;
         let code = response.status().as_u16();
@@ -92,7 +97,7 @@ impl Source for NyaaRssSource {
                                                                             // `https://nyaa.si/view/{id}`
                 let id_usize = id.parse::<usize>().ok()?;
                 let category_str = get_ext_value::<String>(ext, "categoryId");
-                let cat = NyaaHtmlSource::categories().entry_from_str(&category_str);
+                let cat = Self::info().entry_from_str(&category_str);
                 let category = cat.id;
                 let icon = cat.icon.clone();
                 let size = get_ext_value::<String>(ext, "size")
@@ -137,16 +142,24 @@ impl Source for NyaaRssSource {
         Ok(results)
     }
 
-    async fn filter(app: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
-        NyaaRssSource::search(app, w).await
+    async fn filter(
+        client: &reqwest::Client,
+        app: &mut Context,
+        w: &Widgets,
+    ) -> Result<Vec<Item>, Box<dyn Error>> {
+        NyaaRssSource::search(client, app, w).await
     }
 
-    async fn categorize(app: &mut Context, w: &Widgets) -> Result<Vec<Item>, Box<dyn Error>> {
-        NyaaRssSource::search(app, w).await
+    async fn categorize(
+        client: &reqwest::Client,
+        app: &mut Context,
+        w: &Widgets,
+    ) -> Result<Vec<Item>, Box<dyn Error>> {
+        NyaaRssSource::search(client, app, w).await
     }
 
-    fn categories() -> Categories {
-        NyaaHtmlSource::categories()
+    fn info() -> SourceInfo {
+        NyaaHtmlSource::info()
     }
 
     fn default_category() -> usize {
