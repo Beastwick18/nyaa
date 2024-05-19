@@ -1,6 +1,10 @@
-use std::error::Error;
+use std::{cmp::max, error::Error};
 
 use chrono::{DateTime, Local, NaiveDateTime, TimeZone};
+use ratatui::{
+    layout::{Alignment, Constraint},
+    style::Stylize as _,
+};
 use reqwest::{StatusCode, Url};
 use scraper::{ElementRef, Html, Selector};
 use urlencoding::encode;
@@ -8,12 +12,67 @@ use urlencoding::encode;
 use crate::{
     app::{Context, Widgets},
     info,
-    util::conv::to_bytes,
+    results::{ResultColumn, ResultHeader, ResultRow, ResultTable},
+    theme::Theme,
+    util::conv::{shorten_number, to_bytes},
+    widget::sort::{SelectedSort, Sort},
 };
 
 use super::{add_protocol, Item, ItemType, Source, SourceInfo};
 
 pub struct NyaaHtmlSource;
+
+pub fn nyaa_table(items: Vec<Item>, theme: &Theme, sel_sort: &SelectedSort) -> ResultTable {
+    let raw_date_width = items.iter().map(|i| i.date.len()).max().unwrap_or_default() as u16;
+    let date_width = max(raw_date_width, 6);
+
+    let header = ResultHeader::new([
+        ResultColumn::Normal("Cat".to_owned(), Constraint::Length(3)),
+        ResultColumn::Normal("Name".to_owned(), Constraint::Min(3)),
+        ResultColumn::Sorted("Size".to_owned(), 9, Sort::Size as u32),
+        ResultColumn::Sorted("Date".to_owned(), date_width, Sort::Date as u32),
+        ResultColumn::Sorted("".to_owned(), 4, Sort::Seeders as u32),
+        ResultColumn::Sorted("".to_owned(), 4, Sort::Leechers as u32),
+        ResultColumn::Sorted("".to_owned(), 5, Sort::Downloads as u32),
+    ]);
+    let binding = header.get_binding();
+    let align = [
+        Alignment::Left,
+        Alignment::Left,
+        Alignment::Right,
+        Alignment::Left,
+        Alignment::Right,
+        Alignment::Right,
+        Alignment::Left,
+    ];
+    let rows: Vec<ResultRow> = items
+        .iter()
+        .map(|item| {
+            ResultRow::new([
+                item.icon.label.fg(item.icon.color),
+                item.title.to_owned().fg(match item.item_type {
+                    ItemType::Trusted => theme.trusted,
+                    ItemType::Remake => theme.remake,
+                    ItemType::None => theme.fg,
+                }),
+                item.size.clone().into(),
+                item.date.clone().into(),
+                item.seeders.to_string().fg(theme.trusted),
+                item.leechers.to_string().fg(theme.remake),
+                shorten_number(item.downloads).into(),
+            ])
+            .aligned(align, binding.to_owned())
+            .fg(theme.fg)
+        })
+        .collect();
+
+    ResultTable {
+        headers: header.get_row(sel_sort.dir, sel_sort.sort as u32),
+        rows,
+        binding: header.get_binding(),
+        items,
+    }
+}
 
 fn inner(e: ElementRef, s: &Selector, default: &str) -> String {
     e.select(s)
@@ -35,7 +94,7 @@ impl Source for NyaaHtmlSource {
         client: &reqwest::Client,
         ctx: &mut Context,
         w: &Widgets,
-    ) -> Result<Vec<Item>, Box<dyn Error>> {
+    ) -> Result<ResultTable, Box<dyn Error>> {
         let cat = ctx.category;
         let filter = w.filter.selected as u16;
         let page = ctx.page;
@@ -88,7 +147,7 @@ impl Source for NyaaHtmlSource {
             }
         }
 
-        Ok(doc
+        let items: Vec<Item> = doc
             .select(item_sel)
             .filter_map(|e| {
                 let cat_str = attr(e, icon_sel, "href");
@@ -156,27 +215,45 @@ impl Source for NyaaHtmlSource {
                     item_type,
                 })
             })
-            .collect())
+            .collect();
+
+        // let raw_date_width = items.iter().map(|i| i.date.len()).max().unwrap_or_default() as u16;
+        // let date_width = max(raw_date_width, 6);
+        // let header = ResultHeader::new([
+        //     ResultColumn::Normal("Cat".to_owned(), Constraint::Length(3)),
+        //     ResultColumn::Normal("Name".to_owned(), Constraint::Min(3)),
+        //     ResultColumn::Sorted("Size".to_owned(), 9),
+        //     ResultColumn::Sorted("Date".to_owned(), date_width),
+        //     ResultColumn::Sorted("".to_owned(), 4),
+        //     ResultColumn::Sorted("".to_owned(), 4),
+        //     ResultColumn::Sorted("".to_owned(), 5),
+        // ]);
+        // let s = header
+        //     .get_render(w.sort.selected.dir)
+        //     .iter()
+        //     .fold("".to_owned(), |acc, s| format!("{}\"{}\"\n", acc, s));
+        // ctx.show_error(s);
+        Ok(nyaa_table(items, &ctx.theme, &w.sort.selected))
     }
     async fn sort(
         client: &reqwest::Client,
         ctx: &mut Context,
         w: &Widgets,
-    ) -> Result<Vec<Item>, Box<dyn Error>> {
+    ) -> Result<ResultTable, Box<dyn Error>> {
         NyaaHtmlSource::search(client, ctx, w).await
     }
     async fn filter(
         client: &reqwest::Client,
         ctx: &mut Context,
         w: &Widgets,
-    ) -> Result<Vec<Item>, Box<dyn Error>> {
+    ) -> Result<ResultTable, Box<dyn Error>> {
         NyaaHtmlSource::search(client, ctx, w).await
     }
     async fn categorize(
         client: &reqwest::Client,
         ctx: &mut Context,
         w: &Widgets,
-    ) -> Result<Vec<Item>, Box<dyn Error>> {
+    ) -> Result<ResultTable, Box<dyn Error>> {
         NyaaHtmlSource::search(client, ctx, w).await
     }
 

@@ -1,5 +1,9 @@
-use std::error::Error;
+use std::{cmp::max, error::Error};
 
+use ratatui::{
+    layout::{Alignment, Constraint},
+    style::Stylize as _,
+};
 use reqwest::{StatusCode, Url};
 use scraper::{ElementRef, Html, Selector};
 use urlencoding::encode;
@@ -7,7 +11,9 @@ use urlencoding::encode;
 use crate::{
     app::{Context, Widgets},
     info,
-    util::conv::to_bytes,
+    results::{ResultColumn, ResultHeader, ResultRow, ResultTable},
+    util::conv::{shorten_number, to_bytes},
+    widget::sort::Sort,
 };
 
 use super::{add_protocol, Item, ItemType, Source, SourceInfo};
@@ -34,45 +40,38 @@ impl Source for TorrentGalaxyHtmlSource {
         client: &reqwest::Client,
         ctx: &mut Context,
         w: &Widgets,
-    ) -> Result<Vec<Item>, Box<dyn Error>> {
+    ) -> Result<ResultTable, Box<dyn Error>> {
         TorrentGalaxyHtmlSource::search(client, ctx, w).await
     }
     async fn categorize(
         client: &reqwest::Client,
         ctx: &mut Context,
         w: &Widgets,
-    ) -> Result<Vec<Item>, Box<dyn Error>> {
+    ) -> Result<ResultTable, Box<dyn Error>> {
         TorrentGalaxyHtmlSource::search(client, ctx, w).await
     }
     async fn sort(
         client: &reqwest::Client,
         ctx: &mut Context,
         w: &Widgets,
-    ) -> Result<Vec<Item>, Box<dyn Error>> {
+    ) -> Result<ResultTable, Box<dyn Error>> {
         TorrentGalaxyHtmlSource::search(client, ctx, w).await
     }
     async fn search(
         client: &reqwest::Client,
         ctx: &mut Context,
         w: &Widgets,
-    ) -> Result<Vec<Item>, Box<dyn Error>> {
-        // let cat = ctx.category;
-        // let filter = w.filter.selected as u16;
-        // let page = ctx.page;
-        // let user = ctx.user.to_owned().unwrap_or_default();
-        // let sort = w.sort.selected.sort.to_url();
-
-        // let domain = "https://torrentgalaxy.mx/";
+    ) -> Result<ResultTable, Box<dyn Error>> {
         let domain = "https://torrentgalaxy.to/";
-        let base_url = add_protocol(format!("{}torrents.php", domain), true); // TODO: Load from config
-                                                                              // let (high, low) = (cat / 10, cat % 10);
+        // let domain = "https://torrentgalaxy.to/";
+        let base_url = add_protocol(format!("{}torrents.php", domain), true);
         let query = encode(&w.search.input.input);
         // let dir = w.sort.selected.dir.to_url();
         let url = Url::parse(&base_url)?;
         let mut url_query = url.clone();
-        url_query.set_query(Some(&format!("search={}", query)));
+        let q = format!("search={}&page={}", query, ctx.page - 1);
+        url_query.set_query(Some(&q));
 
-        // let client = super::request_client(ctx)?;
         let response = client.get(url_query.to_owned()).send().await?;
         if response.status() != StatusCode::OK {
             // Throw error if response code is not OK
@@ -96,29 +95,27 @@ impl Source for TorrentGalaxyHtmlSource {
         let torrent_sel = &Selector::parse("div.tgxtablecell:nth-of-type(5) > a:first-of-type")?;
         let magnet_sel = &Selector::parse("div.tgxtablecell:nth-of-type(5) > a:last-of-type")?;
 
-        ctx.last_page = 100;
-        ctx.total_results = 7500;
-        // For searches, pagination has a description of total results found
-        // if let Some(pagination) = doc.select(pagination_sel).next() {
-        //     // 6th word in pagination description contains total number of results
-        //     if let Some(num_results_str) = pagination.inner_html().split(' ').nth(5) {
-        //         if let Ok(num_results) = num_results_str.parse::<usize>() {
-        //             ctx.last_page = (num_results + 74) / 75;
-        //             ctx.total_results = num_results;
-        //         }
-        //     }
-        // }
+        let pagination_sel = &Selector::parse("div#filterbox2 > span.badge")?;
 
-        Ok(doc
+        ctx.last_page = 50;
+        ctx.total_results = 2500;
+        if let Some(pagination) = doc.select(pagination_sel).nth(0) {
+            if let Ok(num_results) = pagination
+                .inner_html()
+                .chars()
+                .filter(|c| c.is_ascii_digit())
+                .collect::<String>()
+                .parse::<usize>()
+            {
+                ctx.last_page = (num_results + 49) / 50;
+                ctx.total_results = num_results;
+            }
+        }
+
+        let items: Vec<Item> = doc
             .select(item_sel)
             .enumerate()
             .map(|(i, e)| {
-                // let cat_str = attr(e, icon_sel, "href");
-                // let cat_str = cat_str.split('=').last().unwrap_or("");
-                // let cat = Self::info().entry_from_str(cat_str);
-                // let category = cat.id;
-                // let icon = cat.icon.clone();
-                // let icon = Self::info().entry_from_str("0_0").icon.clone();
                 let cat_id = attr(e, cat_sel, "href")
                     .rsplit_once('=')
                     .map(|v| v.1)
@@ -151,30 +148,95 @@ impl Source for TorrentGalaxyHtmlSource {
                 let file_name = format!("{}.torrent", hash);
 
                 Item {
-                    id: i,                              //
-                    date,                               //
-                    seeders,                            //
-                    leechers,                           //
-                    downloads: views,                   //
-                    bytes: to_bytes(&size),             //
-                    size,                               //
-                    title: attr(e, title_sel, "title"), //
-                    torrent_link,                       //
-                    magnet_link,                        //
-                    post_link,                          //
-                    file_name,                          //
-                    category: cat_id,                   //
-                    icon,                               //
-                    item_type,                          //
+                    id: i,
+                    date,
+                    seeders,
+                    leechers,
+                    downloads: views,
+                    bytes: to_bytes(&size),
+                    size,
+                    title: attr(e, title_sel, "title"),
+                    torrent_link,
+                    magnet_link,
+                    post_link,
+                    file_name,
+                    category: cat_id,
+                    icon,
+                    item_type,
                 }
             })
-            .collect())
+            .collect();
+
+        let raw_date_width = items.iter().map(|i| i.date.len()).max().unwrap_or_default() as u16;
+        let date_width = max(raw_date_width, 6);
+
+        let header = ResultHeader::new([
+            ResultColumn::Normal("Cat".to_owned(), Constraint::Length(3)),
+            ResultColumn::Normal("Name".to_owned(), Constraint::Min(3)),
+            ResultColumn::Sorted("Size".to_owned(), 9, Sort::Size as u32),
+            ResultColumn::Sorted("Date".to_owned(), date_width, Sort::Date as u32),
+            ResultColumn::Sorted("".to_owned(), 4, Sort::Seeders as u32),
+            ResultColumn::Sorted("".to_owned(), 4, Sort::Leechers as u32),
+            ResultColumn::Sorted("󰈈".to_owned(), 5, Sort::Downloads as u32),
+        ]);
+        let binding = header.get_binding();
+        let align = [
+            Alignment::Left,
+            Alignment::Left,
+            Alignment::Right,
+            Alignment::Left,
+            Alignment::Right,
+            Alignment::Right,
+            Alignment::Left,
+        ];
+        let rows: Vec<ResultRow> = items
+            .iter()
+            .map(|item| {
+                ResultRow::new([
+                    item.icon.label.fg(item.icon.color),
+                    item.title.to_owned().fg(match item.item_type {
+                        ItemType::Trusted => ctx.theme.trusted,
+                        ItemType::Remake => ctx.theme.remake,
+                        ItemType::None => ctx.theme.fg,
+                    }),
+                    item.size.clone().into(),
+                    item.date.clone().into(),
+                    item.seeders.to_string().fg(ctx.theme.trusted),
+                    item.leechers.to_string().fg(ctx.theme.remake),
+                    shorten_number(item.downloads).into(),
+                ])
+                .aligned(align, &binding)
+                .fg(ctx.theme.fg)
+            })
+            .collect();
+
+        Ok(ResultTable {
+            headers: header.get_row(w.sort.selected.dir, w.sort.selected.sort as u32),
+            rows,
+            binding,
+            items,
+        })
     }
 
     fn info() -> SourceInfo {
         info! {
             "All Categories" => {
                 0 => ("---", "All Categories", "AllCategories", White);
+            }
+            "Movies" => {
+                3 => ("4kM", "4K UHD Movies", "4kMovies", LightMagenta);
+                46 => ("Bly", "Bollywood", "Bollywood Movies", Green);
+                45 => ("Cam", "Cam/TS", "CamMovies", LightCyan);
+                42 => ("HdM", "HD Movies", "HdMovies", LightBlue);
+                4 => ("PkM", "Movie Packs", "PackMovies", Magenta);
+                1 => ("SdM", "SD Movies", "SdMovies", Yellow);
+            }
+            "TV" => {
+                41 => ("HdT", "TV HD", "HdTV", Green);
+                5 => ("SdT", "TV SD", "SdTV", LightCyan);
+                11 => ("4kT", "TV 4k", "4kTV", LightMagenta);
+                6 => ("PkT", "TV Packs", "PacksTV", Blue);
+                7 => ("Spo", "Sports", "SportsTV", LightGreen);
             }
             "Anime" => {
                 28 => ("Ani", "All Anime", "Anime", LightMagenta);
@@ -198,14 +260,6 @@ impl Source for TorrentGalaxyHtmlSource {
                 10 => ("Wgm", "Windows Games", "WindowsGames", LightCyan);
                 43 => ("Ogm", "Other Games", "OtherGames", Yellow);
             }
-            "Movies" => {
-                3 => ("4kM", "4K UHD Movies", "4kMovies", LightMagenta);
-                46 => ("Bly", "Bollywood", "Bollywood Movies", Green);
-                45 => ("Cam", "Cam/TS", "CamMovies", LightCyan);
-                42 => ("HdM", "HD Movies", "HdMovies", LightBlue);
-                4 => ("PkM", "Movie Packs", "PackMovies", Magenta);
-                1 => ("SdM", "SD Movies", "SdMovies", Yellow);
-            }
             "Music" => {
                 22 => ("Alb", "Music Albums", "AlbumsMusic", Cyan);
                 26 => ("Dis", "Music Discography", "DiscographyMusic", Magenta);
@@ -218,13 +272,6 @@ impl Source for TorrentGalaxyHtmlSource {
                 40 => ("Pic", "Other Pictures", "PicturesOther", Green);
                 37 => ("Tra", "Other Training", "TrainingOther", LightBlue);
                 33 => ("Oth", "Other", "Other", Yellow);
-            }
-            "TV" => {
-                41 => ("HdT", "TV HD", "HdTV", Green);
-                5 => ("SdT", "TV SD", "SdTV", LightCyan);
-                11 => ("4kT", "TV 4k", "4kTV", LightMagenta);
-                6 => ("PkT", "TV Packs", "PacksTV", Blue);
-                7 => ("Spo", "Sports", "SportsTV", LightGreen);
             }
             "XXX" => {
                 48 => ("4kX", "XXX 4k", "4kXXX", Red);

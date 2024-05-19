@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     app::{Context, LoadType, Widgets},
     popup_enum,
+    results::ResultTable,
     util::conv::add_protocol,
     widget::{
         category::{CatEntry, CatIcon, CatStruct},
@@ -110,22 +111,22 @@ pub trait Source {
         client: &reqwest::Client,
         app: &mut Context,
         w: &Widgets,
-    ) -> Result<Vec<Item>, Box<dyn Error>>;
+    ) -> Result<ResultTable, Box<dyn Error>>;
     async fn sort(
         client: &reqwest::Client,
         app: &mut Context,
         w: &Widgets,
-    ) -> Result<Vec<Item>, Box<dyn Error>>;
+    ) -> Result<ResultTable, Box<dyn Error>>;
     async fn filter(
         client: &reqwest::Client,
         app: &mut Context,
         w: &Widgets,
-    ) -> Result<Vec<Item>, Box<dyn Error>>;
+    ) -> Result<ResultTable, Box<dyn Error>>;
     async fn categorize(
         client: &reqwest::Client,
         app: &mut Context,
         w: &Widgets,
-    ) -> Result<Vec<Item>, Box<dyn Error>>;
+    ) -> Result<ResultTable, Box<dyn Error>>;
     fn info() -> SourceInfo;
     fn default_category() -> usize;
 }
@@ -137,43 +138,45 @@ impl Sources {
         load_type: LoadType,
         ctx: &mut Context,
         w: &Widgets,
-    ) -> Result<Vec<Item>, Box<dyn Error>> {
+    ) -> Option<Result<ResultTable, Box<dyn Error>>> {
         match self {
             Sources::NyaaHtml => match load_type {
                 LoadType::Searching | LoadType::Sourcing => {
-                    NyaaHtmlSource::search(client, ctx, w).await
+                    Some(NyaaHtmlSource::search(client, ctx, w).await)
                 }
-                LoadType::Sorting => NyaaHtmlSource::sort(client, ctx, w).await,
-                LoadType::Filtering => NyaaHtmlSource::filter(client, ctx, w).await,
-                LoadType::Categorizing => NyaaHtmlSource::categorize(client, ctx, w).await,
-                LoadType::Downloading | LoadType::Batching => Ok(w.results.table.items.clone()),
+                LoadType::Sorting => Some(NyaaHtmlSource::sort(client, ctx, w).await),
+                LoadType::Filtering => Some(NyaaHtmlSource::filter(client, ctx, w).await),
+                LoadType::Categorizing => Some(NyaaHtmlSource::categorize(client, ctx, w).await),
+                LoadType::Downloading | LoadType::Batching => None,
             },
             Sources::NyaaRss => match load_type {
                 LoadType::Searching | LoadType::Sourcing => {
-                    NyaaRssSource::search(client, ctx, w).await
+                    Some(NyaaRssSource::search(client, ctx, w).await)
                 }
-                LoadType::Sorting => NyaaRssSource::sort(client, ctx, w).await,
-                LoadType::Filtering => NyaaRssSource::filter(client, ctx, w).await,
-                LoadType::Categorizing => NyaaRssSource::categorize(client, ctx, w).await,
-                LoadType::Downloading | LoadType::Batching => Ok(w.results.table.items.clone()),
+                LoadType::Sorting => Some(NyaaRssSource::sort(client, ctx, w).await),
+                LoadType::Filtering => Some(NyaaRssSource::filter(client, ctx, w).await),
+                LoadType::Categorizing => Some(NyaaRssSource::categorize(client, ctx, w).await),
+                LoadType::Downloading | LoadType::Batching => None,
             },
             Sources::SubekiNyaa => match load_type {
                 LoadType::Searching | LoadType::Sourcing => {
-                    SubekiHtmlSource::search(client, ctx, w).await
+                    Some(SubekiHtmlSource::search(client, ctx, w).await)
                 }
-                LoadType::Sorting => SubekiHtmlSource::sort(client, ctx, w).await,
-                LoadType::Filtering => SubekiHtmlSource::filter(client, ctx, w).await,
-                LoadType::Categorizing => SubekiHtmlSource::categorize(client, ctx, w).await,
-                LoadType::Downloading | LoadType::Batching => Ok(w.results.table.items.clone()),
+                LoadType::Sorting => Some(SubekiHtmlSource::sort(client, ctx, w).await),
+                LoadType::Filtering => Some(SubekiHtmlSource::filter(client, ctx, w).await),
+                LoadType::Categorizing => Some(SubekiHtmlSource::categorize(client, ctx, w).await),
+                LoadType::Downloading | LoadType::Batching => None,
             },
             Sources::TorrentGalaxy => match load_type {
                 LoadType::Searching | LoadType::Sourcing => {
-                    TorrentGalaxyHtmlSource::search(client, ctx, w).await
+                    Some(TorrentGalaxyHtmlSource::search(client, ctx, w).await)
                 }
-                LoadType::Sorting => TorrentGalaxyHtmlSource::sort(client, ctx, w).await,
-                LoadType::Filtering => TorrentGalaxyHtmlSource::filter(client, ctx, w).await,
-                LoadType::Categorizing => TorrentGalaxyHtmlSource::categorize(client, ctx, w).await,
-                LoadType::Downloading | LoadType::Batching => Ok(w.results.table.items.clone()),
+                LoadType::Sorting => Some(TorrentGalaxyHtmlSource::sort(client, ctx, w).await),
+                LoadType::Filtering => Some(TorrentGalaxyHtmlSource::filter(client, ctx, w).await),
+                LoadType::Categorizing => {
+                    Some(TorrentGalaxyHtmlSource::categorize(client, ctx, w).await)
+                }
+                LoadType::Downloading | LoadType::Batching => None,
             },
         }
     }

@@ -12,6 +12,7 @@ use crate::{
     client::Client,
     clip,
     config::Config,
+    results::ResultTable,
     source::{nyaa_html::NyaaHtmlSource, request_client, Item, Source, SourceInfo, Sources},
     theme::{self, Theme},
     util::conv::key_to_string,
@@ -117,6 +118,7 @@ pub struct Context {
     pub client: Client,
     pub batch: Vec<Item>,
     pub last_key: String,
+    pub results: ResultTable,
     should_quit: bool,
 }
 
@@ -156,6 +158,7 @@ impl Default for Context {
             batch: vec![],
             last_key: "".to_owned(),
             should_quit: false,
+            results: ResultTable::default(),
         }
     }
 }
@@ -209,7 +212,12 @@ impl App {
                 ctx.mode = Mode::Normal;
                 match load_type {
                     LoadType::Downloading => {
-                        if let Some(i) = w.results.table.selected() {
+                        if let Some(i) = w
+                            .results
+                            .table
+                            .selected()
+                            .and_then(|i| ctx.results.items.get(i))
+                        {
                             ctx.client.clone().download(i.to_owned(), ctx).await;
                         }
                         continue;
@@ -233,10 +241,16 @@ impl App {
 
                 let result = ctx.src.clone().load(&client, load_type, ctx, w).await;
 
-                match result {
-                    Ok(items) => w.results.with_items(items, w.sort.selected),
-                    Err(e) => ctx.show_error(e),
+                if let Some(results) = result {
+                    match results {
+                        Ok(items) => ctx.results = items,
+                        Err(e) => ctx.show_error(e),
+                    }
                 }
+                // match result {
+                //     Ok(items) => w.results.with_items(items, w.sort.selected),
+                //     Err(e) => ctx.show_error(e),
+                // }
                 continue; // Redraw
             }
 
@@ -412,7 +426,7 @@ impl App {
         match keys[..] {
             ['y', c] => {
                 let s = w.results.table.state.selected().unwrap_or(0);
-                match w.results.table.items.get(s) {
+                match ctx.results.items.get(s) {
                     Some(item) => {
                         let link = match c {
                             't' => item.torrent_link.to_owned(),

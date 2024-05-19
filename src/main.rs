@@ -8,6 +8,7 @@ mod client;
 mod clip;
 mod config;
 mod macros;
+mod results;
 mod source;
 mod theme;
 mod util;

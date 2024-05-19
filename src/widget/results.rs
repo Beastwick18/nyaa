@@ -2,7 +2,7 @@ use std::cmp::max;
 
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::{
-    layout::{Constraint, Margin, Rect},
+    layout::{Margin, Rect},
     style::{Style, Stylize},
     symbols::{self},
     text::Line,
@@ -13,18 +13,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     app::{Context, LoadType, Mode},
-    cond_vec,
-    source::{Item, ItemType},
     title,
-    util::conv::shorten_number,
     widget::sort::SortDir,
 };
 
-use super::{
-    border_block, centered_rect,
-    sort::{SelectedSort, Sort},
-    StatefulTable, TitlePosition,
-};
+use super::{border_block, centered_rect, TitlePosition, VirtualStatefulTable};
 
 #[derive(Clone, Copy, Serialize, Deserialize, Default)]
 pub struct ColumnsConfig {
@@ -37,46 +30,29 @@ pub struct ColumnsConfig {
     downloads: Option<bool>,
 }
 
-impl ColumnsConfig {
-    fn array(self) -> [bool; 7] {
-        [
-            self.category.unwrap_or(true),
-            self.title.unwrap_or(true),
-            self.size.unwrap_or(true),
-            self.date.unwrap_or(true),
-            self.seeders.unwrap_or(true),
-            self.leechers.unwrap_or(true),
-            self.downloads.unwrap_or(true),
-        ]
-    }
-}
+// impl ColumnsConfig {
+//     fn array(self) -> [bool; 7] {
+//         [
+//             self.category.unwrap_or(true),
+//             self.title.unwrap_or(true),
+//             self.size.unwrap_or(true),
+//             self.date.unwrap_or(true),
+//             self.seeders.unwrap_or(true),
+//             self.leechers.unwrap_or(true),
+//             self.downloads.unwrap_or(true),
+//         ]
+//     }
+// }
 
 pub struct ResultsWidget {
-    pub table: StatefulTable<Item>,
-    sort: SelectedSort,
-    raw_date_width: u16,
-    date_width: u16,
+    pub table: VirtualStatefulTable,
     control_space: bool,
 }
 
 impl ResultsWidget {
-    pub fn with_items(&mut self, items: Vec<Item>, sort: SelectedSort) {
-        self.table.with_items(items);
-        self.sort = sort;
-        // self.raw_date_width = self.table.items.first().map(|i| i.date.len()).unwrap_or(10) as u16;
-        self.raw_date_width = self
-            .table
-            .items
-            .iter()
-            .map(|i| i.date.len())
-            .max()
-            .unwrap_or_default() as u16;
-        self.date_width = max(self.raw_date_width, 6);
-    }
-
     fn try_select_toggle(&self, ctx: &mut Context) {
         if let Some(sel) = self.table.state.selected() {
-            if let Some(item) = self.table.items.get(sel) {
+            if let Some(item) = ctx.results.items.get(sel) {
                 if let Some(p) = ctx.batch.iter().position(|s| s.id == item.id) {
                     ctx.batch.remove(p);
                 } else {
@@ -88,7 +64,7 @@ impl ResultsWidget {
 
     fn try_select(&self, ctx: &mut Context) {
         if let Some(sel) = self.table.state.selected() {
-            if let Some(item) = self.table.items.get(sel) {
+            if let Some(item) = ctx.results.items.get(sel) {
                 if !ctx.batch.iter().any(|s| s.id == item.id) {
                     ctx.batch.push(item.to_owned());
                 }
@@ -100,10 +76,9 @@ impl ResultsWidget {
 impl Default for ResultsWidget {
     fn default() -> Self {
         ResultsWidget {
-            table: StatefulTable::empty(),
-            sort: SelectedSort::default(),
-            date_width: 6,
-            raw_date_width: 4,
+            table: VirtualStatefulTable::new(),
+            // date_width: 6,
+            // raw_date_width: 4,
             control_space: false,
         }
     }
@@ -111,63 +86,13 @@ impl Default for ResultsWidget {
 
 impl super::Widget for ResultsWidget {
     fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
-        let size = f.size();
         let buf = f.buffer_mut();
         let focus_color = match ctx.mode {
             Mode::Normal | Mode::KeyCombo(_) => ctx.theme.border_focused_color,
             _ => ctx.theme.border_color,
         };
-        let header_slice = &mut [
-            "Cat".to_owned(),
-            "Name".to_owned(),
-            format!("  {}", "Size"),
-            format!(
-                "{:^width$}",
-                "Date  ",
-                width = max(self.raw_date_width, 4) as usize + 2
-            ),
-            format!(" {}", ""),
-            format!(" {}", ""),
-            format!(" {}", ""),
-        ];
-        let direction = match self.sort.dir {
-            SortDir::Asc => "▲",
-            SortDir::Desc => "▼",
-        };
-        let sort_idx = match self.sort.sort {
-            Sort::Date => 3,
-            Sort::Size => 2,
-            Sort::Seeders => 4,
-            Sort::Leechers => 5,
-            Sort::Downloads => 6,
-        };
-        let sort_text = format!("{} {}", header_slice[sort_idx].trim(), direction);
-        let sort_fmt = match self.sort.sort {
-            Sort::Size => format!("  {:<8}", sort_text),
-            Sort::Date => format!(
-                "{:^width$}",
-                sort_text,
-                width = max(self.raw_date_width, 4) as usize + 2
-            ),
-            Sort::Seeders => format!(" {:<3}", sort_text),
-            Sort::Leechers => format!(" {:<3}", sort_text),
-            Sort::Downloads => format!(" {:<3}", sort_text),
-        };
-        header_slice[sort_idx] = sort_fmt;
-
-        let cols = ctx.config.columns.unwrap_or_default().array();
-        let b = cond_vec!(cols ; [3, 0, 9, self.date_width, 4, 4, 5]);
-        let tot = b.iter().sum::<u16>() + cols.iter().map(|b| *b as u16).sum::<u16>();
-        let title_width = max(area.width as i32 - tot as i32, 5) as u16;
-        let b = cond_vec!(cols ; [3, title_width, 9, self.date_width, 4, 4, 5]);
-        let header = Row::new(cond_vec!(cols; header_slice))
-            .fg(focus_color)
-            .bold()
-            .underlined()
-            .height(1)
-            .bottom_margin(0);
-
-        let binding = Constraint::from_lengths(b);
+        let header: Row = ctx.results.headers.clone().into();
+        let header = header.fg(focus_color).underlined();
 
         Clear.render(area, buf);
         let items: Vec<Row> = match ctx.mode {
@@ -185,28 +110,12 @@ impl super::Widget for ResultsWidget {
                 Paragraph::new(message).render(load_area, buf);
                 vec![]
             }
-            _ => self
-                .table
-                .items
-                .iter()
-                .map(|item| {
-                    Row::new(cond_vec!(cols ; [
-                        item.icon.label.fg(item.icon.color),
-                            item.title.to_owned().fg(match item.item_type {
-                                ItemType::Trusted => ctx.theme.trusted,
-                                ItemType::Remake => ctx.theme.remake,
-                                ItemType::None => ctx.theme.fg,
-                            }),
-                        format!("{:>9}", item.size).into(),
-                        format!("{:<14}", item.date).into(),
-                        format!("{:>4}", item.seeders).fg(ctx.theme.trusted),
-                        format!("{:>4}", item.leechers).fg(ctx.theme.remake),
-                        shorten_number(item.downloads).into(),
-                    ]))
-                    .fg(ctx.theme.fg)
-                    .height(1)
-                    .bottom_margin(0)
-                })
+            _ => ctx
+                .results
+                .rows
+                .clone()
+                .into_iter()
+                .map(Into::into)
                 .collect(),
         };
 
@@ -219,7 +128,7 @@ impl super::Widget for ResultsWidget {
         let num_items = items.len();
         let first_item = (ctx.page - 1) * 75;
         let focused = matches!(ctx.mode, Mode::Normal | Mode::KeyCombo(_));
-        let table = Table::new(items, binding)
+        let table = Table::new(items, ctx.results.binding.to_owned())
             .header(header)
             .block(border_block(&ctx.theme, focused).title(title!(
                 "Results {}-{} ({} total): Page {}/{}",
@@ -234,11 +143,11 @@ impl super::Widget for ResultsWidget {
         StatefulWidget::render(sb, sb_area, buf, &mut self.table.scrollbar_state);
 
         if !matches!(ctx.mode, Mode::Loading(_)) && num_items == 0 {
-            let center = centered_rect(10, 1, size);
+            let center = centered_rect(10, 1, area);
             Paragraph::new("No results").render(center, buf);
         }
 
-        if let Some(visible_items) = self.table.items.get(self.table.state.offset()..) {
+        if let Some(visible_items) = ctx.results.items.get(self.table.state.offset()..) {
             let selected_ids: Vec<usize> = ctx.batch.iter().map(|i| i.id).collect();
             let vert_left = ctx.theme.border.to_border_set().vertical_left;
             let lines = visible_items
@@ -335,9 +244,9 @@ impl super::Widget for ResultsWidget {
                         .table
                         .state
                         .selected()
-                        .is_some_and(|s| s + 1 != self.table.items.len())
+                        .is_some_and(|s| s + 1 != ctx.results.items.len())
                     {
-                        self.table.next(1);
+                        self.table.next(ctx.results.items.len(), 1);
                         if self.control_space {
                             self.try_select_toggle(ctx);
                         }
@@ -348,17 +257,17 @@ impl super::Widget for ResultsWidget {
                         if self.control_space {
                             self.try_select_toggle(ctx);
                         }
-                        self.table.next(-1);
+                        self.table.next(ctx.results.items.len(), -1);
                     }
                 }
                 (Char('J'), &KeyModifiers::SHIFT) => {
-                    self.table.next(4);
+                    self.table.next(ctx.results.items.len(), 4);
                 }
                 (Char('K'), &KeyModifiers::SHIFT) => {
-                    self.table.next(-4);
+                    self.table.next(ctx.results.items.len(), -4);
                 }
                 (Char('G'), &KeyModifiers::SHIFT) => {
-                    self.table.select(max(self.table.items.len(), 1) - 1);
+                    self.table.select(max(ctx.results.items.len(), 1) - 1);
                 }
                 (Char('g'), &KeyModifiers::NONE) => {
                     self.table.select(0);
@@ -388,8 +297,8 @@ impl super::Widget for ResultsWidget {
                     ctx.mode = Mode::User;
                 }
                 (Char('o'), &KeyModifiers::NONE) => {
-                    let link = self
-                        .table
+                    let link = ctx
+                        .results
                         .items
                         .get(self.table.state.selected().unwrap_or(0))
                         .map(|item| item.post_link.clone())
@@ -413,7 +322,7 @@ impl super::Widget for ResultsWidget {
                 }
                 (Char(' '), &KeyModifiers::NONE) => {
                     if let Some(sel) = self.table.state.selected() {
-                        if let Some(item) = &mut self.table.items.get_mut(sel) {
+                        if let Some(item) = &mut ctx.results.items.get_mut(sel) {
                             if let Some(p) = ctx.batch.iter().position(|s| s.id == item.id) {
                                 ctx.batch.remove(p);
                             } else {

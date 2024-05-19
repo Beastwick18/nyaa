@@ -11,7 +11,11 @@ use crate::{
     widget::sort::{SelectedSort, Sort, SortDir},
 };
 
-use super::{add_protocol, nyaa_html::NyaaHtmlSource, Item, ItemType, Source, SourceInfo};
+use super::{
+    add_protocol,
+    nyaa_html::{nyaa_table, NyaaHtmlSource},
+    Item, ItemType, ResultTable, Source, SourceInfo,
+};
 
 pub struct NyaaRssSource;
 
@@ -43,19 +47,20 @@ fn sort_items(items: &mut [Item], sort: SelectedSort) {
 impl Source for NyaaRssSource {
     async fn sort(
         _: &reqwest::Client,
-        _: &mut Context,
+        ctx: &mut Context,
         w: &Widgets,
-    ) -> Result<Vec<Item>, Box<dyn Error>> {
-        let mut items = w.results.table.items.clone();
+    ) -> Result<ResultTable, Box<dyn Error>> {
+        let mut items = ctx.results.items.clone();
         sort_items(&mut items, w.sort.selected);
-        Ok(items)
+        // Ok(items)
+        Ok(ResultTable::default())
     }
 
     async fn search(
         client: &reqwest::Client,
         ctx: &mut Context,
         w: &Widgets,
-    ) -> Result<Vec<Item>, Box<dyn Error>> {
+    ) -> Result<ResultTable, Box<dyn Error>> {
         let cat = ctx.category;
         let query = w.search.input.input.clone();
         let filter = w.filter.selected as usize;
@@ -86,7 +91,7 @@ impl Source for NyaaRssSource {
         let bytes = response.bytes().await?;
         let channel = Channel::read_from(&bytes[..])?;
 
-        let mut results: Vec<Item> = channel
+        let mut items: Vec<Item> = channel
             .items
             .iter()
             .filter_map(|item| {
@@ -137,16 +142,16 @@ impl Source for NyaaRssSource {
                 })
             })
             .collect();
-        ctx.total_results = results.len();
-        sort_items(&mut results, w.sort.selected);
-        Ok(results)
+        ctx.total_results = items.len();
+        sort_items(&mut items, w.sort.selected);
+        Ok(nyaa_table(items, &ctx.theme, &w.sort.selected))
     }
 
     async fn filter(
         client: &reqwest::Client,
         app: &mut Context,
         w: &Widgets,
-    ) -> Result<Vec<Item>, Box<dyn Error>> {
+    ) -> Result<ResultTable, Box<dyn Error>> {
         NyaaRssSource::search(client, app, w).await
     }
 
@@ -154,7 +159,7 @@ impl Source for NyaaRssSource {
         client: &reqwest::Client,
         app: &mut Context,
         w: &Widgets,
-    ) -> Result<Vec<Item>, Box<dyn Error>> {
+    ) -> Result<ResultTable, Box<dyn Error>> {
         NyaaRssSource::search(client, app, w).await
     }
 

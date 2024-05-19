@@ -150,12 +150,12 @@ impl<T> StatefulTable<T> {
         }
     }
 
-    pub fn with_items(&mut self, items: Vec<T>) -> &mut Self {
-        self.state = TableState::new().with_selected(Some(0));
-        self.scrollbar_state = ScrollbarState::new(items.len());
-        self.items = items;
-        self
-    }
+    // pub fn with_items(&mut self, items: Vec<T>) -> &mut Self {
+    //     self.state = TableState::new().with_selected(Some(0));
+    //     self.scrollbar_state = ScrollbarState::new(items.len());
+    //     self.items = items;
+    //     self
+    // }
 
     pub fn next_wrap(&mut self, amt: isize) {
         if self.items.is_empty() {
@@ -169,27 +169,27 @@ impl<T> StatefulTable<T> {
         self.scrollbar_state = self.scrollbar_state.position(i as usize);
     }
 
-    pub fn next(&mut self, amt: isize) {
-        if self.items.is_empty() {
-            return;
-        }
-        let i = match self.state.selected() {
-            Some(i) => i as isize + amt,
-            None => 0,
-        };
-        let idx = i.max(0).min(self.items.len() as isize - 1) as usize;
-        self.state.select(Some(idx));
-        self.scrollbar_state = self.scrollbar_state.position(idx);
-    }
+    // pub fn next(&mut self, amt: isize) {
+    //     if self.items.is_empty() {
+    //         return;
+    //     }
+    //     let i = match self.state.selected() {
+    //         Some(i) => i as isize + amt,
+    //         None => 0,
+    //     };
+    //     let idx = i.max(0).min(self.items.len() as isize - 1) as usize;
+    //     self.state.select(Some(idx));
+    //     self.scrollbar_state = self.scrollbar_state.position(idx);
+    // }
 
     pub fn select(&mut self, idx: usize) {
         self.state.select(Some(idx));
         self.scrollbar_state = self.scrollbar_state.position(idx);
     }
 
-    pub fn selected(&self) -> Option<&T> {
-        self.state.selected().and_then(|i| self.items.get(i))
-    }
+    // pub fn selected(&self) -> Option<&T> {
+    //     self.state.selected().and_then(|i| self.items.get(i))
+    // }
 }
 
 #[derive(Default)]

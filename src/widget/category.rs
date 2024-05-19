@@ -81,6 +81,9 @@ impl CategoryPopup {
             false => self.major - 1,
         };
         self.minor = 0;
+        if self.table.state.offset() > self.major {
+            *self.table.state.offset_mut() = self.major;
+        }
     }
 }
 

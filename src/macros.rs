@@ -48,7 +48,7 @@ macro_rules! popup_enum {
             ($num:expr, $konst:ident, $phrase:expr);
         )+
     ) => {
-        #[derive(Clone, Copy, Serialize, Deserialize)]
+        #[derive(PartialEq, Clone, Copy, Serialize, Deserialize)]
         pub enum $name {
         $(
             $(#[$docs])*

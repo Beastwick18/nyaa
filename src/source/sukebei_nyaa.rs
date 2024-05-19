@@ -11,7 +11,7 @@ use crate::{
     util::conv::to_bytes,
 };
 
-use super::{add_protocol, Item, ItemType, Source, SourceInfo};
+use super::{add_protocol, nyaa_html::nyaa_table, Item, ItemType, ResultTable, Source, SourceInfo};
 
 pub struct SubekiHtmlSource;
 
@@ -35,28 +35,28 @@ impl Source for SubekiHtmlSource {
         client: &reqwest::Client,
         ctx: &mut Context,
         w: &Widgets,
-    ) -> Result<Vec<Item>, Box<dyn Error>> {
+    ) -> Result<ResultTable, Box<dyn Error>> {
         SubekiHtmlSource::search(client, ctx, w).await
     }
     async fn categorize(
         client: &reqwest::Client,
         ctx: &mut Context,
         w: &Widgets,
-    ) -> Result<Vec<Item>, Box<dyn Error>> {
+    ) -> Result<ResultTable, Box<dyn Error>> {
         SubekiHtmlSource::search(client, ctx, w).await
     }
     async fn sort(
         client: &reqwest::Client,
         ctx: &mut Context,
         w: &Widgets,
-    ) -> Result<Vec<Item>, Box<dyn Error>> {
+    ) -> Result<ResultTable, Box<dyn Error>> {
         SubekiHtmlSource::search(client, ctx, w).await
     }
     async fn search(
         client: &reqwest::Client,
         ctx: &mut Context,
         w: &Widgets,
-    ) -> Result<Vec<Item>, Box<dyn Error>> {
+    ) -> Result<ResultTable, Box<dyn Error>> {
         let cat = ctx.category;
         let filter = w.filter.selected as u16;
         let page = ctx.page;
@@ -109,7 +109,7 @@ impl Source for SubekiHtmlSource {
             }
         }
 
-        Ok(doc
+        let items: Vec<Item> = doc
             .select(item_sel)
             .filter_map(|e| {
                 let cat_str = attr(e, icon_sel, "href");
@@ -119,16 +119,14 @@ impl Source for SubekiHtmlSource {
                 let icon = cat.icon.clone();
 
                 let torrent = attr(e, torrent_sel, "href");
-                let id = torrent
-                    .split('/')
-                    .last()?
-                    .split('.')
-                    .next()?
-                    .parse::<usize>()
-                    .ok()?;
+                let post_link = url
+                    .join(&attr(e, title_sel, "href"))
+                    .map(|url| url.to_string())
+                    .unwrap_or("null".to_owned());
+                let id = post_link.split('/').last()?.parse::<usize>().ok()?;
                 let file_name = format!("{}.torrent", id);
 
-                let size = inner(e, size_sel, "0 bytes")
+                let size = inner(e, size_sel, "0 B")
                     .replace('i', "")
                     .replace("Bytes", "B");
                 let bytes = to_bytes(&size);
@@ -145,10 +143,6 @@ impl Source for SubekiHtmlSource {
                 let torrent_link = url
                     .join(&torrent)
                     .map(|u| u.to_string())
-                    .unwrap_or("null".to_owned());
-                let post_link = url
-                    .join(&attr(e, title_sel, "href"))
-                    .map(|url| url.to_string())
                     .unwrap_or("null".to_owned());
 
                 let trusted = e.value().classes().any(|e| e == "success");
@@ -177,7 +171,8 @@ impl Source for SubekiHtmlSource {
                     item_type,
                 })
             })
-            .collect())
+            .collect();
+        Ok(nyaa_table(items, &ctx.theme, &w.sort.selected))
     }
 
     fn info() -> SourceInfo {
