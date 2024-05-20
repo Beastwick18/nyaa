@@ -4,48 +4,41 @@ use ratatui::{
     widgets::{Row, StatefulWidget as _, Table},
     Frame,
 };
-use serde::{Deserialize, Serialize};
 
 use crate::{
     app::{Context, LoadType, Mode},
-    popup_enum, style, title,
+    style, title,
 };
 
-use super::{border_block, EnumIter, StatefulTable, Widget};
-
-popup_enum! {
-    Filter;
-    #[allow(clippy::enum_variant_names)]
-    (0, NoFilter, "No Filter");
-    (1, NoRemakes, "No Remakes");
-    (2, TrustedOnly, "Trusted Only");
-    (3, Batches, "Batches");
-}
+use super::{border_block, VirtualStatefulTable, Widget};
 
 pub struct FilterPopup {
-    pub table: StatefulTable<String>,
-    pub selected: Filter,
+    pub table: VirtualStatefulTable,
+    pub selected: usize,
 }
 
 impl Default for FilterPopup {
     fn default() -> Self {
         FilterPopup {
-            table: StatefulTable::new(Filter::iter().map(|item| item.to_string()).collect()),
-            selected: Filter::NoFilter,
+            table: VirtualStatefulTable::new(),
+            selected: 0,
         }
     }
 }
 
 impl Widget for FilterPopup {
     fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
-        let center = super::centered_rect(30, self.table.items.len() as u16 + 2, area);
+        let center = super::centered_rect(30, ctx.src_info.filters.len() as u16 + 2, area);
         let clear = super::centered_rect(center.width + 2, center.height, area);
-        let items = self.table.items.iter().enumerate().map(|(i, item)| {
-            match i == (self.selected.to_owned() as usize) {
-                true => Row::new(vec![format!("  {}", item.to_owned())]),
-                false => Row::new(vec![format!("   {}", item.to_owned())]),
-            }
-        });
+        let items =
+            ctx.src_info
+                .filters
+                .iter()
+                .enumerate()
+                .map(|(i, item)| match i == self.selected {
+                    true => Row::new(vec![format!("  {}", item.to_owned())]),
+                    false => Row::new(vec![format!("   {}", item.to_owned())]),
+                });
         super::clear(clear, f.buffer_mut(), ctx.theme.bg);
         Table::new(items, [Constraint::Percentage(100)])
             .block(border_block(&ctx.theme, true).title(title!("Filter")))
@@ -65,24 +58,24 @@ impl Widget for FilterPopup {
                     ctx.mode = Mode::Normal;
                 }
                 KeyCode::Char('j') | KeyCode::Down => {
-                    self.table.next_wrap(1);
+                    self.table.next_wrap(ctx.src_info.filters.len(), 1);
                 }
                 KeyCode::Char('k') | KeyCode::Up => {
-                    self.table.next_wrap(-1);
+                    self.table.next_wrap(ctx.src_info.filters.len(), -1);
                 }
                 KeyCode::Char('G') => {
-                    self.table.select(self.table.items.len() - 1);
+                    self.table.select(ctx.src_info.filters.len() - 1);
                 }
                 KeyCode::Char('g') => {
                     self.table.select(0);
                 }
                 KeyCode::Enter => {
-                    if let Some(i) =
-                        Filter::iter().nth(self.table.state.selected().unwrap_or_default())
-                    {
-                        self.selected = i.to_owned();
+                    if let Some(i) = self.table.state.selected() {
+                        self.selected = i;
                         ctx.mode = Mode::Loading(LoadType::Filtering);
-                        ctx.notify(format!("Filter by \"{}\"", i.to_string()));
+                        if let Some(f) = ctx.src_info.filters.get(i) {
+                            ctx.notify(format!("Filter by \"{}\"", f));
+                        }
                     }
                 }
                 _ => {}

@@ -68,15 +68,22 @@ impl Widget for SourcesPopup {
                 }
                 KeyCode::Enter => {
                     if let Some(i) = Sources::iter().nth(self.table.state.selected().unwrap_or(0)) {
-                        ctx.src = *i;
-                        ctx.config.source = *i;
-                        ctx.mode = Mode::Loading(LoadType::Sourcing);
-                        match ctx.config.clone().store() {
-                            Ok(_) => ctx.notify(format!("Updated source to \"{}\"", i.to_string())),
-                            Err(e) => ctx.show_error(format!(
-                                "Failed to update default source in config file:\n{}",
-                                e
-                            )),
+                        if !i.eq(&ctx.src) {
+                            ctx.src = *i;
+                            ctx.config.source = *i;
+                            ctx.mode = Mode::Loading(LoadType::Sourcing);
+                            match ctx.config.clone().store() {
+                                Ok(_) => {
+                                    ctx.notify(format!("Updated source to \"{}\"", i.to_string()))
+                                }
+                                Err(e) => ctx.show_error(format!(
+                                    "Failed to update default source in config file:\n{}",
+                                    e
+                                )),
+                            }
+                        } else {
+                            // If source is the same, do nothing
+                            ctx.mode = Mode::Normal;
                         }
                     }
                 }

@@ -60,7 +60,7 @@ pub struct CategoryPopup {
     pub major: usize,
     pub minor: usize,
     pub max_cat: usize,
-    table: VirtualStatefulTable,
+    pub table: VirtualStatefulTable,
 }
 
 impl CategoryPopup {

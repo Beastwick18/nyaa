@@ -6,7 +6,7 @@ use crate::{
     clip::ClipboardConfig,
     source::Sources,
     theme::{self, Theme},
-    widget::{filter::Filter, results::ColumnsConfig, sort::Sort},
+    widget::results::ColumnsConfig,
 };
 use confy::ConfyError;
 use serde::{Deserialize, Serialize};
@@ -16,11 +16,11 @@ pub static CONFIG_FILE: &str = "config";
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub struct Config {
-    pub torrent_client_cmd: Option<String>,
-    pub default_category: String,
-    pub default_filter: Filter,
-    pub default_sort: Sort,
-    pub default_search: String,
+    // pub torrent_client_cmd: Option<String>,
+    // pub default_category: String,
+    // pub default_filter: Filter,
+    // pub default_sort: Sort,
+    // pub default_search: String,
     #[serde(alias = "default_theme")]
     pub theme: String,
     #[serde(alias = "default_source")]
@@ -42,14 +42,14 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Config {
         Config {
-            torrent_client_cmd: None,
-            default_category: "0_0".to_owned(), // TODO: Deprecate, seperate default for each source
-            default_filter: Filter::NoFilter,
-            default_sort: Sort::Date,
+            // torrent_client_cmd: None,
+            // default_category: "0_0".to_owned(), // TODO: Deprecate, seperate default for each source
+            // default_filter: Filter::NoFilter,
+            // default_sort: Sort::Date,
             source: Sources::NyaaHtml,
             download_client: Client::Cmd,
             theme: Theme::default().name,
-            default_search: "".to_owned(),
+            // default_search: "".to_owned(),
             date_format: "%Y-%m-%d %H:%M".to_owned(),
             base_url: "https://nyaa.si/".to_owned(),
             request_proxy: None,
@@ -79,10 +79,10 @@ impl Config {
     }
     pub fn apply(&self, ctx: &mut Context, w: &mut Widgets) {
         ctx.config = self.to_owned();
-        w.search.input.input = ctx.config.default_search.to_owned();
+        // w.search.input.input = ctx.config.default_search.to_owned();
         w.search.input.cursor = w.search.input.input.len();
-        w.sort.selected.sort = ctx.config.default_sort.to_owned();
-        w.filter.selected = ctx.config.default_filter.to_owned();
+        w.sort.selected.sort = 0;
+        w.filter.selected = 0;
         ctx.client = ctx.config.download_client.to_owned();
         ctx.src = ctx.config.source.to_owned();
         ctx.src_info = ctx.src.info();
@@ -96,12 +96,12 @@ impl Config {
             w.theme.selected = i;
             ctx.theme = theme.to_owned();
         }
-        if let Some(ent) = ctx
-            .src_info
-            .find_category(ctx.config.default_category.to_owned())
-        {
-            ctx.category = ent.id;
-        }
+        // if let Some(ent) = ctx
+        //     .src_info
+        //     .find_category(ctx.config.default_category.to_owned())
+        // {
+        //     ctx.category = ent.id;
+        // }
 
         if let Err(e) = ctx.client.clone().load_config(ctx) {
             ctx.show_error(e);

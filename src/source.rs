@@ -1,17 +1,13 @@
-use std::{error::Error, time::Duration};
+use std::{collections::HashMap, error::Error, time::Duration};
 
 use reqwest::Proxy;
-use serde::{Deserialize, Serialize};
 
 use crate::{
     app::{Context, LoadType, Widgets},
     popup_enum,
     results::ResultTable,
     util::conv::add_protocol,
-    widget::{
-        category::{CatEntry, CatIcon, CatStruct},
-        EnumIter,
-    },
+    widget::category::{CatEntry, CatIcon, CatStruct},
 };
 
 use self::{
@@ -27,6 +23,8 @@ pub mod torrent_galaxy;
 #[derive(Clone)]
 pub struct SourceInfo {
     pub cats: Vec<CatStruct>,
+    pub filters: Vec<String>,
+    pub sorts: Vec<String>,
 }
 
 impl SourceInfo {
@@ -47,19 +45,19 @@ impl SourceInfo {
         self.cats[0].entries[0].clone()
     }
 
-    pub fn find_category<S: Into<String>>(&self, name: S) -> Option<CatEntry> {
-        let name = name.into();
-        for cat in self.cats.iter() {
-            if let Some(ent) = cat
-                .entries
-                .iter()
-                .find(|ent| ent.cfg.eq_ignore_ascii_case(&name))
-            {
-                return Some(ent.to_owned());
-            }
-        }
-        None
-    }
+    // pub fn find_category<S: Into<String>>(&self, name: S) -> Option<CatEntry> {
+    //     let name = name.into();
+    //     for cat in self.cats.iter() {
+    //         if let Some(ent) = cat
+    //             .entries
+    //             .iter()
+    //             .find(|ent| ent.cfg.eq_ignore_ascii_case(&name))
+    //         {
+    //             return Some(ent.to_owned());
+    //         }
+    //     }
+    //     None
+    // }
 }
 
 pub fn request_client(ctx: &Context) -> Result<reqwest::Client, reqwest::Error> {
@@ -72,14 +70,15 @@ pub fn request_client(ctx: &Context) -> Result<reqwest::Client, reqwest::Error> 
     client.build()
 }
 
-#[derive(Clone, Copy)]
+#[derive(Default, Clone, Copy)]
 pub enum ItemType {
+    #[default]
+    None,
     Trusted,
     Remake,
-    None,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Item {
     pub id: usize,
     pub date: String,
@@ -96,6 +95,7 @@ pub struct Item {
     pub category: usize,
     pub icon: CatIcon,
     pub item_type: ItemType,
+    pub extra: HashMap<String, String>,
 }
 
 popup_enum! {
@@ -128,7 +128,7 @@ pub trait Source {
         w: &Widgets,
     ) -> Result<ResultTable, Box<dyn Error>>;
     fn info() -> SourceInfo;
-    fn default_category() -> usize;
+    // fn default_category() -> usize;
 }
 
 impl Sources {
@@ -190,12 +190,30 @@ impl Sources {
         }
     }
 
-    pub fn default_category(self) -> usize {
-        match self {
-            Sources::NyaaHtml => NyaaHtmlSource::default_category(),
-            Sources::NyaaRss => NyaaRssSource::default_category(),
-            Sources::SubekiNyaa => SubekiHtmlSource::default_category(),
-            Sources::TorrentGalaxy => TorrentGalaxyHtmlSource::default_category(),
-        }
-    }
+    // pub fn default_category(self) -> usize {
+    //     match self {
+    //         Sources::NyaaHtml => NyaaHtmlSource::default_category(),
+    //         Sources::NyaaRss => NyaaRssSource::default_category(),
+    //         Sources::SubekiNyaa => SubekiHtmlSource::default_category(),
+    //         Sources::TorrentGalaxy => TorrentGalaxyHtmlSource::default_category(),
+    //     }
+    // }
+    //
+    // pub fn default_sort(self) -> usize {
+    //     match self {
+    //         Sources::NyaaHtml => NyaaHtmlSource::default_category(),
+    //         Sources::NyaaRss => NyaaRssSource::default_category(),
+    //         Sources::SubekiNyaa => SubekiHtmlSource::default_category(),
+    //         Sources::TorrentGalaxy => TorrentGalaxyHtmlSource::default_category(),
+    //     }
+    // }
+    //
+    // pub fn default_filter(self) -> usize {
+    //     match self {
+    //         Sources::NyaaHtml => NyaaHtmlSource::default_category(),
+    //         Sources::NyaaRss => NyaaRssSource::default_category(),
+    //         Sources::SubekiNyaa => SubekiHtmlSource::default_category(),
+    //         Sources::TorrentGalaxy => TorrentGalaxyHtmlSource::default_category(),
+    //     }
+    // }
 }

@@ -6,19 +6,52 @@ use ratatui::{
     style::Stylize as _,
 };
 use reqwest::{StatusCode, Url};
-use scraper::{ElementRef, Html, Selector};
+use scraper::{Html, Selector};
 use urlencoding::encode;
 
 use crate::{
     app::{Context, Widgets},
-    info,
+    cats, popup_enum,
     results::{ResultColumn, ResultHeader, ResultRow, ResultTable},
     theme::Theme,
-    util::conv::{shorten_number, to_bytes},
-    widget::sort::{SelectedSort, Sort},
+    util::{
+        conv::{shorten_number, to_bytes},
+        html::{attr, inner},
+    },
+    widget::{sort::SelectedSort, EnumIter as _},
 };
 
 use super::{add_protocol, Item, ItemType, Source, SourceInfo};
+
+popup_enum! {
+    NyaaSort;
+    (0, Date, "Date");
+    (1, Downloads, "Downloads");
+    (2, Seeders, "Seeders");
+    (3, Leechers, "Leechers");
+    (4, Size, "Size");
+}
+
+impl NyaaSort {
+    pub fn to_url(self) -> String {
+        match self {
+            NyaaSort::Date => "id".to_owned(),
+            NyaaSort::Downloads => "downloads".to_owned(),
+            NyaaSort::Seeders => "seeders".to_owned(),
+            NyaaSort::Leechers => "leechers".to_owned(),
+            NyaaSort::Size => "size".to_owned(),
+        }
+    }
+}
+
+popup_enum! {
+    NyaaFilter;
+    #[allow(clippy::enum_variant_names)]
+    (0, NoFilter, "No Filter");
+    (1, NoRemakes, "No Remakes");
+    (2, TrustedOnly, "Trusted Only");
+    (3, Batches, "Batches");
+}
 
 pub struct NyaaHtmlSource;
 
@@ -29,11 +62,11 @@ pub fn nyaa_table(items: Vec<Item>, theme: &Theme, sel_sort: &SelectedSort) -> R
     let header = ResultHeader::new([
         ResultColumn::Normal("Cat".to_owned(), Constraint::Length(3)),
         ResultColumn::Normal("Name".to_owned(), Constraint::Min(3)),
-        ResultColumn::Sorted("Size".to_owned(), 9, Sort::Size as u32),
-        ResultColumn::Sorted("Date".to_owned(), date_width, Sort::Date as u32),
-        ResultColumn::Sorted("".to_owned(), 4, Sort::Seeders as u32),
-        ResultColumn::Sorted("".to_owned(), 4, Sort::Leechers as u32),
-        ResultColumn::Sorted("".to_owned(), 5, Sort::Downloads as u32),
+        ResultColumn::Sorted("Size".to_owned(), 9, NyaaSort::Size as u32),
+        ResultColumn::Sorted("Date".to_owned(), date_width, NyaaSort::Date as u32),
+        ResultColumn::Sorted("".to_owned(), 4, NyaaSort::Seeders as u32),
+        ResultColumn::Sorted("".to_owned(), 4, NyaaSort::Leechers as u32),
+        ResultColumn::Sorted("".to_owned(), 5, NyaaSort::Downloads as u32),
     ]);
     let binding = header.get_binding();
     let align = [
@@ -74,21 +107,6 @@ pub fn nyaa_table(items: Vec<Item>, theme: &Theme, sel_sort: &SelectedSort) -> R
     }
 }
 
-fn inner(e: ElementRef, s: &Selector, default: &str) -> String {
-    e.select(s)
-        .next()
-        .map(|i| i.inner_html())
-        .unwrap_or(default.to_owned())
-}
-
-fn attr(e: ElementRef, s: &Selector, attr: &str) -> String {
-    e.select(s)
-        .next()
-        .and_then(|i| i.value().attr(attr))
-        .unwrap_or("")
-        .to_owned()
-}
-
 impl Source for NyaaHtmlSource {
     async fn search(
         client: &reqwest::Client,
@@ -99,7 +117,9 @@ impl Source for NyaaHtmlSource {
         let filter = w.filter.selected as u16;
         let page = ctx.page;
         let user = ctx.user.to_owned().unwrap_or_default();
-        let sort = w.sort.selected.sort.to_url();
+        let sort = NyaaSort::try_from(w.sort.selected.sort)
+            .map(|s| s.to_url())
+            .unwrap_or(NyaaSort::Date.to_url());
 
         let base_url = add_protocol(ctx.config.base_url.clone(), true);
         let (high, low) = (cat / 10, cat % 10);
@@ -213,6 +233,7 @@ impl Source for NyaaHtmlSource {
                     category,
                     icon,
                     item_type,
+                    ..Default::default()
                 })
             })
             .collect();
@@ -258,7 +279,7 @@ impl Source for NyaaHtmlSource {
     }
 
     fn info() -> SourceInfo {
-        info! {
+        let cats = cats! {
             "All Categories" => {
                 0 => ("---", "All Categories", "AllCategories", White);
             }
@@ -297,10 +318,11 @@ impl Source for NyaaHtmlSource {
                 61 => ("Sof", "Applications", "SoftApplications", Blue);
                 62 => ("Sof", "Games", "SoftGames", LightBlue);
             }
+        };
+        SourceInfo {
+            cats,
+            filters: NyaaFilter::iter().map(|f| f.to_string()).collect(),
+            sorts: NyaaSort::iter().map(|item| item.to_string()).collect(),
         }
-    }
-
-    fn default_category() -> usize {
-        0
     }
 }

@@ -186,6 +186,9 @@ impl App {
         terminal: &mut Terminal<B>,
     ) -> Result<(), Box<dyn Error>> {
         let w = &mut Widgets::default();
+        w.category
+            .table
+            .select(w.category.major + w.category.minor + 1);
         let ctx = &mut Context::default();
         let config = match Config::load() {
             Ok(config) => config,
@@ -231,10 +234,14 @@ impl App {
                     }
                     LoadType::Sourcing => {
                         // On sourcing, update info, reset things like category, etc.
-                        ctx.category = ctx.src.default_category();
-                        ctx.src_info = ctx.src.info();
+                        ctx.category = 0;
                         w.category.major = 0;
                         w.category.minor = 0;
+
+                        w.sort.selected.sort = 0;
+                        w.filter.selected = 0;
+
+                        ctx.src_info = ctx.src.info();
                     }
                     _ => {}
                 }

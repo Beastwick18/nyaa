@@ -1,11 +1,11 @@
 #[macro_export]
-macro_rules! info {
+macro_rules! cats {
     (
         $(
             $cats:expr => {$($idx:expr => ($icon:expr, $disp:expr, $conf:expr, $col:ident);)+}
         )+
     ) => {{
-        let v = $crate::source::SourceInfo {cats:vec![
+        let v = vec![
         $(
             $crate::widget::category::CatStruct {
                 name: $cats.to_string(),
@@ -17,20 +17,8 @@ macro_rules! info {
                         ratatui::style::Color::$col,
                     ),
                 )+],
-        },
-            // pub static $cat: CatStruct = CatStruct {
-            //     name: $cats,
-            //     entries: &[$(CatEntry::new(
-            //             $disp,
-            //             $conf,
-            //             $idx,
-            //             $icon,
-            //             Color::$col,
-            //         ),
-            //     )+],
-            // };
-        )+
-        ]};
+        },)+
+        ];
         v
 
         // pub static $name: &[&CatStruct] = &[
@@ -48,7 +36,7 @@ macro_rules! popup_enum {
             ($num:expr, $konst:ident, $phrase:expr);
         )+
     ) => {
-        #[derive(PartialEq, Clone, Copy, Serialize, Deserialize)]
+        #[derive(PartialEq, Clone, Copy, serde::Serialize, serde::Deserialize)]
         pub enum $name {
         $(
             $(#[$docs])*
@@ -68,7 +56,7 @@ macro_rules! popup_enum {
         }
 
 
-        impl EnumIter<$name> for $name {
+        impl $crate::widget::EnumIter<$name> for $name {
             fn iter() -> std::slice::Iter<'static, $name> {
                 static ITEMS: &[$name] = &[
                     $(
@@ -76,6 +64,19 @@ macro_rules! popup_enum {
                     )+
                 ];
                 ITEMS.iter()
+            }
+        }
+
+        impl TryFrom<usize> for $name {
+            type Error = ();
+
+            fn try_from(v: usize) -> Result<Self, Self::Error> {
+                match v {
+                    $(
+                        x if x == $name::$konst as usize => Ok($name::$konst),
+                    )+
+                    _ => Err(()),
+                }
             }
         }
     }

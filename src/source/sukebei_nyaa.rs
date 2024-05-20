@@ -2,33 +2,26 @@ use std::error::Error;
 
 use chrono::{DateTime, Local, NaiveDateTime, TimeZone};
 use reqwest::{StatusCode, Url};
-use scraper::{ElementRef, Html, Selector};
+use scraper::{Html, Selector};
 use urlencoding::encode;
 
 use crate::{
     app::{Context, Widgets},
-    info,
-    util::conv::to_bytes,
+    cats,
+    util::{
+        conv::to_bytes,
+        html::{attr, inner},
+    },
+    widget::EnumIter as _,
 };
 
-use super::{add_protocol, nyaa_html::nyaa_table, Item, ItemType, ResultTable, Source, SourceInfo};
+use super::{
+    add_protocol,
+    nyaa_html::{nyaa_table, NyaaFilter, NyaaSort},
+    Item, ItemType, ResultTable, Source, SourceInfo,
+};
 
 pub struct SubekiHtmlSource;
-
-fn inner(e: ElementRef, s: &Selector, default: &str) -> String {
-    e.select(s)
-        .next()
-        .map(|i| i.inner_html())
-        .unwrap_or(default.to_owned())
-}
-
-fn attr(e: ElementRef, s: &Selector, attr: &str) -> String {
-    e.select(s)
-        .next()
-        .and_then(|i| i.value().attr(attr))
-        .unwrap_or("")
-        .to_owned()
-}
 
 impl Source for SubekiHtmlSource {
     async fn filter(
@@ -61,7 +54,9 @@ impl Source for SubekiHtmlSource {
         let filter = w.filter.selected as u16;
         let page = ctx.page;
         let user = ctx.user.to_owned().unwrap_or_default();
-        let sort = w.sort.selected.sort.to_url();
+        let sort = NyaaSort::try_from(w.sort.selected.sort)
+            .map(|s| s.to_url())
+            .unwrap_or(NyaaSort::Date.to_url());
 
         let base_url = add_protocol("https://sukebei.nyaa.si/", true); // TODO: Load from config
         let (high, low) = (cat / 10, cat % 10);
@@ -169,6 +164,7 @@ impl Source for SubekiHtmlSource {
                     category,
                     icon,
                     item_type,
+                    ..Default::default()
                 })
             })
             .collect();
@@ -176,7 +172,7 @@ impl Source for SubekiHtmlSource {
     }
 
     fn info() -> SourceInfo {
-        info! {
+        let cats = cats! {
             "All Categories" => {
                 0 => ("---", "All Categories", "AllCategories", White);
             }
@@ -193,10 +189,11 @@ impl Source for SubekiHtmlSource {
                 21 => ("Pho", "Photobooks and Pictures", "RealPhotos", Red);
                 22 => ("Vid", "Videos", "RealVideos", Yellow);
             }
+        };
+        SourceInfo {
+            cats,
+            filters: NyaaFilter::iter().map(|f| f.to_string()).collect(),
+            sorts: NyaaSort::iter().map(|item| item.to_string()).collect(),
         }
-    }
-
-    fn default_category() -> usize {
-        0
     }
 }

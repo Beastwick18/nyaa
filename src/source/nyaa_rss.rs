@@ -8,12 +8,12 @@ use urlencoding::encode;
 use crate::{
     app::{Context, Widgets},
     util::conv::to_bytes,
-    widget::sort::{SelectedSort, Sort, SortDir},
+    widget::sort::{SelectedSort, SortDir},
 };
 
 use super::{
     add_protocol,
-    nyaa_html::{nyaa_table, NyaaHtmlSource},
+    nyaa_html::{nyaa_table, NyaaHtmlSource, NyaaSort},
     Item, ItemType, ResultTable, Source, SourceInfo,
 };
 
@@ -31,12 +31,12 @@ pub fn get_ext_value<T: Default + FromStr>(ext_map: &ExtensionMap, key: &str) ->
 }
 
 fn sort_items(items: &mut [Item], sort: SelectedSort) {
-    let f: fn(&Item, &Item) -> Ordering = match sort.sort {
-        Sort::Date => |a, b| a.id.cmp(&b.id),
-        Sort::Downloads => |a, b| b.downloads.cmp(&a.downloads),
-        Sort::Seeders => |a, b| b.seeders.cmp(&a.seeders),
-        Sort::Leechers => |a, b| b.leechers.cmp(&a.leechers),
-        Sort::Size => |a, b| b.bytes.cmp(&a.bytes),
+    let f: fn(&Item, &Item) -> Ordering = match NyaaSort::try_from(sort.sort) {
+        Ok(NyaaSort::Downloads) => |a, b| b.downloads.cmp(&a.downloads),
+        Ok(NyaaSort::Seeders) => |a, b| b.seeders.cmp(&a.seeders),
+        Ok(NyaaSort::Leechers) => |a, b| b.leechers.cmp(&a.leechers),
+        Ok(NyaaSort::Size) => |a, b| b.bytes.cmp(&a.bytes),
+        _ => |a, b| a.id.cmp(&b.id),
     };
     items.sort_by(f);
     if sort.dir == SortDir::Asc {
@@ -63,7 +63,7 @@ impl Source for NyaaRssSource {
     ) -> Result<ResultTable, Box<dyn Error>> {
         let cat = ctx.category;
         let query = w.search.input.input.clone();
-        let filter = w.filter.selected as usize;
+        let filter = w.filter.selected;
         let user = ctx.user.to_owned().unwrap_or_default();
         ctx.last_page = 1;
         ctx.page = 1;
@@ -139,6 +139,7 @@ impl Source for NyaaRssSource {
                     item_type,
                     category,
                     icon,
+                    ..Default::default()
                 })
             })
             .collect();
@@ -165,9 +166,5 @@ impl Source for NyaaRssSource {
 
     fn info() -> SourceInfo {
         NyaaHtmlSource::info()
-    }
-
-    fn default_category() -> usize {
-        0
     }
 }

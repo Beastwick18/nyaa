@@ -3,7 +3,7 @@ use std::error::Error;
 use serde::{Deserialize, Serialize};
 use tokio::task::JoinSet;
 
-use crate::{app::Context, popup_enum, source::Item, widget::EnumIter};
+use crate::{app::Context, popup_enum, source::Item};
 
 use self::{
     cmd::CmdConfig, default_app::DefaultAppConfig, download::DownloadConfig, qbit::QbitConfig,

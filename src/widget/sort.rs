@@ -4,34 +4,24 @@ use ratatui::{
     widgets::{Row, StatefulWidget as _, Table},
     Frame,
 };
-use serde::{Deserialize, Serialize};
 
 use crate::{
     app::{Context, LoadType, Mode},
-    popup_enum, style, title,
+    style, title,
 };
 
-use super::{border_block, EnumIter, StatefulTable, Widget};
-
-popup_enum! {
-    Sort;
-    (0, Date, "Date");
-    (1, Downloads, "Downloads");
-    (2, Seeders, "Seeders");
-    (3, Leechers, "Leechers");
-    (4, Size, "Size");
-}
+use super::{border_block, VirtualStatefulTable, Widget};
 
 #[derive(Clone, Copy)]
 pub struct SelectedSort {
-    pub sort: Sort,
+    pub sort: usize,
     pub dir: SortDir,
 }
 
 impl Default for SelectedSort {
     fn default() -> Self {
         Self {
-            sort: Sort::Date,
+            sort: 0,
             dir: SortDir::Desc,
         }
     }
@@ -53,27 +43,15 @@ impl SortDir {
     }
 }
 
-impl Sort {
-    pub fn to_url(self) -> String {
-        match self {
-            Sort::Date => "id".to_owned(),
-            Sort::Downloads => "downloads".to_owned(),
-            Sort::Seeders => "seeders".to_owned(),
-            Sort::Leechers => "leechers".to_owned(),
-            Sort::Size => "size".to_owned(),
-        }
-    }
-}
-
 pub struct SortPopup {
-    pub table: StatefulTable<String>,
+    pub table: VirtualStatefulTable,
     pub selected: SelectedSort,
 }
 
 impl Default for SortPopup {
     fn default() -> Self {
         SortPopup {
-            table: StatefulTable::new(Sort::iter().map(|item| item.to_string()).collect()),
+            table: VirtualStatefulTable::new(),
             selected: SelectedSort::default(),
         }
     }
@@ -82,10 +60,10 @@ impl Default for SortPopup {
 impl Widget for SortPopup {
     fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
         let buf = f.buffer_mut();
-        let center = super::centered_rect(30, self.table.items.len() as u16 + 2, area);
+        let center = super::centered_rect(30, ctx.src_info.sorts.len() as u16 + 2, area);
         let clear = super::centered_rect(center.width + 2, center.height, area);
-        let items = self.table.items.iter().enumerate().map(|(i, item)| {
-            Row::new([match i == self.selected.sort as usize {
+        let items = ctx.src_info.sorts.iter().enumerate().map(|(i, item)| {
+            Row::new([match i == self.selected.sort {
                 true => format!("  {}", item),
                 false => format!("   {}", item),
             }])
@@ -114,27 +92,28 @@ impl Widget for SortPopup {
                     ctx.mode = Mode::Normal;
                 }
                 KeyCode::Char('j') | KeyCode::Down => {
-                    self.table.next_wrap(1);
+                    self.table.next_wrap(ctx.src_info.sorts.len(), 1);
                 }
                 KeyCode::Char('k') | KeyCode::Up => {
-                    self.table.next_wrap(-1);
+                    self.table.next_wrap(ctx.src_info.sorts.len(), -1);
                 }
                 KeyCode::Char('G') => {
-                    self.table.select(self.table.items.len() - 1);
+                    self.table.select(ctx.src_info.sorts.len() - 1);
                 }
                 KeyCode::Char('g') => {
                     self.table.select(0);
                 }
                 KeyCode::Enter => {
-                    if let Some(i) = Sort::iter().nth(self.table.state.selected().unwrap_or(0)) {
-                        self.selected.sort = i.to_owned();
+                    if let Some(i) = self.table.state.selected() {
+                        self.selected.sort = i;
                         self.selected.dir = match ctx.mode == Mode::Sort(SortDir::Asc) {
                             true => SortDir::Asc,
                             false => SortDir::Desc,
                         };
-                        // ctx.ascending = ctx.mode == Mode::Sort(SortDir::Asc);
                         ctx.mode = Mode::Loading(LoadType::Sorting);
-                        ctx.notify(format!("Sort by \"{}\"", i.to_string()));
+                        if let Some(s) = ctx.src_info.sorts.get(i) {
+                            ctx.notify(format!("Sort by \"{}\"", s));
+                        }
                     }
                 }
                 _ => {}

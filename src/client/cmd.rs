@@ -26,18 +26,11 @@ impl Default for CmdConfig {
 
 pub fn load_config(app: &mut Context) {
     if app.config.client.cmd.is_none() {
-        let mut def = CmdConfig::default();
-        // Replace deprecated torrent_client_cmd with client.command config
-        if let Some(cmd) = app.config.torrent_client_cmd.clone() {
-            def.cmd = cmd;
-        }
-        app.config.client.cmd = Some(def);
-        app.config.torrent_client_cmd = None;
+        app.config.client.cmd = Some(CmdConfig::default());
     }
 }
 
 pub async fn download(item: Item, conf: ClientConfig) -> Result<String, String> {
-    // load_config(app);
     let cmd = match conf.cmd.to_owned() {
         Some(c) => c,
         None => {
