@@ -1,6 +1,6 @@
 [package]
 name = "nyaa"
-version = "0.8.1"
+version = "0.9.0"
 edition = "2021"
 rust-version = "1.75"
 categories = ["command-line-utilities"]
@@ -22,7 +22,7 @@ reqwest = { version = "0.11.27", features = [
 ], default-features = false }
 tokio = { version = "1.36.0", features = ["rt", "macros", "rt-multi-thread"] }
 urlencoding = "2.1.0"
-ratatui = "=0.26.1"
+ratatui = "0.26.3"
 crossterm = "0.27.0"
 unicode-width = "0.1.5"
 unicode-segmentation = "1.11.0"
