@@ -3,11 +3,13 @@ use std::error::Error;
 use chrono::{DateTime, Local, NaiveDateTime, TimeZone};
 use reqwest::{StatusCode, Url};
 use scraper::{Html, Selector};
+use serde::{Deserialize, Serialize};
 use urlencoding::encode;
 
 use crate::{
     app::{Context, Widgets},
     cats,
+    config::Config,
     util::{
         conv::to_bytes,
         html::{attr, inner},
@@ -17,9 +19,33 @@ use crate::{
 
 use super::{
     add_protocol,
-    nyaa_html::{nyaa_table, NyaaFilter, NyaaSort},
+    nyaa_html::{nyaa_table, NyaaColumns, NyaaFilter, NyaaSort},
     Item, ItemType, ResultTable, Source, SourceInfo,
 };
+
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(default)]
+pub struct SukebeiNyaaConfig {
+    pub base_url: String,
+    pub default_sort: NyaaSort,
+    pub default_filter: NyaaFilter,
+    pub default_category: String,
+    pub default_search: String,
+    pub columns: Option<NyaaColumns>,
+}
+
+impl Default for SukebeiNyaaConfig {
+    fn default() -> Self {
+        Self {
+            base_url: "https://sukebei.nyaa.si/".to_owned(),
+            default_sort: NyaaSort::Date,
+            default_filter: NyaaFilter::NoFilter,
+            default_category: "AllCategories".to_owned(),
+            default_search: Default::default(),
+            columns: None,
+        }
+    }
+}
 
 pub struct SubekiHtmlSource;
 
@@ -50,15 +76,16 @@ impl Source for SubekiHtmlSource {
         ctx: &mut Context,
         w: &Widgets,
     ) -> Result<ResultTable, Box<dyn Error>> {
-        let cat = ctx.category;
+        let sukebei = ctx.config.sources.sukebei.to_owned().unwrap_or_default();
+        let cat = w.category.selected;
         let filter = w.filter.selected as u16;
         let page = ctx.page;
         let user = ctx.user.to_owned().unwrap_or_default();
         let sort = NyaaSort::try_from(w.sort.selected.sort)
-            .map(|s| s.to_url())
-            .unwrap_or(NyaaSort::Date.to_url());
+            .unwrap_or(NyaaSort::Date)
+            .to_url();
 
-        let base_url = add_protocol("https://sukebei.nyaa.si/", true); // TODO: Load from config
+        let base_url = add_protocol(sukebei.base_url, true);
         let (high, low) = (cat / 10, cat % 10);
         let query = encode(&w.search.input.input);
         let dir = w.sort.selected.dir.to_url();
@@ -126,11 +153,13 @@ impl Source for SubekiHtmlSource {
                     .replace("Bytes", "B");
                 let bytes = to_bytes(&size);
 
-                let date = inner(e, date_sel, "");
-                let naive =
-                    NaiveDateTime::parse_from_str(&date, "%Y-%m-%d %H:%M").unwrap_or_default();
-                let date_time: DateTime<Local> = Local.from_utc_datetime(&naive);
-                let date = date_time.format(&ctx.config.date_format).to_string();
+                let mut date = inner(e, date_sel, "");
+                if let Some(date_format) = ctx.config.date_format.to_owned() {
+                    let naive =
+                        NaiveDateTime::parse_from_str(&date, "%Y-%m-%d %H:%M").unwrap_or_default();
+                    let date_time: DateTime<Local> = Local.from_utc_datetime(&naive);
+                    date = date_time.format(&date_format).to_string();
+                }
 
                 let seeders = inner(e, seed_sel, "0").parse().unwrap_or(0);
                 let leechers = inner(e, leech_sel, "0").parse().unwrap_or(0);
@@ -168,7 +197,12 @@ impl Source for SubekiHtmlSource {
                 })
             })
             .collect();
-        Ok(nyaa_table(items, &ctx.theme, &w.sort.selected))
+        Ok(nyaa_table(
+            items,
+            &ctx.theme,
+            &w.sort.selected,
+            sukebei.columns,
+        ))
     }
 
     fn info() -> SourceInfo {
@@ -195,5 +229,37 @@ impl Source for SubekiHtmlSource {
             filters: NyaaFilter::iter().map(|f| f.to_string()).collect(),
             sorts: NyaaSort::iter().map(|item| item.to_string()).collect(),
         }
+    }
+
+    fn load_config(ctx: &mut Context) {
+        if ctx.config.sources.sukebei.is_none() {
+            ctx.config.sources.sukebei = Some(SukebeiNyaaConfig::default());
+        }
+    }
+
+    fn default_category(cfg: &Config) -> usize {
+        let default = cfg
+            .sources
+            .sukebei
+            .to_owned()
+            .unwrap_or_default()
+            .default_category;
+        Self::info().entry_from_cfg(&default).id
+    }
+
+    fn default_sort(cfg: &Config) -> usize {
+        cfg.sources
+            .sukebei
+            .to_owned()
+            .unwrap_or_default()
+            .default_sort as usize
+    }
+
+    fn default_filter(cfg: &Config) -> usize {
+        cfg.sources
+            .sukebei
+            .to_owned()
+            .unwrap_or_default()
+            .default_filter as usize
     }
 }

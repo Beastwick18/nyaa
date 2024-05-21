@@ -56,7 +56,7 @@ pub struct CatStruct {
 
 #[derive(Default)]
 pub struct CategoryPopup {
-    // pub category: usize,
+    pub selected: usize,
     pub major: usize,
     pub minor: usize,
     pub max_cat: usize,
@@ -105,7 +105,7 @@ impl Widget for CategoryPopup {
 
             let cat_rows = cat.entries.iter().map(|e| {
                 Row::new(vec![Line::from(vec![
-                    match e.id == ctx.category {
+                    match e.id == self.selected {
                         true => "  ",
                         false => "   ",
                     }
@@ -162,7 +162,7 @@ impl Widget for CategoryPopup {
                 KeyCode::Enter => {
                     if let Some(cat) = ctx.src_info.cats.get(self.major) {
                         if let Some(item) = cat.entries.get(self.minor) {
-                            ctx.category = item.id;
+                            self.selected = item.id;
                             ctx.notify(format!("Category \"{}\"", item.name));
                         }
                     }

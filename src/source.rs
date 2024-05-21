@@ -1,9 +1,11 @@
 use std::{collections::HashMap, error::Error, time::Duration};
 
 use reqwest::Proxy;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     app::{Context, LoadType, Widgets},
+    config::Config,
     popup_enum,
     results::ResultTable,
     util::conv::add_protocol,
@@ -11,14 +13,26 @@ use crate::{
 };
 
 use self::{
-    nyaa_html::NyaaHtmlSource, nyaa_rss::NyaaRssSource, sukebei_nyaa::SubekiHtmlSource,
-    torrent_galaxy::TorrentGalaxyHtmlSource,
+    nyaa_html::{NyaaConfig, NyaaHtmlSource},
+    nyaa_rss::NyaaRssSource,
+    sukebei_nyaa::{SubekiHtmlSource, SukebeiNyaaConfig},
+    torrent_galaxy::{TgxConfig, TorrentGalaxyHtmlSource},
 };
 
 pub mod nyaa_html;
 pub mod nyaa_rss;
 pub mod sukebei_nyaa;
 pub mod torrent_galaxy;
+
+#[derive(Serialize, Deserialize, Clone, Default)]
+#[serde(default)]
+pub struct SourceConfig {
+    pub nyaa: Option<NyaaConfig>,
+    #[serde(rename = "sukebei_nyaa")]
+    pub sukebei: Option<SukebeiNyaaConfig>,
+    #[serde(rename = "torrent_galaxy")]
+    pub tgx: Option<TgxConfig>,
+}
 
 #[derive(Clone)]
 pub struct SourceInfo {
@@ -28,6 +42,15 @@ pub struct SourceInfo {
 }
 
 impl SourceInfo {
+    pub fn entry_from_cfg(self, s: &str) -> CatEntry {
+        for cat in self.cats.iter() {
+            if let Some(ent) = cat.entries.iter().find(|ent| ent.cfg == s) {
+                return ent.clone();
+            }
+        }
+        self.cats[0].entries[0].clone()
+    }
+
     pub fn entry_from_str(self, s: &str) -> CatEntry {
         let split: Vec<&str> = s.split('_').collect();
         let high = split.first().unwrap_or(&"1").parse().unwrap_or(1);
@@ -44,20 +67,6 @@ impl SourceInfo {
         }
         self.cats[0].entries[0].clone()
     }
-
-    // pub fn find_category<S: Into<String>>(&self, name: S) -> Option<CatEntry> {
-    //     let name = name.into();
-    //     for cat in self.cats.iter() {
-    //         if let Some(ent) = cat
-    //             .entries
-    //             .iter()
-    //             .find(|ent| ent.cfg.eq_ignore_ascii_case(&name))
-    //         {
-    //             return Some(ent.to_owned());
-    //         }
-    //     }
-    //     None
-    // }
 }
 
 pub fn request_client(ctx: &Context) -> Result<reqwest::Client, reqwest::Error> {
@@ -109,26 +118,30 @@ popup_enum! {
 pub trait Source {
     async fn search(
         client: &reqwest::Client,
-        app: &mut Context,
+        ctx: &mut Context,
         w: &Widgets,
     ) -> Result<ResultTable, Box<dyn Error>>;
     async fn sort(
         client: &reqwest::Client,
-        app: &mut Context,
+        ctx: &mut Context,
         w: &Widgets,
     ) -> Result<ResultTable, Box<dyn Error>>;
     async fn filter(
         client: &reqwest::Client,
-        app: &mut Context,
+        ctx: &mut Context,
         w: &Widgets,
     ) -> Result<ResultTable, Box<dyn Error>>;
     async fn categorize(
         client: &reqwest::Client,
-        app: &mut Context,
+        ctx: &mut Context,
         w: &Widgets,
     ) -> Result<ResultTable, Box<dyn Error>>;
     fn info() -> SourceInfo;
-    // fn default_category() -> usize;
+    fn load_config(ctx: &mut Context);
+
+    fn default_category(cfg: &Config) -> usize;
+    fn default_sort(cfg: &Config) -> usize;
+    fn default_filter(cfg: &Config) -> usize;
 }
 
 impl Sources {
@@ -190,30 +203,39 @@ impl Sources {
         }
     }
 
-    // pub fn default_category(self) -> usize {
-    //     match self {
-    //         Sources::NyaaHtml => NyaaHtmlSource::default_category(),
-    //         Sources::NyaaRss => NyaaRssSource::default_category(),
-    //         Sources::SubekiNyaa => SubekiHtmlSource::default_category(),
-    //         Sources::TorrentGalaxy => TorrentGalaxyHtmlSource::default_category(),
-    //     }
-    // }
-    //
-    // pub fn default_sort(self) -> usize {
-    //     match self {
-    //         Sources::NyaaHtml => NyaaHtmlSource::default_category(),
-    //         Sources::NyaaRss => NyaaRssSource::default_category(),
-    //         Sources::SubekiNyaa => SubekiHtmlSource::default_category(),
-    //         Sources::TorrentGalaxy => TorrentGalaxyHtmlSource::default_category(),
-    //     }
-    // }
-    //
-    // pub fn default_filter(self) -> usize {
-    //     match self {
-    //         Sources::NyaaHtml => NyaaHtmlSource::default_category(),
-    //         Sources::NyaaRss => NyaaRssSource::default_category(),
-    //         Sources::SubekiNyaa => SubekiHtmlSource::default_category(),
-    //         Sources::TorrentGalaxy => TorrentGalaxyHtmlSource::default_category(),
-    //     }
-    // }
+    pub fn load_config(self, ctx: &mut Context) {
+        match self {
+            Sources::NyaaHtml => NyaaHtmlSource::load_config(ctx),
+            Sources::NyaaRss => NyaaRssSource::load_config(ctx),
+            Sources::SubekiNyaa => SubekiHtmlSource::load_config(ctx),
+            Sources::TorrentGalaxy => TorrentGalaxyHtmlSource::load_config(ctx),
+        };
+    }
+
+    pub fn default_category(self, cfg: &Config) -> usize {
+        match self {
+            Sources::NyaaHtml => NyaaHtmlSource::default_category(cfg),
+            Sources::NyaaRss => NyaaRssSource::default_category(cfg),
+            Sources::SubekiNyaa => SubekiHtmlSource::default_category(cfg),
+            Sources::TorrentGalaxy => TorrentGalaxyHtmlSource::default_category(cfg),
+        }
+    }
+
+    pub fn default_sort(self, cfg: &Config) -> usize {
+        match self {
+            Sources::NyaaHtml => NyaaHtmlSource::default_sort(cfg),
+            Sources::NyaaRss => NyaaRssSource::default_sort(cfg),
+            Sources::SubekiNyaa => SubekiHtmlSource::default_sort(cfg),
+            Sources::TorrentGalaxy => TorrentGalaxyHtmlSource::default_sort(cfg),
+        }
+    }
+
+    pub fn default_filter(self, cfg: &Config) -> usize {
+        match self {
+            Sources::NyaaHtml => NyaaHtmlSource::default_filter(cfg),
+            Sources::NyaaRss => NyaaRssSource::default_filter(cfg),
+            Sources::SubekiNyaa => SubekiHtmlSource::default_filter(cfg),
+            Sources::TorrentGalaxy => TorrentGalaxyHtmlSource::default_filter(cfg),
+        }
+    }
 }

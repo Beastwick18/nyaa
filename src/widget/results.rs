@@ -9,7 +9,6 @@ use ratatui::{
     widgets::{Clear, Paragraph, Row, ScrollbarOrientation, StatefulWidget, Table, Widget},
     Frame,
 };
-use serde::{Deserialize, Serialize};
 
 use crate::{
     app::{Context, LoadType, Mode},
@@ -19,16 +18,16 @@ use crate::{
 
 use super::{border_block, centered_rect, TitlePosition, VirtualStatefulTable};
 
-#[derive(Clone, Copy, Serialize, Deserialize, Default)]
-pub struct ColumnsConfig {
-    category: Option<bool>,
-    title: Option<bool>,
-    size: Option<bool>,
-    date: Option<bool>,
-    seeders: Option<bool>,
-    leechers: Option<bool>,
-    downloads: Option<bool>,
-}
+// #[derive(Clone, Copy, Serialize, Deserialize, Default)]
+// pub struct ColumnsConfig {
+//     category: Option<bool>,
+//     title: Option<bool>,
+//     size: Option<bool>,
+//     date: Option<bool>,
+//     seeders: Option<bool>,
+//     leechers: Option<bool>,
+//     downloads: Option<bool>,
+// }
 
 // impl ColumnsConfig {
 //     fn array(self) -> [bool; 7] {
@@ -172,19 +171,19 @@ impl super::Widget for ResultsWidget {
             ctx.client.to_string(),
             ctx.src.to_string()
         );
-        if let Some((tr, area)) = TitlePosition::TopRight.try_widget(dl_src, area) {
+        if let Some((tr, area)) = TitlePosition::TopRight.try_widget(dl_src, area, true) {
             f.render_widget(tr, area);
         }
 
         if !ctx.last_key.is_empty() {
             let key_str = title!(ctx.last_key);
-            if let Some((br, area)) = TitlePosition::BottomRight.try_widget(key_str, area) {
+            if let Some((br, area)) = TitlePosition::BottomRight.try_widget(key_str, area, true) {
                 f.render_widget(br, area);
             }
         }
 
         if let Some(notif) = ctx.notification.clone() {
-            if let Some((bl, area)) = TitlePosition::BottomLeft.try_widget(notif, area) {
+            if let Some((bl, area)) = TitlePosition::BottomLeft.try_widget(notif, area, false) {
                 f.render_widget(bl, area);
             }
         }

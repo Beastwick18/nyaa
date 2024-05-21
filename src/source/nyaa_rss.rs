@@ -7,13 +7,14 @@ use urlencoding::encode;
 
 use crate::{
     app::{Context, Widgets},
+    config::Config,
     util::conv::to_bytes,
     widget::sort::{SelectedSort, SortDir},
 };
 
 use super::{
     add_protocol,
-    nyaa_html::{nyaa_table, NyaaHtmlSource, NyaaSort},
+    nyaa_html::{nyaa_table, NyaaConfig, NyaaHtmlSource, NyaaSort},
     Item, ItemType, ResultTable, Source, SourceInfo,
 };
 
@@ -61,7 +62,8 @@ impl Source for NyaaRssSource {
         ctx: &mut Context,
         w: &Widgets,
     ) -> Result<ResultTable, Box<dyn Error>> {
-        let cat = ctx.category;
+        let nyaa = ctx.config.sources.nyaa.to_owned().unwrap_or_default();
+        let cat = w.category.selected;
         let query = w.search.input.input.clone();
         let filter = w.filter.selected;
         let user = ctx.user.to_owned().unwrap_or_default();
@@ -69,7 +71,7 @@ impl Source for NyaaRssSource {
         ctx.page = 1;
         let (high, low) = (cat / 10, cat % 10);
         let query = encode(&query);
-        let base_url = add_protocol(ctx.config.base_url.clone(), true);
+        let base_url = add_protocol(nyaa.base_url, true);
         let base_url = Url::parse(&base_url)?;
 
         let mut url = base_url.clone();
@@ -122,10 +124,15 @@ impl Source for NyaaRssSource {
                     (_, true) => ItemType::Remake,
                     _ => ItemType::None,
                 };
+                let date_format = ctx
+                    .config
+                    .date_format
+                    .to_owned()
+                    .unwrap_or("%Y-%m-%d %H:%M".to_owned());
 
                 Some(Item {
                     id: id_usize,
-                    date: date.format(&ctx.config.date_format).to_string(),
+                    date: date.format(&date_format).to_string(),
                     seeders: get_ext_value(ext, "seeders"),
                     leechers: get_ext_value(ext, "leechers"),
                     downloads: get_ext_value(ext, "downloads"),
@@ -145,7 +152,12 @@ impl Source for NyaaRssSource {
             .collect();
         ctx.total_results = items.len();
         sort_items(&mut items, w.sort.selected);
-        Ok(nyaa_table(items, &ctx.theme, &w.sort.selected))
+        Ok(nyaa_table(
+            items,
+            &ctx.theme,
+            &w.sort.selected,
+            nyaa.columns,
+        ))
     }
 
     async fn filter(
@@ -166,5 +178,23 @@ impl Source for NyaaRssSource {
 
     fn info() -> SourceInfo {
         NyaaHtmlSource::info()
+    }
+
+    fn load_config(ctx: &mut Context) {
+        if ctx.config.sources.nyaa.is_none() {
+            ctx.config.sources.nyaa = Some(NyaaConfig::default());
+        }
+    }
+
+    fn default_category(cfg: &Config) -> usize {
+        NyaaHtmlSource::default_category(cfg)
+    }
+
+    fn default_sort(cfg: &Config) -> usize {
+        NyaaHtmlSource::default_sort(cfg)
+    }
+
+    fn default_filter(cfg: &Config) -> usize {
+        NyaaHtmlSource::default_filter(cfg)
     }
 }

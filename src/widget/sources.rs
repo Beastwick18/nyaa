@@ -72,6 +72,7 @@ impl Widget for SourcesPopup {
                             ctx.src = *i;
                             ctx.config.source = *i;
                             ctx.mode = Mode::Loading(LoadType::Sourcing);
+                            i.load_config(ctx);
                             match ctx.config.clone().store() {
                                 Ok(_) => {
                                     ctx.notify(format!("Updated source to \"{}\"", i.to_string()))

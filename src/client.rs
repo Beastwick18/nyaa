@@ -1,5 +1,3 @@
-use std::error::Error;
-
 use serde::{Deserialize, Serialize};
 use tokio::task::JoinSet;
 
@@ -153,7 +151,7 @@ impl Client {
         ctx.batch.retain(|i| !success_ids.contains(&i.id)); // Remove successes from batch
     }
 
-    pub fn load_config(&self, app: &mut Context) -> Result<(), Box<dyn Error>> {
+    pub fn load_config(&self, app: &mut Context) {
         match self {
             Self::Cmd => cmd::load_config(app),
             Self::Qbit => qbit::load_config(app),
@@ -163,7 +161,6 @@ impl Client {
             Self::Download => download::load_config(app),
         };
         app.config.download_client = self.to_owned();
-        app.config.clone().store()?;
-        Ok(())
+        // app.config.clone().store()?;
     }
 }

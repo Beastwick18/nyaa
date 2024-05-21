@@ -104,12 +104,10 @@ pub struct Context {
     pub mode: Mode,
     pub themes: IndexMap<String, Theme>,
     pub src_info: SourceInfo,
-    pub category: usize,
     pub theme: Theme,
     pub config: Config,
     pub errors: VecDeque<String>,
     pub notification: Option<String>,
-    // pub ascending: bool,
     pub page: usize,
     pub user: Option<String>,
     pub last_page: usize,
@@ -143,7 +141,6 @@ impl Default for Context {
             mode: Mode::Loading(LoadType::Searching),
             themes,
             src_info: NyaaHtmlSource::info(),
-            category: 0,
             theme: Theme::default(),
             config: Config::default(),
             errors: VecDeque::new(),
@@ -190,14 +187,21 @@ impl App {
             .table
             .select(w.category.major + w.category.minor + 1);
         let ctx = &mut Context::default();
-        let config = match Config::load() {
-            Ok(config) => config,
-            Err(e) => {
-                ctx.show_error(e);
-                ctx.config.clone()
+        match Config::load() {
+            Ok(config) => {
+                if let Err(e) = config.apply(ctx, w) {
+                    ctx.show_error(e);
+                } else if let Err(e) = ctx.config.clone().store() {
+                    ctx.show_error(e);
+                }
             }
-        };
-        config.apply(ctx, w);
+            Err(e) => {
+                ctx.show_error(format!("Failed to load config:\n{}", e));
+                if let Err(e) = ctx.config.clone().apply(ctx, w) {
+                    ctx.show_error(e);
+                }
+            }
+        }
 
         let client = request_client(ctx)?;
 
@@ -234,12 +238,12 @@ impl App {
                     }
                     LoadType::Sourcing => {
                         // On sourcing, update info, reset things like category, etc.
-                        ctx.category = 0;
+                        w.category.selected = ctx.src.default_category(&ctx.config);
                         w.category.major = 0;
                         w.category.minor = 0;
 
-                        w.sort.selected.sort = 0;
-                        w.filter.selected = 0;
+                        w.sort.selected.sort = ctx.src.default_sort(&ctx.config);
+                        w.filter.selected = ctx.src.default_filter(&ctx.config);
 
                         ctx.src_info = ctx.src.info();
                     }

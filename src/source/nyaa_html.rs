@@ -7,11 +7,14 @@ use ratatui::{
 };
 use reqwest::{StatusCode, Url};
 use scraper::{Html, Selector};
+use serde::{Deserialize, Serialize};
 use urlencoding::encode;
 
 use crate::{
     app::{Context, Widgets},
-    cats, popup_enum,
+    cats, cond_vec,
+    config::Config,
+    popup_enum,
     results::{ResultColumn, ResultHeader, ResultRow, ResultTable},
     theme::Theme,
     util::{
@@ -22,6 +25,55 @@ use crate::{
 };
 
 use super::{add_protocol, Item, ItemType, Source, SourceInfo};
+
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(default)]
+pub struct NyaaConfig {
+    pub base_url: String,
+    pub default_sort: NyaaSort,
+    pub default_filter: NyaaFilter,
+    pub default_category: String,
+    pub default_search: String,
+    pub columns: Option<NyaaColumns>,
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize, Default)]
+pub struct NyaaColumns {
+    category: Option<bool>,
+    title: Option<bool>,
+    size: Option<bool>,
+    date: Option<bool>,
+    seeders: Option<bool>,
+    leechers: Option<bool>,
+    downloads: Option<bool>,
+}
+
+impl NyaaColumns {
+    fn array(self) -> [bool; 7] {
+        [
+            self.category.unwrap_or(true),
+            self.title.unwrap_or(true),
+            self.size.unwrap_or(true),
+            self.date.unwrap_or(true),
+            self.seeders.unwrap_or(true),
+            self.leechers.unwrap_or(true),
+            self.downloads.unwrap_or(true),
+        ]
+    }
+}
+
+impl Default for NyaaConfig {
+    fn default() -> Self {
+        Self {
+            base_url: "https://nyaa.si/".to_owned(),
+            default_sort: NyaaSort::Date,
+            default_filter: NyaaFilter::NoFilter,
+            default_category: "AllCategories".to_owned(),
+            default_search: Default::default(),
+            columns: None,
+        }
+    }
+}
 
 popup_enum! {
     NyaaSort;
@@ -55,7 +107,12 @@ popup_enum! {
 
 pub struct NyaaHtmlSource;
 
-pub fn nyaa_table(items: Vec<Item>, theme: &Theme, sel_sort: &SelectedSort) -> ResultTable {
+pub fn nyaa_table(
+    items: Vec<Item>,
+    theme: &Theme,
+    sel_sort: &SelectedSort,
+    columns: Option<NyaaColumns>,
+) -> ResultTable {
     let raw_date_width = items.iter().map(|i| i.date.len()).max().unwrap_or_default() as u16;
     let date_width = max(raw_date_width, 6);
 
@@ -68,7 +125,7 @@ pub fn nyaa_table(items: Vec<Item>, theme: &Theme, sel_sort: &SelectedSort) -> R
         ResultColumn::Sorted("".to_owned(), 4, NyaaSort::Leechers as u32),
         ResultColumn::Sorted("".to_owned(), 5, NyaaSort::Downloads as u32),
     ]);
-    let binding = header.get_binding();
+    let mut binding = header.get_binding();
     let align = [
         Alignment::Left,
         Alignment::Left,
@@ -78,7 +135,7 @@ pub fn nyaa_table(items: Vec<Item>, theme: &Theme, sel_sort: &SelectedSort) -> R
         Alignment::Right,
         Alignment::Left,
     ];
-    let rows: Vec<ResultRow> = items
+    let mut rows: Vec<ResultRow> = items
         .iter()
         .map(|item| {
             ResultRow::new([
@@ -99,10 +156,25 @@ pub fn nyaa_table(items: Vec<Item>, theme: &Theme, sel_sort: &SelectedSort) -> R
         })
         .collect();
 
+    let mut headers = header.get_row(sel_sort.dir, sel_sort.sort as u32);
+    if let Some(columns) = columns {
+        let cols = columns.array();
+
+        headers.cells = cond_vec!(cols ; headers.cells);
+        rows = rows
+            .clone()
+            .into_iter()
+            .map(|mut r| {
+                r.cells = cond_vec!(cols ; r.cells.to_owned());
+                r
+            })
+            .collect::<Vec<ResultRow>>();
+        binding = cond_vec!(cols ; binding);
+    }
     ResultTable {
-        headers: header.get_row(sel_sort.dir, sel_sort.sort as u32),
+        headers,
         rows,
-        binding: header.get_binding(),
+        binding,
         items,
     }
 }
@@ -113,15 +185,17 @@ impl Source for NyaaHtmlSource {
         ctx: &mut Context,
         w: &Widgets,
     ) -> Result<ResultTable, Box<dyn Error>> {
-        let cat = ctx.category;
+        let nyaa = ctx.config.sources.nyaa.to_owned().unwrap_or_default();
+        let cat = w.category.selected;
         let filter = w.filter.selected as u16;
         let page = ctx.page;
         let user = ctx.user.to_owned().unwrap_or_default();
         let sort = NyaaSort::try_from(w.sort.selected.sort)
-            .map(|s| s.to_url())
-            .unwrap_or(NyaaSort::Date.to_url());
+            .unwrap_or(NyaaSort::Date)
+            .to_url();
 
-        let base_url = add_protocol(ctx.config.base_url.clone(), true);
+        let base_url = add_protocol(nyaa.base_url, true);
+        // let base_url = add_protocol(ctx.config.base_url.clone(), true);
         let (high, low) = (cat / 10, cat % 10);
         let query = encode(&w.search.input.input);
         let dir = w.sort.selected.dir.to_url();
@@ -191,11 +265,13 @@ impl Source for NyaaHtmlSource {
                     .replace("Bytes", "B");
                 let bytes = to_bytes(&size);
 
-                let date = inner(e, date_sel, "");
-                let naive =
-                    NaiveDateTime::parse_from_str(&date, "%Y-%m-%d %H:%M").unwrap_or_default();
-                let date_time: DateTime<Local> = Local.from_utc_datetime(&naive);
-                let date = date_time.format(&ctx.config.date_format).to_string();
+                let mut date = inner(e, date_sel, "");
+                if let Some(date_format) = ctx.config.date_format.to_owned() {
+                    let naive =
+                        NaiveDateTime::parse_from_str(&date, "%Y-%m-%d %H:%M").unwrap_or_default();
+                    let date_time: DateTime<Local> = Local.from_utc_datetime(&naive);
+                    date = date_time.format(&date_format).to_string();
+                }
 
                 let seeders = inner(e, seed_sel, "0").parse().unwrap_or(0);
                 let leechers = inner(e, leech_sel, "0").parse().unwrap_or(0);
@@ -238,23 +314,12 @@ impl Source for NyaaHtmlSource {
             })
             .collect();
 
-        // let raw_date_width = items.iter().map(|i| i.date.len()).max().unwrap_or_default() as u16;
-        // let date_width = max(raw_date_width, 6);
-        // let header = ResultHeader::new([
-        //     ResultColumn::Normal("Cat".to_owned(), Constraint::Length(3)),
-        //     ResultColumn::Normal("Name".to_owned(), Constraint::Min(3)),
-        //     ResultColumn::Sorted("Size".to_owned(), 9),
-        //     ResultColumn::Sorted("Date".to_owned(), date_width),
-        //     ResultColumn::Sorted("".to_owned(), 4),
-        //     ResultColumn::Sorted("".to_owned(), 4),
-        //     ResultColumn::Sorted("".to_owned(), 5),
-        // ]);
-        // let s = header
-        //     .get_render(w.sort.selected.dir)
-        //     .iter()
-        //     .fold("".to_owned(), |acc, s| format!("{}\"{}\"\n", acc, s));
-        // ctx.show_error(s);
-        Ok(nyaa_table(items, &ctx.theme, &w.sort.selected))
+        Ok(nyaa_table(
+            items,
+            &ctx.theme,
+            &w.sort.selected,
+            nyaa.columns,
+        ))
     }
     async fn sort(
         client: &reqwest::Client,
@@ -324,5 +389,33 @@ impl Source for NyaaHtmlSource {
             filters: NyaaFilter::iter().map(|f| f.to_string()).collect(),
             sorts: NyaaSort::iter().map(|item| item.to_string()).collect(),
         }
+    }
+
+    fn load_config(ctx: &mut Context) {
+        if ctx.config.sources.nyaa.is_none() {
+            ctx.config.sources.nyaa = Some(NyaaConfig::default());
+        }
+    }
+
+    fn default_category(cfg: &Config) -> usize {
+        let default = cfg
+            .sources
+            .nyaa
+            .to_owned()
+            .unwrap_or_default()
+            .default_category;
+        Self::info().entry_from_cfg(&default).id
+    }
+
+    fn default_sort(cfg: &Config) -> usize {
+        cfg.sources.nyaa.to_owned().unwrap_or_default().default_sort as usize
+    }
+
+    fn default_filter(cfg: &Config) -> usize {
+        cfg.sources
+            .nyaa
+            .to_owned()
+            .unwrap_or_default()
+            .default_filter as usize
     }
 }

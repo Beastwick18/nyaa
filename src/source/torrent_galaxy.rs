@@ -6,23 +6,48 @@ use ratatui::{
 };
 use reqwest::{StatusCode, Url};
 use scraper::{Html, Selector};
+use serde::{Deserialize, Serialize};
 use urlencoding::encode;
 
 use crate::{
     app::{Context, Widgets},
-    cats, collection, popup_enum,
+    cats, collection,
+    config::Config,
+    popup_enum,
     results::{ResultColumn, ResultHeader, ResultRow, ResultTable},
     util::{
         conv::{shorten_number, to_bytes},
         html::{attr, inner},
     },
-    widget::EnumIter,
+    widget::EnumIter as _,
 };
 
 use super::{add_protocol, Item, ItemType, Source, SourceInfo};
 
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(default)]
+pub struct TgxConfig {
+    pub base_url: String,
+    pub default_sort: TgxSort,
+    pub default_filter: TgxFilter,
+    pub default_category: String,
+    pub default_search: String,
+}
+
+impl Default for TgxConfig {
+    fn default() -> Self {
+        Self {
+            base_url: "https://torrentgalaxy.to/".to_owned(),
+            default_sort: TgxSort::Date,
+            default_filter: TgxFilter::NoFilter,
+            default_category: "AllCategories".to_owned(),
+            default_search: Default::default(),
+        }
+    }
+}
+
 popup_enum! {
-    TgSort;
+    TgxSort;
     (0, Date, "Date");
     (1, Seeders, "Seeders");
     (2, Leechers, "Leechers");
@@ -31,7 +56,7 @@ popup_enum! {
 }
 
 popup_enum! {
-    TgFilter;
+    TgxFilter;
     #[allow(clippy::enum_variant_names)]
     (0, NoFilter, "NoFilter");
     (1, OnlineStreams, "Filter online streams");
@@ -78,6 +103,7 @@ fn get_status_color(status: String) -> Option<Color> {
     match status.as_str() {
         "Trial Uploader" => Some(Color::Magenta),
         "Trusted Uploader" => Some(Color::LightGreen),
+        "Trusted User" => Some(Color::Cyan),
         "Moderator" => Some(Color::Red),
         "Admin" => Some(Color::Yellow),
         "Torrent Officer" => Some(Color::LightYellow),
@@ -113,30 +139,26 @@ impl Source for TorrentGalaxyHtmlSource {
         ctx: &mut Context,
         w: &Widgets,
     ) -> Result<ResultTable, Box<dyn Error>> {
-        let domain = "https://torrentgalaxy.mx/";
-        // let domain = "https://torrentgalaxy.to/";
-        let base_url = add_protocol(format!("{}torrents.php", domain), true);
+        let tgx = ctx.config.sources.tgx.to_owned().unwrap_or_default();
+        let base_url = Url::parse(&add_protocol(tgx.base_url, true))?.join("torrents.php")?;
         let query = encode(&w.search.input.input);
-        let sort = match TgSort::try_from(w.sort.selected.sort) {
-            Ok(TgSort::Date) => "&sort=id",
-            Ok(TgSort::Seeders) => "&sort=seeders",
-            Ok(TgSort::Leechers) => "&sort=leechers",
-            Ok(TgSort::Size) => "&sort=size",
-            Ok(TgSort::Name) => "&sort=name",
+
+        let sort = match TgxSort::try_from(w.sort.selected.sort) {
+            Ok(TgxSort::Date) => "&sort=id",
+            Ok(TgxSort::Seeders) => "&sort=seeders",
+            Ok(TgxSort::Leechers) => "&sort=leechers",
+            Ok(TgxSort::Size) => "&sort=size",
+            Ok(TgxSort::Name) => "&sort=name",
             _ => "",
         };
         let ord = format!("&order={}", w.sort.selected.dir.to_url());
-        // let dir = w.sort.selected.dir.to_url();
-        let url = Url::parse(&base_url)?;
-        let mut url_query = url.clone();
-        // &filterstream=1&nox=1&nowildcard=1
-        let filter = match TgFilter::try_from(w.filter.selected) {
-            Ok(TgFilter::OnlineStreams) => "&filterstream=1",
-            Ok(TgFilter::ExcludeXXX) => "&nox=2&nox=1",
-            Ok(TgFilter::NoWildcard) => "&nowildcard=1",
+        let filter = match TgxFilter::try_from(w.filter.selected) {
+            Ok(TgxFilter::OnlineStreams) => "&filterstream=1",
+            Ok(TgxFilter::ExcludeXXX) => "&nox=2&nox=1",
+            Ok(TgxFilter::NoWildcard) => "&nowildcard=1",
             _ => "",
         };
-        let cat = match ctx.category {
+        let cat = match w.category.selected {
             0 => "".to_owned(),
             x => format!("&c{}=1", x),
         };
@@ -150,13 +172,14 @@ impl Source for TorrentGalaxyHtmlSource {
             sort,
             ord
         );
-        url_query.set_query(Some(&q));
+        let mut url = base_url.clone();
+        url.set_query(Some(&q));
 
-        let response = client.get(url_query.to_owned()).send().await?;
+        let response = client.get(url.to_owned()).send().await?;
         if response.status() != StatusCode::OK {
             // Throw error if response code is not OK
             let code = response.status().as_u16();
-            return Err(format!("{}\nInvalid repsponse code: {}", url_query, code).into());
+            return Err(format!("{}\nInvalid repsponse code: {}", url, code).into());
         }
         let content = response.text().await?;
         let doc = Html::parse_document(&content);
@@ -195,9 +218,42 @@ impl Source for TorrentGalaxyHtmlSource {
                     .nth(0)
                     .map(|e| e.text().collect())
                     .unwrap_or_default();
-                let seeders = inner(e, seed_sel, "0").parse::<u32>().unwrap_or_default();
-                let leechers = inner(e, leech_sel, "0").parse::<u32>().unwrap_or_default();
-                let size = inner(e, size_sel, "0 MB");
+                let seeders = inner(e, seed_sel, "0")
+                    .chars()
+                    .filter(char::is_ascii_digit)
+                    .collect::<String>()
+                    .parse::<u32>()
+                    .unwrap_or_default();
+                let leechers = inner(e, leech_sel, "0")
+                    .chars()
+                    .filter(char::is_ascii_digit)
+                    .collect::<String>()
+                    .parse::<u32>()
+                    .unwrap_or_default();
+                let views = inner(e, views_sel, "0")
+                    .chars()
+                    .filter(char::is_ascii_digit)
+                    .collect::<String>()
+                    .parse::<u32>()
+                    .unwrap_or_default();
+                let mut size = inner(e, size_sel, "0 MB");
+
+                // Convert numbers like 1,015 KB => 1.01 MB
+                if let Some((x, y)) = size.split_once(',') {
+                    if let Some((y, unit)) = y.split_once(' ') {
+                        let y = y.get(0..2).unwrap_or("00");
+                        // find next unit up
+                        let unit = match unit.to_lowercase().as_str() {
+                            "b" => "kB",
+                            "kb" => "MB",
+                            "mb" => "GB",
+                            "gb" => "TB",
+                            _ => "??",
+                        };
+                        size = format!("{}.{} {}", x, y, unit);
+                    }
+                }
+
                 let item_type = match e
                     .select(trust_sel)
                     .nth(0)
@@ -207,11 +263,18 @@ impl Source for TorrentGalaxyHtmlSource {
                     true => ItemType::None,
                     false => ItemType::Remake,
                 };
-                let views = inner(e, views_sel, "0").parse::<u32>().unwrap_or_default();
 
                 let torrent_link = attr(e, torrent_sel, "href");
+                let torrent_link = base_url
+                    .join(&torrent_link)
+                    .map(|u| u.to_string())
+                    .unwrap_or_default();
                 let magnet_link = attr(e, magnet_sel, "href");
                 let post_link = attr(e, title_sel, "href");
+                let post_link = base_url
+                    .join(&post_link)
+                    .map(|u| u.to_string())
+                    .unwrap_or_default();
                 let hash = torrent_link.split('/').nth(4).unwrap_or("unknown");
                 let file_name = format!("{}.torrent", hash);
 
@@ -274,10 +337,10 @@ impl Source for TorrentGalaxyHtmlSource {
             ResultColumn::Normal("".to_owned(), Constraint::Length(2)),
             ResultColumn::Normal("Name".to_owned(), Constraint::Min(3)),
             ResultColumn::Normal("Uploader".to_owned(), Constraint::Length(uploader_width)),
-            ResultColumn::Sorted("Size".to_owned(), 9, TgSort::Size as u32),
-            ResultColumn::Sorted("Date".to_owned(), date_width, TgSort::Date as u32),
-            ResultColumn::Sorted("".to_owned(), 4, TgSort::Seeders as u32),
-            ResultColumn::Sorted("".to_owned(), 4, TgSort::Leechers as u32),
+            ResultColumn::Sorted("Size".to_owned(), 9, TgxSort::Size as u32),
+            ResultColumn::Sorted("Date".to_owned(), date_width, TgxSort::Date as u32),
+            ResultColumn::Sorted("".to_owned(), 4, TgxSort::Seeders as u32),
+            ResultColumn::Sorted("".to_owned(), 4, TgxSort::Leechers as u32),
             ResultColumn::Normal("  󰈈".to_owned(), Constraint::Length(5)),
         ]);
         let binding = header.get_binding();
@@ -399,8 +462,36 @@ impl Source for TorrentGalaxyHtmlSource {
         };
         SourceInfo {
             cats,
-            filters: TgFilter::iter().map(|f| f.to_string()).collect(),
-            sorts: TgSort::iter().map(|item| item.to_string()).collect(),
+            filters: TgxFilter::iter().map(|f| f.to_string()).collect(),
+            sorts: TgxSort::iter().map(|item| item.to_string()).collect(),
         }
+    }
+
+    fn load_config(ctx: &mut Context) {
+        if ctx.config.sources.tgx.is_none() {
+            ctx.config.sources.tgx = Some(TgxConfig::default());
+        }
+    }
+
+    fn default_category(cfg: &Config) -> usize {
+        let default = cfg
+            .sources
+            .tgx
+            .to_owned()
+            .unwrap_or_default()
+            .default_category;
+        Self::info().entry_from_cfg(&default).id
+    }
+
+    fn default_sort(cfg: &Config) -> usize {
+        cfg.sources.tgx.to_owned().unwrap_or_default().default_sort as usize
+    }
+
+    fn default_filter(cfg: &Config) -> usize {
+        cfg.sources
+            .tgx
+            .to_owned()
+            .unwrap_or_default()
+            .default_filter as usize
     }
 }

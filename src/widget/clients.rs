@@ -69,16 +69,12 @@ impl Widget for ClientsPopup {
                 KeyCode::Enter => {
                     if let Some(c) = Client::iter().nth(self.table.state.selected().unwrap_or(0)) {
                         ctx.client = *c;
-                        match c.load_config(ctx) {
-                            Ok(_) => ctx.notify(format!(
-                                "Updated download client to \"{}\"",
-                                c.to_string()
-                            )),
-                            Err(e) => ctx.show_error(format!(
-                                "Failed to update download client in config file:\n{}",
-                                e
-                            )),
-                        };
+
+                        c.load_config(ctx);
+                        ctx.notify(format!("Updated download client to \"{}\"", c.to_string()));
+                        if let Err(e) = ctx.config.to_owned().store() {
+                            ctx.show_error(format!("Failed to update config:\n{}", e))
+                        }
                         ctx.mode = Mode::Normal;
                     }
                 }

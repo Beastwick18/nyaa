@@ -52,21 +52,21 @@ impl TitlePosition {
         self,
         text: L,
         area: Rect,
+        hide_if_too_small: bool,
     ) -> Option<(Line<'a>, Rect)> {
         let line: Line = text.into();
-        if area.width < line.width() as u16 + 2 {
+        let line_width = min(area.width, line.width() as u16);
+        if hide_if_too_small && area.width < line.width() as u16 + 2 {
             // Too small
             return None;
         }
         let (left, y) = match self {
             // TitlePosition::TopLeft => (area.left() + 1, area.top()),
-            TitlePosition::TopRight => (area.right() - 1 - line.width() as u16, area.top()),
+            TitlePosition::TopRight => (area.right() - 1 - line_width, area.top()),
             TitlePosition::BottomLeft => (area.left() + 1, area.bottom() - 1),
-            TitlePosition::BottomRight => {
-                (area.right() - 1 - line.width() as u16, area.bottom() - 1)
-            }
+            TitlePosition::BottomRight => (area.right() - 1 - line_width, area.bottom() - 1),
         };
-        let right = Rect::new(left, y, line.width() as u16, 1);
+        let right = Rect::new(left, y, line_width, 1);
         Some((line, right))
     }
 }

@@ -47,7 +47,7 @@ impl super::Widget for SearchWidget {
             "?".bold();
             " for help".into();
         );
-        if let Some((tr, area)) = TitlePosition::TopRight.try_widget(help_title, area) {
+        if let Some((tr, area)) = TitlePosition::TopRight.try_widget(help_title, area, true) {
             tr.render(area, buf);
         }
 
