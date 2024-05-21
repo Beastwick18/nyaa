@@ -14,7 +14,6 @@ use crate::{
 
 use self::{
     nyaa_html::{NyaaConfig, NyaaHtmlSource},
-    nyaa_rss::NyaaRssSource,
     sukebei_nyaa::{SubekiHtmlSource, SukebeiNyaaConfig},
     torrent_galaxy::{TgxConfig, TorrentGalaxyHtmlSource},
 };
@@ -109,8 +108,7 @@ pub struct Item {
 
 popup_enum! {
     Sources;
-    (0, NyaaHtml, "Nyaa HTML");
-    (1, NyaaRss, "Nyaa RSS");
+    (0, Nyaa, "Nyaa");
     (2, SubekiNyaa, "Subeki");
     (3, TorrentGalaxy, "TorrentGalaxy");
 }
@@ -118,22 +116,22 @@ popup_enum! {
 pub trait Source {
     async fn search(
         client: &reqwest::Client,
-        ctx: &mut Context,
+        ctx: &Context,
         w: &Widgets,
     ) -> Result<ResultTable, Box<dyn Error>>;
     async fn sort(
         client: &reqwest::Client,
-        ctx: &mut Context,
+        ctx: &Context,
         w: &Widgets,
     ) -> Result<ResultTable, Box<dyn Error>>;
     async fn filter(
         client: &reqwest::Client,
-        ctx: &mut Context,
+        ctx: &Context,
         w: &Widgets,
     ) -> Result<ResultTable, Box<dyn Error>>;
     async fn categorize(
         client: &reqwest::Client,
-        ctx: &mut Context,
+        ctx: &Context,
         w: &Widgets,
     ) -> Result<ResultTable, Box<dyn Error>>;
     fn info() -> SourceInfo;
@@ -149,26 +147,17 @@ impl Sources {
         &self,
         client: &reqwest::Client,
         load_type: LoadType,
-        ctx: &mut Context,
+        ctx: &Context,
         w: &Widgets,
     ) -> Option<Result<ResultTable, Box<dyn Error>>> {
         match self {
-            Sources::NyaaHtml => match load_type {
+            Sources::Nyaa => match load_type {
                 LoadType::Searching | LoadType::Sourcing => {
                     Some(NyaaHtmlSource::search(client, ctx, w).await)
                 }
                 LoadType::Sorting => Some(NyaaHtmlSource::sort(client, ctx, w).await),
                 LoadType::Filtering => Some(NyaaHtmlSource::filter(client, ctx, w).await),
                 LoadType::Categorizing => Some(NyaaHtmlSource::categorize(client, ctx, w).await),
-                LoadType::Downloading | LoadType::Batching => None,
-            },
-            Sources::NyaaRss => match load_type {
-                LoadType::Searching | LoadType::Sourcing => {
-                    Some(NyaaRssSource::search(client, ctx, w).await)
-                }
-                LoadType::Sorting => Some(NyaaRssSource::sort(client, ctx, w).await),
-                LoadType::Filtering => Some(NyaaRssSource::filter(client, ctx, w).await),
-                LoadType::Categorizing => Some(NyaaRssSource::categorize(client, ctx, w).await),
                 LoadType::Downloading | LoadType::Batching => None,
             },
             Sources::SubekiNyaa => match load_type {
@@ -196,8 +185,7 @@ impl Sources {
 
     pub fn info(self) -> SourceInfo {
         match self {
-            Sources::NyaaHtml => NyaaHtmlSource::info(),
-            Sources::NyaaRss => NyaaRssSource::info(),
+            Sources::Nyaa => NyaaHtmlSource::info(),
             Sources::SubekiNyaa => SubekiHtmlSource::info(),
             Sources::TorrentGalaxy => TorrentGalaxyHtmlSource::info(),
         }
@@ -205,8 +193,7 @@ impl Sources {
 
     pub fn load_config(self, ctx: &mut Context) {
         match self {
-            Sources::NyaaHtml => NyaaHtmlSource::load_config(ctx),
-            Sources::NyaaRss => NyaaRssSource::load_config(ctx),
+            Sources::Nyaa => NyaaHtmlSource::load_config(ctx),
             Sources::SubekiNyaa => SubekiHtmlSource::load_config(ctx),
             Sources::TorrentGalaxy => TorrentGalaxyHtmlSource::load_config(ctx),
         };
@@ -214,8 +201,7 @@ impl Sources {
 
     pub fn default_category(self, cfg: &Config) -> usize {
         match self {
-            Sources::NyaaHtml => NyaaHtmlSource::default_category(cfg),
-            Sources::NyaaRss => NyaaRssSource::default_category(cfg),
+            Sources::Nyaa => NyaaHtmlSource::default_category(cfg),
             Sources::SubekiNyaa => SubekiHtmlSource::default_category(cfg),
             Sources::TorrentGalaxy => TorrentGalaxyHtmlSource::default_category(cfg),
         }
@@ -223,8 +209,7 @@ impl Sources {
 
     pub fn default_sort(self, cfg: &Config) -> usize {
         match self {
-            Sources::NyaaHtml => NyaaHtmlSource::default_sort(cfg),
-            Sources::NyaaRss => NyaaRssSource::default_sort(cfg),
+            Sources::Nyaa => NyaaHtmlSource::default_sort(cfg),
             Sources::SubekiNyaa => SubekiHtmlSource::default_sort(cfg),
             Sources::TorrentGalaxy => TorrentGalaxyHtmlSource::default_sort(cfg),
         }
@@ -232,8 +217,7 @@ impl Sources {
 
     pub fn default_filter(self, cfg: &Config) -> usize {
         match self {
-            Sources::NyaaHtml => NyaaHtmlSource::default_filter(cfg),
-            Sources::NyaaRss => NyaaRssSource::default_filter(cfg),
+            Sources::Nyaa => NyaaHtmlSource::default_filter(cfg),
             Sources::SubekiNyaa => SubekiHtmlSource::default_filter(cfg),
             Sources::TorrentGalaxy => TorrentGalaxyHtmlSource::default_filter(cfg),
         }

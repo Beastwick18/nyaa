@@ -47,7 +47,7 @@ impl Default for Config {
             // default_category: "0_0".to_owned(), // TODO: Deprecate, seperate default for each source
             // default_filter: Filter::NoFilter,
             // default_sort: Sort::Date,
-            source: Sources::NyaaHtml,
+            source: Sources::Nyaa,
             download_client: Client::Cmd,
             theme: Theme::default().name,
             // default_search: "".to_owned(),

@@ -24,7 +24,7 @@ use crate::{
     widget::{sort::SelectedSort, EnumIter as _},
 };
 
-use super::{add_protocol, Item, ItemType, Source, SourceInfo};
+use super::{add_protocol, nyaa_rss, Item, ItemType, Source, SourceInfo};
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(default)]
@@ -34,6 +34,7 @@ pub struct NyaaConfig {
     pub default_filter: NyaaFilter,
     pub default_category: String,
     pub default_search: String,
+    pub rss: bool,
     pub columns: Option<NyaaColumns>,
 }
 
@@ -70,6 +71,7 @@ impl Default for NyaaConfig {
             default_filter: NyaaFilter::NoFilter,
             default_category: "AllCategories".to_owned(),
             default_search: Default::default(),
+            rss: false,
             columns: None,
         }
     }
@@ -112,6 +114,8 @@ pub fn nyaa_table(
     theme: &Theme,
     sel_sort: &SelectedSort,
     columns: Option<NyaaColumns>,
+    last_page: usize,
+    total_results: usize,
 ) -> ResultTable {
     let raw_date_width = items.iter().map(|i| i.date.len()).max().unwrap_or_default() as u16;
     let date_width = max(raw_date_width, 6);
@@ -176,16 +180,21 @@ pub fn nyaa_table(
         rows,
         binding,
         items,
+        last_page,
+        total_results,
     }
 }
 
 impl Source for NyaaHtmlSource {
     async fn search(
         client: &reqwest::Client,
-        ctx: &mut Context,
+        ctx: &Context,
         w: &Widgets,
     ) -> Result<ResultTable, Box<dyn Error>> {
         let nyaa = ctx.config.sources.nyaa.to_owned().unwrap_or_default();
+        if nyaa.rss {
+            return nyaa_rss::search_rss(client, ctx, w).await;
+        }
         let cat = w.category.selected;
         let filter = w.filter.selected as u16;
         let page = ctx.page;
@@ -228,15 +237,15 @@ impl Source for NyaaHtmlSource {
         let dl_sel = &Selector::parse("td:nth-of-type(8)")?;
         let pagination_sel = &Selector::parse(".pagination-page-info")?;
 
-        ctx.last_page = 100;
-        ctx.total_results = 7500;
+        let mut last_page = 100;
+        let mut total_results = 7500;
         // For searches, pagination has a description of total results found
         if let Some(pagination) = doc.select(pagination_sel).next() {
             // 6th word in pagination description contains total number of results
             if let Some(num_results_str) = pagination.inner_html().split(' ').nth(5) {
                 if let Ok(num_results) = num_results_str.parse::<usize>() {
-                    ctx.last_page = (num_results + 74) / 75;
-                    ctx.total_results = num_results;
+                    last_page = (num_results + 74) / 75;
+                    total_results = num_results;
                 }
             }
         }
@@ -319,25 +328,31 @@ impl Source for NyaaHtmlSource {
             &ctx.theme,
             &w.sort.selected,
             nyaa.columns,
+            last_page,
+            total_results,
         ))
     }
     async fn sort(
         client: &reqwest::Client,
-        ctx: &mut Context,
+        ctx: &Context,
         w: &Widgets,
     ) -> Result<ResultTable, Box<dyn Error>> {
+        let nyaa = ctx.config.sources.nyaa.to_owned().unwrap_or_default();
+        if nyaa.rss {
+            return nyaa_rss::sort_rss(ctx, w).await;
+        }
         NyaaHtmlSource::search(client, ctx, w).await
     }
     async fn filter(
         client: &reqwest::Client,
-        ctx: &mut Context,
+        ctx: &Context,
         w: &Widgets,
     ) -> Result<ResultTable, Box<dyn Error>> {
         NyaaHtmlSource::search(client, ctx, w).await
     }
     async fn categorize(
         client: &reqwest::Client,
-        ctx: &mut Context,
+        ctx: &Context,
         w: &Widgets,
     ) -> Result<ResultTable, Box<dyn Error>> {
         NyaaHtmlSource::search(client, ctx, w).await

@@ -7,18 +7,15 @@ use urlencoding::encode;
 
 use crate::{
     app::{Context, Widgets},
-    config::Config,
     util::conv::to_bytes,
     widget::sort::{SelectedSort, SortDir},
 };
 
 use super::{
     add_protocol,
-    nyaa_html::{nyaa_table, NyaaConfig, NyaaHtmlSource, NyaaSort},
-    Item, ItemType, ResultTable, Source, SourceInfo,
+    nyaa_html::{nyaa_table, NyaaHtmlSource, NyaaSort},
+    Item, ItemType, ResultTable, Source,
 };
-
-pub struct NyaaRssSource;
 
 type ExtensionMap = BTreeMap<String, Vec<Extension>>;
 
@@ -45,156 +42,113 @@ fn sort_items(items: &mut [Item], sort: SelectedSort) {
     }
 }
 
-impl Source for NyaaRssSource {
-    async fn sort(
-        _: &reqwest::Client,
-        ctx: &mut Context,
-        w: &Widgets,
-    ) -> Result<ResultTable, Box<dyn Error>> {
-        let mut items = ctx.results.items.clone();
-        sort_items(&mut items, w.sort.selected);
-        // Ok(items)
-        Ok(ResultTable::default())
+pub async fn sort_rss(ctx: &Context, w: &Widgets) -> Result<ResultTable, Box<dyn Error>> {
+    let mut items = ctx.results.items.clone();
+    sort_items(&mut items, w.sort.selected);
+    // Ok(items)
+    Ok(ResultTable::default())
+}
+
+pub async fn search_rss(
+    client: &reqwest::Client,
+    ctx: &Context,
+    w: &Widgets,
+) -> Result<ResultTable, Box<dyn Error>> {
+    let nyaa = ctx.config.sources.nyaa.to_owned().unwrap_or_default();
+    let cat = w.category.selected;
+    let query = w.search.input.input.clone();
+    let filter = w.filter.selected;
+    let user = ctx.user.to_owned().unwrap_or_default();
+    let last_page = 1;
+    let (high, low) = (cat / 10, cat % 10);
+    let query = encode(&query);
+    let base_url = add_protocol(nyaa.base_url, true);
+    let base_url = Url::parse(&base_url)?;
+
+    let mut url = base_url.clone();
+    let query = format!(
+        "page=rss&f={}&c={}_{}&q={}&u={}&m",
+        filter, high, low, query, user
+    );
+    url.set_query(Some(&query));
+
+    // let client = super::request_client(ctx)?;
+
+    let response = client.get(url.to_owned()).send().await?;
+    let code = response.status().as_u16();
+    if code != StatusCode::OK {
+        // Throw error if response code is not OK
+        return Err(format!("{}\nInvalid response code: {}", url, code).into());
     }
 
-    async fn search(
-        client: &reqwest::Client,
-        ctx: &mut Context,
-        w: &Widgets,
-    ) -> Result<ResultTable, Box<dyn Error>> {
-        let nyaa = ctx.config.sources.nyaa.to_owned().unwrap_or_default();
-        let cat = w.category.selected;
-        let query = w.search.input.input.clone();
-        let filter = w.filter.selected;
-        let user = ctx.user.to_owned().unwrap_or_default();
-        ctx.last_page = 1;
-        ctx.page = 1;
-        let (high, low) = (cat / 10, cat % 10);
-        let query = encode(&query);
-        let base_url = add_protocol(nyaa.base_url, true);
-        let base_url = Url::parse(&base_url)?;
+    let bytes = response.bytes().await?;
+    let channel = Channel::read_from(&bytes[..])?;
 
-        let mut url = base_url.clone();
-        let query = format!(
-            "page=rss&f={}&c={}_{}&q={}&u={}&m",
-            filter, high, low, query, user
-        );
-        url.set_query(Some(&query));
+    let mut items: Vec<Item> = channel
+        .items
+        .iter()
+        .filter_map(|item| {
+            let ext = item.extensions().get("nyaa")?;
+            let guid = item.guid()?;
+            let post = guid.value.clone();
+            let id = guid.value.rsplit('/').next().unwrap_or_default(); // Get nyaa id from guid url in format
+                                                                        // `https://nyaa.si/view/{id}`
+            let id_usize = id.parse::<usize>().ok()?;
+            let category_str = get_ext_value::<String>(ext, "categoryId");
+            let cat = NyaaHtmlSource::info().entry_from_str(&category_str);
+            let category = cat.id;
+            let icon = cat.icon.clone();
+            let size = get_ext_value::<String>(ext, "size")
+                .replace('i', "")
+                .replace("Bytes", "B");
+            let pub_date = item.pub_date().unwrap_or("");
+            let date = DateTime::parse_from_rfc2822(pub_date).unwrap_or_default();
+            let date = date.with_timezone(&Local);
+            let torrent_link = base_url
+                .join(&format!("/download/{}.torrent", id))
+                .map(|u| u.to_string())
+                .unwrap_or("null".to_owned());
+            let trusted = get_ext_value::<String>(ext, "trusted").eq("Yes");
+            let remake = get_ext_value::<String>(ext, "remake").eq("Yes");
+            let item_type = match (trusted, remake) {
+                (true, _) => ItemType::Trusted,
+                (_, true) => ItemType::Remake,
+                _ => ItemType::None,
+            };
+            let date_format = ctx
+                .config
+                .date_format
+                .to_owned()
+                .unwrap_or("%Y-%m-%d %H:%M".to_owned());
 
-        // let client = super::request_client(ctx)?;
-
-        let response = client.get(url.to_owned()).send().await?;
-        let code = response.status().as_u16();
-        if code != StatusCode::OK {
-            // Throw error if response code is not OK
-            return Err(format!("{}\nInvalid response code: {}", url, code).into());
-        }
-
-        let bytes = response.bytes().await?;
-        let channel = Channel::read_from(&bytes[..])?;
-
-        let mut items: Vec<Item> = channel
-            .items
-            .iter()
-            .filter_map(|item| {
-                let ext = item.extensions().get("nyaa")?;
-                let guid = item.guid()?;
-                let post = guid.value.clone();
-                let id = guid.value.rsplit('/').next().unwrap_or_default(); // Get nyaa id from guid url in format
-                                                                            // `https://nyaa.si/view/{id}`
-                let id_usize = id.parse::<usize>().ok()?;
-                let category_str = get_ext_value::<String>(ext, "categoryId");
-                let cat = Self::info().entry_from_str(&category_str);
-                let category = cat.id;
-                let icon = cat.icon.clone();
-                let size = get_ext_value::<String>(ext, "size")
-                    .replace('i', "")
-                    .replace("Bytes", "B");
-                let pub_date = item.pub_date().unwrap_or("");
-                let date = DateTime::parse_from_rfc2822(pub_date).unwrap_or_default();
-                let date = date.with_timezone(&Local);
-                let torrent_link = base_url
-                    .join(&format!("/download/{}.torrent", id))
-                    .map(|u| u.to_string())
-                    .unwrap_or("null".to_owned());
-                let trusted = get_ext_value::<String>(ext, "trusted").eq("Yes");
-                let remake = get_ext_value::<String>(ext, "remake").eq("Yes");
-                let item_type = match (trusted, remake) {
-                    (true, _) => ItemType::Trusted,
-                    (_, true) => ItemType::Remake,
-                    _ => ItemType::None,
-                };
-                let date_format = ctx
-                    .config
-                    .date_format
-                    .to_owned()
-                    .unwrap_or("%Y-%m-%d %H:%M".to_owned());
-
-                Some(Item {
-                    id: id_usize,
-                    date: date.format(&date_format).to_string(),
-                    seeders: get_ext_value(ext, "seeders"),
-                    leechers: get_ext_value(ext, "leechers"),
-                    downloads: get_ext_value(ext, "downloads"),
-                    bytes: to_bytes(&size),
-                    size,
-                    title: item.title().unwrap_or("???").to_owned(),
-                    torrent_link,
-                    magnet_link: item.link().unwrap_or("???").to_owned(),
-                    post_link: post,
-                    file_name: format!("{}.torrent", id),
-                    item_type,
-                    category,
-                    icon,
-                    ..Default::default()
-                })
+            Some(Item {
+                id: id_usize,
+                date: date.format(&date_format).to_string(),
+                seeders: get_ext_value(ext, "seeders"),
+                leechers: get_ext_value(ext, "leechers"),
+                downloads: get_ext_value(ext, "downloads"),
+                bytes: to_bytes(&size),
+                size,
+                title: item.title().unwrap_or("???").to_owned(),
+                torrent_link,
+                magnet_link: item.link().unwrap_or("???").to_owned(),
+                post_link: post,
+                file_name: format!("{}.torrent", id),
+                item_type,
+                category,
+                icon,
+                ..Default::default()
             })
-            .collect();
-        ctx.total_results = items.len();
-        sort_items(&mut items, w.sort.selected);
-        Ok(nyaa_table(
-            items,
-            &ctx.theme,
-            &w.sort.selected,
-            nyaa.columns,
-        ))
-    }
-
-    async fn filter(
-        client: &reqwest::Client,
-        app: &mut Context,
-        w: &Widgets,
-    ) -> Result<ResultTable, Box<dyn Error>> {
-        NyaaRssSource::search(client, app, w).await
-    }
-
-    async fn categorize(
-        client: &reqwest::Client,
-        app: &mut Context,
-        w: &Widgets,
-    ) -> Result<ResultTable, Box<dyn Error>> {
-        NyaaRssSource::search(client, app, w).await
-    }
-
-    fn info() -> SourceInfo {
-        NyaaHtmlSource::info()
-    }
-
-    fn load_config(ctx: &mut Context) {
-        if ctx.config.sources.nyaa.is_none() {
-            ctx.config.sources.nyaa = Some(NyaaConfig::default());
-        }
-    }
-
-    fn default_category(cfg: &Config) -> usize {
-        NyaaHtmlSource::default_category(cfg)
-    }
-
-    fn default_sort(cfg: &Config) -> usize {
-        NyaaHtmlSource::default_sort(cfg)
-    }
-
-    fn default_filter(cfg: &Config) -> usize {
-        NyaaHtmlSource::default_filter(cfg)
-    }
+        })
+        .collect();
+    let total_results = items.len();
+    sort_items(&mut items, w.sort.selected);
+    Ok(nyaa_table(
+        items,
+        &ctx.theme,
+        &w.sort.selected,
+        nyaa.columns,
+        last_page,
+        total_results,
+    ))
 }

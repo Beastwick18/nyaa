@@ -89,6 +89,8 @@ pub struct ResultTable {
     pub rows: Vec<ResultRow>,
     pub binding: Vec<Constraint>,
     pub items: Vec<Item>,
+    pub last_page: usize,
+    pub total_results: usize,
 }
 
 #[derive(Clone)]

@@ -133,9 +133,9 @@ impl super::Widget for ResultsWidget {
                 "Results {}-{} ({} total): Page {}/{}",
                 first_item + 1,
                 num_items + first_item,
-                ctx.total_results,
+                ctx.results.total_results,
                 ctx.page,
-                ctx.last_page,
+                ctx.results.last_page,
             )))
             .highlight_style(Style::default().bg(ctx.theme.hl_bg));
         StatefulWidget::render(table, area, buf, &mut self.table.state);
@@ -227,7 +227,7 @@ impl super::Widget for ResultsWidget {
                     }
                 }
                 (Char('n') | Char('l') | Right, &KeyModifiers::NONE) => {
-                    if ctx.page < ctx.last_page {
+                    if ctx.page < ctx.results.last_page {
                         ctx.page += 1;
                         ctx.mode = Mode::Loading(LoadType::Searching);
                     }
@@ -278,8 +278,8 @@ impl super::Widget for ResultsWidget {
                     }
                 }
                 (Char('L') | Char('N'), &KeyModifiers::SHIFT) => {
-                    if ctx.page != ctx.last_page && ctx.last_page > 0 {
-                        ctx.page = ctx.last_page;
+                    if ctx.page != ctx.results.last_page && ctx.results.last_page > 0 {
+                        ctx.page = ctx.results.last_page;
                         ctx.mode = Mode::Loading(LoadType::Searching);
                     }
                 }

@@ -110,8 +110,8 @@ pub struct Context {
     pub notification: Option<String>,
     pub page: usize,
     pub user: Option<String>,
-    pub last_page: usize,
-    pub total_results: usize,
+    // pub last_page: usize,
+    // pub total_results: usize,
     pub src: Sources,
     pub client: Client,
     pub batch: Vec<Item>,
@@ -148,9 +148,9 @@ impl Default for Context {
             // ascending: false,
             page: 1,
             user: None,
-            last_page: 1,
-            total_results: 0,
-            src: Sources::NyaaHtml,
+            // last_page: 1,
+            // total_results: 0,
+            src: Sources::Nyaa,
             client: Client::Cmd,
             batch: vec![],
             last_key: "".to_owned(),
@@ -244,6 +244,9 @@ impl App {
 
                         w.sort.selected.sort = ctx.src.default_sort(&ctx.config);
                         w.filter.selected = ctx.src.default_filter(&ctx.config);
+
+                        // Go back to first page when changing source
+                        ctx.page = 1;
 
                         ctx.src_info = ctx.src.info();
                     }

@@ -115,28 +115,28 @@ fn get_status_color(status: String) -> Option<Color> {
 impl Source for TorrentGalaxyHtmlSource {
     async fn filter(
         client: &reqwest::Client,
-        ctx: &mut Context,
+        ctx: &Context,
         w: &Widgets,
     ) -> Result<ResultTable, Box<dyn Error>> {
         TorrentGalaxyHtmlSource::search(client, ctx, w).await
     }
     async fn categorize(
         client: &reqwest::Client,
-        ctx: &mut Context,
+        ctx: &Context,
         w: &Widgets,
     ) -> Result<ResultTable, Box<dyn Error>> {
         TorrentGalaxyHtmlSource::search(client, ctx, w).await
     }
     async fn sort(
         client: &reqwest::Client,
-        ctx: &mut Context,
+        ctx: &Context,
         w: &Widgets,
     ) -> Result<ResultTable, Box<dyn Error>> {
         TorrentGalaxyHtmlSource::search(client, ctx, w).await
     }
     async fn search(
         client: &reqwest::Client,
-        ctx: &mut Context,
+        ctx: &Context,
         w: &Widgets,
     ) -> Result<ResultTable, Box<dyn Error>> {
         let tgx = ctx.config.sources.tgx.to_owned().unwrap_or_default();
@@ -305,8 +305,8 @@ impl Source for TorrentGalaxyHtmlSource {
             })
             .collect::<Vec<Item>>();
 
-        ctx.last_page = 50;
-        ctx.total_results = 2500;
+        let mut last_page = 50;
+        let mut total_results = 2500;
         if let Some(pagination) = doc.select(pagination_sel).nth(0) {
             if let Ok(num_results) = pagination
                 .inner_html()
@@ -316,8 +316,8 @@ impl Source for TorrentGalaxyHtmlSource {
                 .parse::<usize>()
             {
                 if num_results != 0 || items.is_empty() {
-                    ctx.last_page = (num_results + 49) / 50;
-                    ctx.total_results = num_results;
+                    last_page = (num_results + 49) / 50;
+                    total_results = num_results;
                 }
             }
         }
@@ -395,6 +395,8 @@ impl Source for TorrentGalaxyHtmlSource {
             rows,
             binding,
             items,
+            last_page,
+            total_results,
         })
     }
 

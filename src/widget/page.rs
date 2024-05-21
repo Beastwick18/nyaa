@@ -72,7 +72,10 @@ impl Widget for PagePopup {
                     self.input.cursor = 0;
                 }
                 KeyCode::Enter => {
-                    ctx.page = max(min(self.input.input.parse().unwrap_or(1), ctx.last_page), 1);
+                    ctx.page = max(
+                        min(self.input.input.parse().unwrap_or(1), ctx.results.last_page),
+                        1,
+                    );
                     ctx.mode = Mode::Loading(LoadType::Searching);
 
                     // Clear input on Enter

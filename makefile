@@ -44,6 +44,9 @@ changelog:
 tty:
 	vhs ./scripts/tty.tape
 
+tgx:
+	vhs ./scripts/tgx.tape
+
 publish:
 	@echo -n "Publish v$(VERSION) to crates.io? [y/N] " && read ans && [ $${ans:-N} = y ]
 	cargo publish

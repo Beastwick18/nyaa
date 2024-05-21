@@ -52,28 +52,28 @@ pub struct SubekiHtmlSource;
 impl Source for SubekiHtmlSource {
     async fn filter(
         client: &reqwest::Client,
-        ctx: &mut Context,
+        ctx: &Context,
         w: &Widgets,
     ) -> Result<ResultTable, Box<dyn Error>> {
         SubekiHtmlSource::search(client, ctx, w).await
     }
     async fn categorize(
         client: &reqwest::Client,
-        ctx: &mut Context,
+        ctx: &Context,
         w: &Widgets,
     ) -> Result<ResultTable, Box<dyn Error>> {
         SubekiHtmlSource::search(client, ctx, w).await
     }
     async fn sort(
         client: &reqwest::Client,
-        ctx: &mut Context,
+        ctx: &Context,
         w: &Widgets,
     ) -> Result<ResultTable, Box<dyn Error>> {
         SubekiHtmlSource::search(client, ctx, w).await
     }
     async fn search(
         client: &reqwest::Client,
-        ctx: &mut Context,
+        ctx: &Context,
         w: &Widgets,
     ) -> Result<ResultTable, Box<dyn Error>> {
         let sukebei = ctx.config.sources.sukebei.to_owned().unwrap_or_default();
@@ -118,15 +118,15 @@ impl Source for SubekiHtmlSource {
         let dl_sel = &Selector::parse("td:nth-of-type(8)")?;
         let pagination_sel = &Selector::parse(".pagination-page-info")?;
 
-        ctx.last_page = 100;
-        ctx.total_results = 7500;
+        let mut last_page = 100;
+        let mut total_results = 7500;
         // For searches, pagination has a description of total results found
         if let Some(pagination) = doc.select(pagination_sel).next() {
             // 6th word in pagination description contains total number of results
             if let Some(num_results_str) = pagination.inner_html().split(' ').nth(5) {
                 if let Ok(num_results) = num_results_str.parse::<usize>() {
-                    ctx.last_page = (num_results + 74) / 75;
-                    ctx.total_results = num_results;
+                    last_page = (num_results + 74) / 75;
+                    total_results = num_results;
                 }
             }
         }
@@ -202,6 +202,8 @@ impl Source for SubekiHtmlSource {
             &ctx.theme,
             &w.sort.selected,
             sukebei.columns,
+            last_page,
+            total_results,
         ))
     }
 
