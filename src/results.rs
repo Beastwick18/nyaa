@@ -13,6 +13,8 @@ pub struct ResultHeader<S: PartialEq + Copy> {
 
 pub enum ResultColumn<S: PartialEq + Copy> {
     Normal(String, Constraint),
+
+    // Sortable columns must have a known, fixed width
     Sorted(String, u16, S),
 }
 
