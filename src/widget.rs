@@ -187,9 +187,9 @@ impl<T> StatefulTable<T> {
         self.scrollbar_state = self.scrollbar_state.position(idx);
     }
 
-    // pub fn selected(&self) -> Option<&T> {
-    //     self.state.selected().and_then(|i| self.items.get(i))
-    // }
+    pub fn selected(&self) -> Option<&T> {
+        self.state.selected().and_then(|i| self.items.get(i))
+    }
 }
 
 #[derive(Default)]

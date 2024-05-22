@@ -14,13 +14,13 @@ use crate::{
 use super::{border_block, EnumIter, StatefulTable, Widget};
 
 pub struct SourcesPopup {
-    pub table: StatefulTable<String>,
+    pub table: StatefulTable<Sources>,
 }
 
 impl Default for SourcesPopup {
     fn default() -> Self {
         SourcesPopup {
-            table: StatefulTable::new(Sources::iter().map(|item| item.to_string()).collect()),
+            table: StatefulTable::new(Sources::iter().copied().collect::<Vec<Sources>>()),
         }
     }
 }
@@ -30,10 +30,10 @@ impl Widget for SourcesPopup {
         let buf = f.buffer_mut();
         let center = super::centered_rect(30, self.table.items.len() as u16 + 2, area);
         let clear = super::centered_rect(center.width + 2, center.height, area);
-        let items = self.table.items.iter().enumerate().map(|(i, item)| {
-            Row::new(vec![match i == ctx.src.to_owned() as usize {
-                true => format!("  {}", item.to_owned()),
-                false => format!("   {}", item.to_owned()),
+        let items = self.table.items.iter().map(|item| {
+            Row::new(vec![match item == &ctx.src {
+                true => format!("  {}", item.to_string()),
+                false => format!("   {}", item.to_string()),
             }])
         });
         super::clear(clear, buf, ctx.theme.bg);
@@ -67,12 +67,12 @@ impl Widget for SourcesPopup {
                     self.table.select(0);
                 }
                 KeyCode::Enter => {
-                    if let Some(i) = Sources::iter().nth(self.table.state.selected().unwrap_or(0)) {
+                    if let Some(i) = self.table.selected() {
                         if !i.eq(&ctx.src) {
                             ctx.src = *i;
                             ctx.config.source = *i;
                             ctx.mode = Mode::Loading(LoadType::Sourcing);
-                            i.load_config(ctx);
+                            i.load_config(&mut ctx.config.sources);
                             match ctx.config.clone().store() {
                                 Ok(_) => {
                                     ctx.notify(format!("Updated source to \"{}\"", i.to_string()))

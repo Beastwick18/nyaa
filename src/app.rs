@@ -1,12 +1,13 @@
 use std::{collections::VecDeque, error::Error};
 
-use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
+use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use indexmap::IndexMap;
 use ratatui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout},
     Frame, Terminal,
 };
+use tokio::{sync::mpsc, task::AbortHandle};
 
 use crate::{
     client::Client,
@@ -14,6 +15,7 @@ use crate::{
     config::Config,
     results::ResultTable,
     source::{nyaa_html::NyaaHtmlSource, request_client, Item, Source, SourceInfo, Sources},
+    sync::{self, SearchQuery},
     theme::{self, Theme},
     util::conv::key_to_string,
     widget::{
@@ -55,9 +57,25 @@ pub enum LoadType {
     Downloading,
 }
 
+impl ToString for LoadType {
+    fn to_string(&self) -> String {
+        match self {
+            LoadType::Sourcing => "Sourcing",
+            LoadType::Searching => "Searching",
+            LoadType::Sorting => "Sorting",
+            LoadType::Filtering => "Filtering",
+            LoadType::Categorizing => "Categorizing",
+            LoadType::Batching => "Batching",
+            LoadType::Downloading => "Downloading",
+        }
+        .to_owned()
+    }
+}
+
 #[derive(PartialEq, Clone)]
 pub enum Mode {
     Normal,
+    Loading(LoadType),
     KeyCombo(Vec<char>),
     Search,
     Category,
@@ -67,7 +85,6 @@ pub enum Mode {
     Theme,
     Sources,
     Clients,
-    Loading(LoadType),
     Error,
     Page,
     User,
@@ -100,8 +117,10 @@ pub struct App {
     pub widgets: Widgets,
 }
 
+#[derive(Clone)]
 pub struct Context {
     pub mode: Mode,
+    pub load_type: Option<LoadType>,
     pub themes: IndexMap<String, Theme>,
     pub src_info: SourceInfo,
     pub theme: Theme,
@@ -139,17 +158,15 @@ impl Default for Context {
         let themes = theme::default_themes();
         Context {
             mode: Mode::Loading(LoadType::Searching),
+            load_type: None,
             themes,
             src_info: NyaaHtmlSource::info(),
             theme: Theme::default(),
             config: Config::default(),
             errors: VecDeque::new(),
             notification: None,
-            // ascending: false,
             page: 1,
             user: None,
-            // last_page: 1,
-            // total_results: 0,
             src: Sources::Nyaa,
             client: Client::Cmd,
             batch: vec![],
@@ -187,6 +204,13 @@ impl App {
             .table
             .select(w.category.major + w.category.minor + 1);
         let ctx = &mut Context::default();
+
+        let (tx_res, mut rx_res) =
+            mpsc::channel::<Result<ResultTable, Box<dyn Error + Send + Sync>>>(32);
+        let (tx_evt, mut rx_evt) = mpsc::channel::<Event>(100);
+
+        tokio::task::spawn(sync::read_event_loop(tx_evt));
+
         match Config::load() {
             Ok(config) => {
                 if let Err(e) = config.apply(ctx, w) {
@@ -204,6 +228,7 @@ impl App {
         }
 
         let client = request_client(ctx)?;
+        let mut last_load_abort: Option<AbortHandle> = None;
 
         while !ctx.should_quit {
             if !ctx.errors.is_empty() {
@@ -216,6 +241,7 @@ impl App {
             self.get_help(w, ctx);
             terminal.draw(|f| self.draw(w, ctx, f))?;
             if let Mode::Loading(load_type) = ctx.mode {
+                ctx.load_type = Some(load_type);
                 ctx.mode = Mode::Normal;
                 match load_type {
                     LoadType::Downloading => {
@@ -238,12 +264,13 @@ impl App {
                     }
                     LoadType::Sourcing => {
                         // On sourcing, update info, reset things like category, etc.
-                        w.category.selected = ctx.src.default_category(&ctx.config);
+                        w.category.selected = ctx.src.default_category(&ctx.config.sources);
                         w.category.major = 0;
                         w.category.minor = 0;
+                        w.category.max_cat = ctx.src_info.cats.len();
 
-                        w.sort.selected.sort = ctx.src.default_sort(&ctx.config);
-                        w.filter.selected = ctx.src.default_filter(&ctx.config);
+                        w.sort.selected.sort = ctx.src.default_sort(&ctx.config.sources);
+                        w.filter.selected = ctx.src.default_filter(&ctx.config.sources);
 
                         // Go back to first page when changing source
                         ctx.page = 1;
@@ -253,26 +280,56 @@ impl App {
                     _ => {}
                 }
 
-                let result = ctx.src.clone().load(&client, load_type, ctx, w).await;
-
-                if let Some(results) = result {
-                    match results {
-                        Ok(items) => ctx.results = items,
-                        Err(e) => ctx.show_error(e),
-                    }
+                if let Some(handle) = last_load_abort.as_ref() {
+                    handle.abort();
                 }
-                // match result {
-                //     Ok(items) => w.results.with_items(items, w.sort.selected),
-                //     Err(e) => ctx.show_error(e),
-                // }
+
+                let search = SearchQuery {
+                    query: w.search.input.input.clone(),
+                    page: ctx.page,
+                    category: w.category.selected,
+                    filter: w.filter.selected,
+                    sort: w.sort.selected,
+                    user: ctx.user.clone(),
+                    date_format: ctx.config.date_format.clone(),
+                };
+
+                let task = tokio::spawn(sync::load_results(
+                    tx_res.clone(),
+                    load_type,
+                    ctx.src,
+                    client.clone(),
+                    search,
+                    ctx.config.sources.clone(),
+                    ctx.theme.clone(),
+                ));
+                last_load_abort = Some(task.abort_handle());
                 continue; // Redraw
             }
 
-            let evt = event::read()?;
-            #[cfg(unix)]
-            self.on(&evt, w, ctx, terminal);
-            #[cfg(not(unix))]
-            self.on::<B>(&evt, w, ctx);
+            tokio::select! {
+                Some(rt) = rx_res.recv() => {
+                    match rt {
+                        Ok(rt) => ctx.results = rt,
+                        Err(e) => {
+                            // Clear results on error
+                            ctx.results = ResultTable::default();
+                            ctx.show_error(e);
+                        },
+                    }
+                    ctx.load_type = None;
+                    last_load_abort = None;
+                },
+                Some(evt) = rx_evt.recv() => {
+                    #[cfg(unix)]
+                    self.on(&evt, w, ctx, terminal);
+                    #[cfg(not(unix))]
+                    self.on::<B>(&evt, w, ctx);
+                },
+                else => {
+                    break;
+                }
+            };
         }
         Ok(())
     }
@@ -346,6 +403,32 @@ impl App {
                     panic!("Failed to continue program");
                 }
                 return;
+            }
+            if let (KeyCode::Char('z'), &KeyModifiers::NONE) = (code, modifiers) {
+                let search = SearchQuery {
+                    query: w.search.input.input.clone(),
+                    page: ctx.page,
+                    category: w.category.selected,
+                    filter: w.filter.selected,
+                    sort: w.sort.selected,
+                    user: ctx.user.clone(),
+                    date_format: ctx.config.date_format.clone(),
+                };
+
+                ctx.show_error(format!(
+                    "Source: {}\nQuery: {}\nFilter: {}\nSort: {}\nDir: {}\nCategory: {}\nPage: {}\nUser: {}",
+                    ctx.src.to_string(),
+                    search.query.clone(),
+                    search.filter.clone(),
+                    search.sort.sort.clone(),
+                    match search.sort.dir {
+                        SortDir::Asc => "Asc",
+                        SortDir::Desc => "Desc",
+                    },
+                    search.category.clone(),
+                    search.page.clone(),
+                    search.user.clone().unwrap_or("None".to_string()),
+                ));
             }
             match ctx.mode.to_owned() {
                 Mode::KeyCombo(keys) => {

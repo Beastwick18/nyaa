@@ -94,8 +94,8 @@ impl super::Widget for ResultsWidget {
         let header = header.fg(focus_color).underlined();
 
         Clear.render(area, buf);
-        let items: Vec<Row> = match ctx.mode {
-            Mode::Loading(loadtype) => {
+        let items: Vec<Row> = match ctx.load_type {
+            Some(loadtype) => {
                 let message = match loadtype {
                     LoadType::Sourcing => "Sourcing…",
                     LoadType::Searching => "Searching…",
@@ -141,13 +141,13 @@ impl super::Widget for ResultsWidget {
         StatefulWidget::render(table, area, buf, &mut self.table.state);
         StatefulWidget::render(sb, sb_area, buf, &mut self.table.scrollbar_state);
 
-        if !matches!(ctx.mode, Mode::Loading(_)) && num_items == 0 {
+        if ctx.load_type.is_none() && num_items == 0 {
             let center = centered_rect(10, 1, area);
             Paragraph::new("No results").render(center, buf);
         }
 
         if let Some(visible_items) = ctx.results.items.get(self.table.state.offset()..) {
-            let selected_ids: Vec<usize> = ctx.batch.iter().map(|i| i.id).collect();
+            let selected_ids: Vec<String> = ctx.batch.clone().into_iter().map(|i| i.id).collect();
             let vert_left = ctx.theme.border.to_border_set().vertical_left;
             let lines = visible_items
                 .iter()

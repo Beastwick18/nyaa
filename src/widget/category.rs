@@ -89,7 +89,6 @@ impl CategoryPopup {
 
 impl Widget for CategoryPopup {
     fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
-        self.max_cat = ctx.src_info.cats.len(); // TODO: Bad
         if let Some(cat) = ctx.src_info.cats.get(self.major) {
             let mut tbl: Vec<Row> = ctx
                 .src_info

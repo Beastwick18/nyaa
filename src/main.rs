@@ -10,6 +10,7 @@ mod config;
 mod macros;
 mod results;
 mod source;
+mod sync;
 mod theme;
 mod util;
 mod widget;
@@ -42,5 +43,5 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     util::term::reset_terminal()?;
     terminal.show_cursor()?;
 
-    Ok(())
+    std::process::exit(0);
 }

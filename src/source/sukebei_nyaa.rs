@@ -7,9 +7,9 @@ use serde::{Deserialize, Serialize};
 use urlencoding::encode;
 
 use crate::{
-    app::{Context, Widgets},
-    cats,
-    config::Config,
+    cats, sel,
+    sync::SearchQuery,
+    theme::Theme,
     util::{
         conv::to_bytes,
         html::{attr, inner},
@@ -20,7 +20,7 @@ use crate::{
 use super::{
     add_protocol,
     nyaa_html::{nyaa_table, NyaaColumns, NyaaFilter, NyaaSort},
-    Item, ItemType, ResultTable, Source, SourceInfo,
+    Item, ItemType, ResultTable, Source, SourceConfig, SourceInfo,
 };
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -52,43 +52,47 @@ pub struct SubekiHtmlSource;
 impl Source for SubekiHtmlSource {
     async fn filter(
         client: &reqwest::Client,
-        ctx: &Context,
-        w: &Widgets,
-    ) -> Result<ResultTable, Box<dyn Error>> {
-        SubekiHtmlSource::search(client, ctx, w).await
+        search: SearchQuery,
+        config: SourceConfig,
+        theme: Theme,
+    ) -> Result<ResultTable, Box<dyn Error + Send + Sync>> {
+        SubekiHtmlSource::search(client, search, config, theme).await
     }
     async fn categorize(
         client: &reqwest::Client,
-        ctx: &Context,
-        w: &Widgets,
-    ) -> Result<ResultTable, Box<dyn Error>> {
-        SubekiHtmlSource::search(client, ctx, w).await
+        search: SearchQuery,
+        config: SourceConfig,
+        theme: Theme,
+    ) -> Result<ResultTable, Box<dyn Error + Send + Sync>> {
+        SubekiHtmlSource::search(client, search, config, theme).await
     }
     async fn sort(
         client: &reqwest::Client,
-        ctx: &Context,
-        w: &Widgets,
-    ) -> Result<ResultTable, Box<dyn Error>> {
-        SubekiHtmlSource::search(client, ctx, w).await
+        search: SearchQuery,
+        config: SourceConfig,
+        theme: Theme,
+    ) -> Result<ResultTable, Box<dyn Error + Send + Sync>> {
+        SubekiHtmlSource::search(client, search, config, theme).await
     }
     async fn search(
         client: &reqwest::Client,
-        ctx: &Context,
-        w: &Widgets,
-    ) -> Result<ResultTable, Box<dyn Error>> {
-        let sukebei = ctx.config.sources.sukebei.to_owned().unwrap_or_default();
-        let cat = w.category.selected;
-        let filter = w.filter.selected as u16;
-        let page = ctx.page;
-        let user = ctx.user.to_owned().unwrap_or_default();
-        let sort = NyaaSort::try_from(w.sort.selected.sort)
+        search: SearchQuery,
+        config: SourceConfig,
+        theme: Theme,
+    ) -> Result<ResultTable, Box<dyn Error + Send + Sync>> {
+        let sukebei = config.sukebei.to_owned().unwrap_or_default();
+        let cat = search.category;
+        let filter = search.filter;
+        let page = search.page;
+        let user = search.user.unwrap_or_default();
+        let sort = NyaaSort::try_from(search.sort.sort)
             .unwrap_or(NyaaSort::Date)
             .to_url();
 
         let base_url = add_protocol(sukebei.base_url, true);
         let (high, low) = (cat / 10, cat % 10);
-        let query = encode(&w.search.input.input);
-        let dir = w.sort.selected.dir.to_url();
+        let query = encode(&search.query);
+        let dir = search.sort.dir.to_url();
         let url = Url::parse(&base_url)?;
         let mut url_query = url.clone();
         url_query.set_query(Some(&format!(
@@ -106,17 +110,17 @@ impl Source for SubekiHtmlSource {
         let content = response.bytes().await?;
         let doc = Html::parse_document(std::str::from_utf8(&content[..])?);
 
-        let item_sel = &Selector::parse("table.torrent-list > tbody > tr")?;
-        let icon_sel = &Selector::parse("td:first-of-type > a")?;
-        let title_sel = &Selector::parse("td:nth-of-type(2) > a:last-of-type")?;
-        let torrent_sel = &Selector::parse("td:nth-of-type(3) > a:nth-of-type(1)")?;
-        let magnet_sel = &Selector::parse("td:nth-of-type(3) > a:nth-of-type(2)")?;
-        let size_sel = &Selector::parse("td:nth-of-type(4)")?;
-        let date_sel = &Selector::parse("td:nth-of-type(5)").unwrap();
-        let seed_sel = &Selector::parse("td:nth-of-type(6)")?;
-        let leech_sel = &Selector::parse("td:nth-of-type(7)")?;
-        let dl_sel = &Selector::parse("td:nth-of-type(8)")?;
-        let pagination_sel = &Selector::parse(".pagination-page-info")?;
+        let item_sel = &sel!("table.torrent-list > tbody > tr")?;
+        let icon_sel = &sel!("td:first-of-type > a")?;
+        let title_sel = &sel!("td:nth-of-type(2) > a:last-of-type")?;
+        let torrent_sel = &sel!("td:nth-of-type(3) > a:nth-of-type(1)")?;
+        let magnet_sel = &sel!("td:nth-of-type(3) > a:nth-of-type(2)")?;
+        let size_sel = &sel!("td:nth-of-type(4)")?;
+        let date_sel = &sel!("td:nth-of-type(5)").unwrap();
+        let seed_sel = &sel!("td:nth-of-type(6)")?;
+        let leech_sel = &sel!("td:nth-of-type(7)")?;
+        let dl_sel = &sel!("td:nth-of-type(8)")?;
+        let pagination_sel = &sel!(".pagination-page-info")?;
 
         let mut last_page = 100;
         let mut total_results = 7500;
@@ -146,6 +150,7 @@ impl Source for SubekiHtmlSource {
                     .map(|url| url.to_string())
                     .unwrap_or("null".to_owned());
                 let id = post_link.split('/').last()?.parse::<usize>().ok()?;
+                let id = format!("sukebei-{}", id);
                 let file_name = format!("{}.torrent", id);
 
                 let size = inner(e, size_sel, "0 B")
@@ -154,7 +159,7 @@ impl Source for SubekiHtmlSource {
                 let bytes = to_bytes(&size);
 
                 let mut date = inner(e, date_sel, "");
-                if let Some(date_format) = ctx.config.date_format.to_owned() {
+                if let Some(date_format) = search.date_format.to_owned() {
                     let naive =
                         NaiveDateTime::parse_from_str(&date, "%Y-%m-%d %H:%M").unwrap_or_default();
                     let date_time: DateTime<Local> = Local.from_utc_datetime(&naive);
@@ -199,8 +204,8 @@ impl Source for SubekiHtmlSource {
             .collect();
         Ok(nyaa_table(
             items,
-            &ctx.theme,
-            &w.sort.selected,
+            &theme,
+            &search.sort,
             sukebei.columns,
             last_page,
             total_results,
@@ -233,35 +238,22 @@ impl Source for SubekiHtmlSource {
         }
     }
 
-    fn load_config(ctx: &mut Context) {
-        if ctx.config.sources.sukebei.is_none() {
-            ctx.config.sources.sukebei = Some(SukebeiNyaaConfig::default());
+    fn load_config(config: &mut SourceConfig) {
+        if config.sukebei.is_none() {
+            config.sukebei = Some(SukebeiNyaaConfig::default());
         }
     }
 
-    fn default_category(cfg: &Config) -> usize {
-        let default = cfg
-            .sources
-            .sukebei
-            .to_owned()
-            .unwrap_or_default()
-            .default_category;
+    fn default_category(cfg: &SourceConfig) -> usize {
+        let default = cfg.sukebei.to_owned().unwrap_or_default().default_category;
         Self::info().entry_from_cfg(&default).id
     }
 
-    fn default_sort(cfg: &Config) -> usize {
-        cfg.sources
-            .sukebei
-            .to_owned()
-            .unwrap_or_default()
-            .default_sort as usize
+    fn default_sort(cfg: &SourceConfig) -> usize {
+        cfg.sukebei.to_owned().unwrap_or_default().default_sort as usize
     }
 
-    fn default_filter(cfg: &Config) -> usize {
-        cfg.sources
-            .sukebei
-            .to_owned()
-            .unwrap_or_default()
-            .default_filter as usize
+    fn default_filter(cfg: &SourceConfig) -> usize {
+        cfg.sukebei.to_owned().unwrap_or_default().default_filter as usize
     }
 }

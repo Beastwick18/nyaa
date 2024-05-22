@@ -77,9 +77,8 @@ impl Client {
         item: Item,
         conf: ClientConfig,
         timeout: u64,
-    ) -> Result<usize, String> {
-        let id = item.id;
-        let item = item.clone();
+    ) -> Result<String, String> {
+        let id = item.id.clone();
         let result = match self {
             Self::Cmd => cmd::download(item, conf).await,
             Self::Qbit => qbit::download(item, conf, timeout).await,

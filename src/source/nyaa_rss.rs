@@ -6,7 +6,8 @@ use rss::{extension::Extension, Channel};
 use urlencoding::encode;
 
 use crate::{
-    app::{Context, Widgets},
+    sync::SearchQuery,
+    theme::Theme,
     util::conv::to_bytes,
     widget::sort::{SelectedSort, SortDir},
 };
@@ -14,7 +15,7 @@ use crate::{
 use super::{
     add_protocol,
     nyaa_html::{nyaa_table, NyaaHtmlSource, NyaaSort},
-    Item, ItemType, ResultTable, Source,
+    Item, ItemType, ResultTable, Source, SourceConfig,
 };
 
 type ExtensionMap = BTreeMap<String, Vec<Extension>>;
@@ -28,7 +29,7 @@ pub fn get_ext_value<T: Default + FromStr>(ext_map: &ExtensionMap, key: &str) ->
         .unwrap_or_default()
 }
 
-fn sort_items(items: &mut [Item], sort: SelectedSort) {
+pub fn sort_items(items: &mut [Item], sort: SelectedSort) {
     let f: fn(&Item, &Item) -> Ordering = match NyaaSort::try_from(sort.sort) {
         Ok(NyaaSort::Downloads) => |a, b| b.downloads.cmp(&a.downloads),
         Ok(NyaaSort::Seeders) => |a, b| b.seeders.cmp(&a.seeders),
@@ -42,23 +43,29 @@ fn sort_items(items: &mut [Item], sort: SelectedSort) {
     }
 }
 
-pub async fn sort_rss(ctx: &Context, w: &Widgets) -> Result<ResultTable, Box<dyn Error>> {
-    let mut items = ctx.results.items.clone();
-    sort_items(&mut items, w.sort.selected);
-    // Ok(items)
-    Ok(ResultTable::default())
-}
+// async fn sort_rss(
+//     client: &reqwest::Client,
+//     search: SearchQuery,
+//     config: SourceConfig,
+//     theme: Theme,
+// ) -> Result<ResultTable, Box<dyn Error>> {
+//     let mut items = ctx.results.items.clone();
+//     sort_items(&mut items, w.sort.selected);
+//     // Ok(items)
+//     Ok()
+// }
 
 pub async fn search_rss(
     client: &reqwest::Client,
-    ctx: &Context,
-    w: &Widgets,
-) -> Result<ResultTable, Box<dyn Error>> {
-    let nyaa = ctx.config.sources.nyaa.to_owned().unwrap_or_default();
-    let cat = w.category.selected;
-    let query = w.search.input.input.clone();
-    let filter = w.filter.selected;
-    let user = ctx.user.to_owned().unwrap_or_default();
+    search: SearchQuery,
+    config: SourceConfig,
+    theme: Theme,
+) -> Result<ResultTable, Box<dyn Error + Send + Sync>> {
+    let nyaa = config.nyaa.to_owned().unwrap_or_default();
+    let cat = search.category;
+    let query = search.query;
+    let filter = search.filter;
+    let user = search.user.to_owned().unwrap_or_default();
     let last_page = 1;
     let (high, low) = (cat / 10, cat % 10);
     let query = encode(&query);
@@ -115,14 +122,13 @@ pub async fn search_rss(
                 (_, true) => ItemType::Remake,
                 _ => ItemType::None,
             };
-            let date_format = ctx
-                .config
+            let date_format = search
                 .date_format
                 .to_owned()
                 .unwrap_or("%Y-%m-%d %H:%M".to_owned());
 
             Some(Item {
-                id: id_usize,
+                id: format!("nyaa-{}", id_usize),
                 date: date.format(&date_format).to_string(),
                 seeders: get_ext_value(ext, "seeders"),
                 leechers: get_ext_value(ext, "leechers"),
@@ -142,11 +148,11 @@ pub async fn search_rss(
         })
         .collect();
     let total_results = items.len();
-    sort_items(&mut items, w.sort.selected);
+    sort_items(&mut items, search.sort);
     Ok(nyaa_table(
         items,
-        &ctx.theme,
-        &w.sort.selected,
+        &theme,
+        &search.sort,
         nyaa.columns,
         last_page,
         total_results,

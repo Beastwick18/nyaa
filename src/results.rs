@@ -83,7 +83,7 @@ impl<S: PartialEq + Copy> ResultColumn<S> {
     // }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct ResultTable {
     pub headers: ResultRow,
     pub rows: Vec<ResultRow>,

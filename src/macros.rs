@@ -158,3 +158,13 @@ macro_rules! cond_vec {
         v
     }};
 }
+
+#[macro_export]
+macro_rules! sel {
+    (
+        $text:expr
+    ) => {{
+        let raw = Selector::parse($text).map_err(|e| e.to_string());
+        raw
+    }};
+}
