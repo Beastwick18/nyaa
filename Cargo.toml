@@ -15,7 +15,7 @@ strip = true
 lto = true
 
 [dependencies]
-reqwest = { version = "0.11.27", features = [
+reqwest = { version = "0.12.4", features = [
     "gzip",
     "rustls-tls",
     "socks",
@@ -30,7 +30,7 @@ unicode-segmentation = "1.11.0"
 confy = "0.6.0"
 shellwords = "1.1.0"
 serde = { version = "1.0.152", features = ["derive"] }
-scraper = "0.18.1"
+scraper = "0.19.0"
 regex = "1.10.3"
 rss = "2.0.1"
 chrono = "0.4.34"
