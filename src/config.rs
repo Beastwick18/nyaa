@@ -65,18 +65,18 @@ impl Config {
         })
     }
     pub fn apply(&self, ctx: &mut Context, w: &mut Widgets) -> Result<(), Box<dyn Error>> {
-        ctx.config = self.to_owned();
+        ctx.config = self.clone();
         w.search.input.cursor = w.search.input.input.len();
         w.sort.selected.sort = 0;
         w.filter.selected = 0;
-        ctx.client = ctx.config.download_client.to_owned();
-        ctx.src = ctx.config.source.to_owned();
+        ctx.client = ctx.config.download_client;
+        ctx.src = ctx.config.source;
         ctx.src_info = ctx.src.info();
 
         // Load user-defined themes
         if let Some((i, _, theme)) = ctx.themes.get_full(&self.theme) {
             w.theme.selected = i;
-            ctx.theme = theme.to_owned();
+            ctx.theme = theme.clone();
         }
 
         ctx.src.load_config(&mut ctx.config.sources);

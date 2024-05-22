@@ -32,8 +32,8 @@ impl Widget for ClientsPopup {
         let clear = super::centered_rect(center.width + 2, center.height, area);
         let items = self.table.items.iter().map(|item| {
             Row::new(vec![match item == &ctx.client {
-                true => format!("  {}", item.to_string()),
-                false => format!("   {}", item.to_string()),
+                true => format!("  {}", item),
+                false => format!("   {}", item),
             }])
         });
         super::clear(clear, buf, ctx.theme.bg);
@@ -71,7 +71,7 @@ impl Widget for ClientsPopup {
                         ctx.client = *c;
 
                         c.load_config(ctx);
-                        ctx.notify(format!("Updated download client to \"{}\"", c.to_string()));
+                        ctx.notify(format!("Updated download client to \"{}\"", c));
                         if let Err(e) = ctx.config.to_owned().store() {
                             ctx.show_error(format!("Failed to update config:\n{}", e))
                         }

@@ -87,8 +87,8 @@ impl Widget for ThemePopup {
                     let idx = self.table.selected().unwrap_or(0);
                     if let Some((_, theme)) = ctx.themes.get_index(idx) {
                         self.selected = idx;
-                        ctx.theme = theme.to_owned();
-                        ctx.config.theme = theme.name.to_owned();
+                        ctx.theme = theme.clone();
+                        ctx.config.theme.clone_from(&theme.name);
                         ctx.results.table = ctx.src.format_table(
                             &ctx.results.response.items,
                             &ctx.results.search,

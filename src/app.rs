@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, error::Error};
+use std::{collections::VecDeque, error::Error, fmt::Display};
 
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use indexmap::IndexMap;
@@ -57,18 +57,18 @@ pub enum LoadType {
     Downloading,
 }
 
-impl ToString for LoadType {
-    fn to_string(&self) -> String {
-        match self {
+impl Display for LoadType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
             LoadType::Sourcing => "Sourcing",
             LoadType::Searching => "Searching",
             LoadType::Sorting => "Sorting",
             LoadType::Filtering => "Filtering",
             LoadType::Categorizing => "Categorizing",
-            LoadType::Batching => "Batching",
+            LoadType::Batching => "Downloading Batch",
             LoadType::Downloading => "Downloading",
-        }
-        .to_owned()
+        };
+        write!(f, "{}", s)
     }
 }
 
@@ -91,9 +91,9 @@ pub enum Mode {
     Help,
 }
 
-impl ToString for Mode {
-    fn to_string(&self) -> String {
-        match self {
+impl Display for Mode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
             Mode::Normal | Mode::KeyCombo(_) => "Normal".to_owned(),
             Mode::Batch => "Batch".to_owned(),
             Mode::Search => "Search".to_owned(),
@@ -108,7 +108,8 @@ impl ToString for Mode {
             Mode::Page => "Page".to_owned(),
             Mode::User => "User".to_owned(),
             Mode::Help => "Help".to_owned(),
-        }
+        };
+        write!(f, "{}", s)
     }
 }
 
@@ -399,36 +400,10 @@ impl App {
                     ctx.show_error(format!("Failed to suspend:\n{}", e));
                 }
                 // If we fail to continue the process, panic
-                if term::continue_self(terminal).is_err() {
-                    panic!("Failed to continue program");
+                if let Err(e) = term::continue_self(terminal) {
+                    panic!("Failed to continue program:\n{}", e);
                 }
                 return;
-            }
-            // TODO: Remove (debug)
-            if let (KeyCode::Char('z'), &KeyModifiers::NONE) = (code, modifiers) {
-                let search = SearchQuery {
-                    query: w.search.input.input.clone(),
-                    page: ctx.page,
-                    category: w.category.selected,
-                    filter: w.filter.selected,
-                    sort: w.sort.selected,
-                    user: ctx.user.clone(),
-                };
-
-                ctx.show_error(format!(
-                    "Source: {}\nQuery: {}\nFilter: {}\nSort: {}\nDir: {}\nCategory: {}\nPage: {}\nUser: {}",
-                    ctx.src.to_string(),
-                    search.query.clone(),
-                    search.filter.clone(),
-                    search.sort.sort.clone(),
-                    match search.sort.dir {
-                        SortDir::Asc => "Asc",
-                        SortDir::Desc => "Desc",
-                    },
-                    search.category.clone(),
-                    search.page.clone(),
-                    search.user.clone().unwrap_or("None".to_string()),
-                ));
             }
             match ctx.mode.to_owned() {
                 Mode::KeyCombo(keys) => {

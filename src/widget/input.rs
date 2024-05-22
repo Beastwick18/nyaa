@@ -134,7 +134,7 @@ impl super::Widget for InputWidget {
                 }
                 (Char('u'), &KeyModifiers::CONTROL) => {
                     self.cursor = 0;
-                    self.input = "".to_owned();
+                    "".clone_into(&mut self.input);
                 }
                 _ => {}
             };
@@ -151,7 +151,7 @@ impl super::Widget for InputWidget {
                 &self.input[self.cursor..]
             );
             if self.input.len() > self.max_len {
-                self.input = self.input[..self.max_len].to_owned();
+                self.input = self.input[..self.max_len].to_string();
             }
             self.cursor = min(self.cursor + p.len(), self.max_len);
         }

@@ -96,15 +96,7 @@ impl super::Widget for ResultsWidget {
         Clear.render(area, buf);
         let items: Vec<Row> = match ctx.load_type {
             Some(loadtype) => {
-                let message = match loadtype {
-                    LoadType::Sourcing => "Sourcing…",
-                    LoadType::Searching => "Searching…",
-                    LoadType::Sorting => "Sorting…",
-                    LoadType::Filtering => "Filtering…",
-                    LoadType::Categorizing => "Categorizing…",
-                    LoadType::Batching => "Downloading batch…",
-                    LoadType::Downloading => "Downloading…",
-                };
+                let message = format!("{}…", loadtype);
                 let load_area = centered_rect(message.len() as u16, 1, area);
                 Paragraph::new(message).render(load_area, buf);
                 vec![]

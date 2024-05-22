@@ -100,7 +100,7 @@ impl Widget for HelpPopup {
         {
             match code {
                 KeyCode::Esc | KeyCode::Char('?') | KeyCode::F(1) | KeyCode::Char('q') => {
-                    ctx.mode = self.prev_mode.to_owned();
+                    self.prev_mode.clone_into(&mut ctx.mode);
                 }
                 KeyCode::Char('j') | KeyCode::Down => {
                     self.table.next_wrap(1);

@@ -43,18 +43,17 @@ macro_rules! popup_enum {
             $konst = $num,
         )+
         }
-        impl ToString for $name {
-            fn to_string(&self) -> String {
-                {
-                    match self {
-                        $(
-                            $name::$konst => $phrase.to_owned(),
-                        )+
-                    }
-                }
+
+        impl std::fmt::Display for $name {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                let s = match self {
+                    $(
+                        $name::$konst => $phrase,
+                    )+
+                };
+                write!(f, "{}", s)
             }
         }
-
 
         impl $crate::widget::EnumIter<$name> for $name {
             fn iter() -> std::slice::Iter<'static, $name> {

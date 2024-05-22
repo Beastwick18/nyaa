@@ -32,8 +32,8 @@ impl Widget for SourcesPopup {
         let clear = super::centered_rect(center.width + 2, center.height, area);
         let items = self.table.items.iter().map(|item| {
             Row::new(vec![match item == &ctx.src {
-                true => format!("  {}", item.to_string()),
-                false => format!("   {}", item.to_string()),
+                true => format!("  {}", item),
+                false => format!("   {}", item),
             }])
         });
         super::clear(clear, buf, ctx.theme.bg);
@@ -67,16 +67,14 @@ impl Widget for SourcesPopup {
                     self.table.select(0);
                 }
                 KeyCode::Enter => {
-                    if let Some(i) = self.table.selected() {
-                        if !i.eq(&ctx.src) {
-                            ctx.src = *i;
-                            ctx.config.source = *i;
+                    if let Some(src) = self.table.selected() {
+                        if !src.eq(&ctx.src) {
+                            ctx.src = *src;
+                            ctx.config.source = *src;
                             ctx.mode = Mode::Loading(LoadType::Sourcing);
-                            i.load_config(&mut ctx.config.sources);
+                            src.load_config(&mut ctx.config.sources);
                             match ctx.config.clone().store() {
-                                Ok(_) => {
-                                    ctx.notify(format!("Updated source to \"{}\"", i.to_string()))
-                                }
+                                Ok(_) => ctx.notify(format!("Updated source to \"{}\"", src)),
                                 Err(e) => ctx.show_error(format!(
                                     "Failed to update default source in config file:\n{}",
                                     e

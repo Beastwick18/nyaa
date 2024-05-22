@@ -145,7 +145,7 @@ impl Client {
         ctx.notify(format!(
             "Successfully downloaded {} torrents with {}",
             success_ids.len(),
-            self.to_string()
+            self,
         ));
         ctx.batch.retain(|i| !success_ids.contains(&i.id)); // Remove successes from batch
     }
@@ -159,7 +159,6 @@ impl Client {
             Self::DefaultApp => default_app::load_config(app),
             Self::Download => download::load_config(app),
         };
-        app.config.download_client = self.to_owned();
-        // app.config.clone().store()?;
+        app.config.download_client = *self;
     }
 }
