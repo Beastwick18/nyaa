@@ -7,7 +7,9 @@ use serde::{Deserialize, Serialize};
 use urlencoding::encode;
 
 use crate::{
-    cats, sel,
+    cats,
+    results::ResultResponse,
+    sel,
     sync::SearchQuery,
     theme::Theme,
     util::{
@@ -52,39 +54,39 @@ pub struct SubekiHtmlSource;
 impl Source for SubekiHtmlSource {
     async fn filter(
         client: &reqwest::Client,
-        search: SearchQuery,
-        config: SourceConfig,
-        theme: Theme,
-    ) -> Result<ResultTable, Box<dyn Error + Send + Sync>> {
-        SubekiHtmlSource::search(client, search, config, theme).await
+        search: &SearchQuery,
+        config: &SourceConfig,
+        date_format: Option<String>,
+    ) -> Result<ResultResponse, Box<dyn Error + Send + Sync>> {
+        SubekiHtmlSource::search(client, search, config, date_format).await
     }
     async fn categorize(
         client: &reqwest::Client,
-        search: SearchQuery,
-        config: SourceConfig,
-        theme: Theme,
-    ) -> Result<ResultTable, Box<dyn Error + Send + Sync>> {
-        SubekiHtmlSource::search(client, search, config, theme).await
+        search: &SearchQuery,
+        config: &SourceConfig,
+        date_format: Option<String>,
+    ) -> Result<ResultResponse, Box<dyn Error + Send + Sync>> {
+        SubekiHtmlSource::search(client, search, config, date_format).await
     }
     async fn sort(
         client: &reqwest::Client,
-        search: SearchQuery,
-        config: SourceConfig,
-        theme: Theme,
-    ) -> Result<ResultTable, Box<dyn Error + Send + Sync>> {
-        SubekiHtmlSource::search(client, search, config, theme).await
+        search: &SearchQuery,
+        config: &SourceConfig,
+        date_format: Option<String>,
+    ) -> Result<ResultResponse, Box<dyn Error + Send + Sync>> {
+        SubekiHtmlSource::search(client, search, config, date_format).await
     }
     async fn search(
         client: &reqwest::Client,
-        search: SearchQuery,
-        config: SourceConfig,
-        theme: Theme,
-    ) -> Result<ResultTable, Box<dyn Error + Send + Sync>> {
+        search: &SearchQuery,
+        config: &SourceConfig,
+        date_format: Option<String>,
+    ) -> Result<ResultResponse, Box<dyn Error + Send + Sync>> {
         let sukebei = config.sukebei.to_owned().unwrap_or_default();
         let cat = search.category;
         let filter = search.filter;
         let page = search.page;
-        let user = search.user.unwrap_or_default();
+        let user = search.user.to_owned().unwrap_or_default();
         let sort = NyaaSort::try_from(search.sort.sort)
             .unwrap_or(NyaaSort::Date)
             .to_url();
@@ -159,7 +161,7 @@ impl Source for SubekiHtmlSource {
                 let bytes = to_bytes(&size);
 
                 let mut date = inner(e, date_sel, "");
-                if let Some(date_format) = search.date_format.to_owned() {
+                if let Some(date_format) = date_format.to_owned() {
                     let naive =
                         NaiveDateTime::parse_from_str(&date, "%Y-%m-%d %H:%M").unwrap_or_default();
                     let date_time: DateTime<Local> = Local.from_utc_datetime(&naive);
@@ -202,14 +204,19 @@ impl Source for SubekiHtmlSource {
                 })
             })
             .collect();
-        Ok(nyaa_table(
+        Ok(ResultResponse {
             items,
-            &theme,
-            &search.sort,
-            sukebei.columns,
             last_page,
             total_results,
-        ))
+        })
+        // Ok(nyaa_table(
+        //     items,
+        //     &theme,
+        //     &search.sort,
+        //     sukebei.columns,
+        //     last_page,
+        //     total_results,
+        // ))
     }
 
     fn info() -> SourceInfo {
@@ -255,5 +262,15 @@ impl Source for SubekiHtmlSource {
 
     fn default_filter(cfg: &SourceConfig) -> usize {
         cfg.sukebei.to_owned().unwrap_or_default().default_filter as usize
+    }
+
+    fn format_table(
+        items: &[Item],
+        search: &SearchQuery,
+        config: &SourceConfig,
+        theme: &Theme,
+    ) -> ResultTable {
+        let sukebei = config.sukebei.to_owned().unwrap_or_default();
+        nyaa_table(items, theme, &search.sort, &sukebei.columns)
     }
 }

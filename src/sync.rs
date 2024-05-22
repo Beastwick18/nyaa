@@ -5,25 +5,13 @@ use tokio::sync::mpsc;
 
 use crate::{
     app::LoadType,
-    results::ResultTable,
+    results::Results,
     source::{SourceConfig, Sources},
     theme::Theme,
     widget::sort::SelectedSort,
 };
 
-// pub async fn read_event(kill: CancellationToken, tx_evt: mpsc::Sender<Event>) {
-//     let task = tokio::spawn(read_event_loop(tx_evt));
-//     kill.cancelled().await;
-//     task.abort();
-//     let _ = join!(task);
-//     // tokio::select! {
-//     //     biased;
-//     //
-//     //     _ = kill.cancelled() => (),
-//     //     output = read_event_loop(tx_evt) => output,
-//     // };
-// }
-
+#[derive(Clone, Default)]
 pub struct SearchQuery {
     pub query: String,
     pub page: usize,
@@ -31,20 +19,30 @@ pub struct SearchQuery {
     pub filter: usize,
     pub sort: SelectedSort,
     pub user: Option<String>,
-    pub date_format: Option<String>,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn load_results(
-    tx_res: mpsc::Sender<Result<ResultTable, Box<dyn Error + Send + Sync>>>,
+    tx_res: mpsc::Sender<Result<Results, Box<dyn Error + Send + Sync>>>,
     load_type: LoadType,
     src: Sources,
     client: reqwest::Client,
     search: SearchQuery,
     config: SourceConfig,
     theme: Theme,
+    date_format: Option<String>,
 ) {
-    let res = src.load(load_type, &client, search, config, theme).await;
-    let _ = tx_res.send(res).await;
+    let res = src
+        .load(load_type, &client, &search, &config, date_format)
+        .await;
+    let fmt = res.map(|res| {
+        Results::new(
+            search.clone(),
+            res.clone(),
+            src.format_table(&res.items, &search, &config, &theme),
+        )
+    });
+    let _ = tx_res.send(fmt).await;
 }
 
 pub async fn read_event_loop(tx_evt: mpsc::Sender<Event>) {

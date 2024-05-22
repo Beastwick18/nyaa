@@ -13,7 +13,7 @@ use crate::{
     client::Client,
     clip,
     config::Config,
-    results::ResultTable,
+    results::Results,
     source::{nyaa_html::NyaaHtmlSource, request_client, Item, Source, SourceInfo, Sources},
     sync::{self, SearchQuery},
     theme::{self, Theme},
@@ -135,7 +135,7 @@ pub struct Context {
     pub client: Client,
     pub batch: Vec<Item>,
     pub last_key: String,
-    pub results: ResultTable,
+    pub results: Results,
     should_quit: bool,
 }
 
@@ -172,7 +172,7 @@ impl Default for Context {
             batch: vec![],
             last_key: "".to_owned(),
             should_quit: false,
-            results: ResultTable::default(),
+            results: Results::default(),
         }
     }
 }
@@ -206,7 +206,7 @@ impl App {
         let ctx = &mut Context::default();
 
         let (tx_res, mut rx_res) =
-            mpsc::channel::<Result<ResultTable, Box<dyn Error + Send + Sync>>>(32);
+            mpsc::channel::<Result<Results, Box<dyn Error + Send + Sync>>>(32);
         let (tx_evt, mut rx_evt) = mpsc::channel::<Event>(100);
 
         tokio::task::spawn(sync::read_event_loop(tx_evt));
@@ -249,7 +249,7 @@ impl App {
                             .results
                             .table
                             .selected()
-                            .and_then(|i| ctx.results.items.get(i))
+                            .and_then(|i| ctx.results.response.items.get(i))
                         {
                             ctx.client.clone().download(i.to_owned(), ctx).await;
                         }
@@ -291,7 +291,6 @@ impl App {
                     filter: w.filter.selected,
                     sort: w.sort.selected,
                     user: ctx.user.clone(),
-                    date_format: ctx.config.date_format.clone(),
                 };
 
                 let task = tokio::spawn(sync::load_results(
@@ -302,6 +301,7 @@ impl App {
                     search,
                     ctx.config.sources.clone(),
                     ctx.theme.clone(),
+                    ctx.config.date_format.clone(),
                 ));
                 last_load_abort = Some(task.abort_handle());
                 continue; // Redraw
@@ -313,7 +313,7 @@ impl App {
                         Ok(rt) => ctx.results = rt,
                         Err(e) => {
                             // Clear results on error
-                            ctx.results = ResultTable::default();
+                            ctx.results = Results::default();
                             ctx.show_error(e);
                         },
                     }
@@ -404,6 +404,7 @@ impl App {
                 }
                 return;
             }
+            // TODO: Remove (debug)
             if let (KeyCode::Char('z'), &KeyModifiers::NONE) = (code, modifiers) {
                 let search = SearchQuery {
                     query: w.search.input.input.clone(),
@@ -412,7 +413,6 @@ impl App {
                     filter: w.filter.selected,
                     sort: w.sort.selected,
                     user: ctx.user.clone(),
-                    date_format: ctx.config.date_format.clone(),
                 };
 
                 ctx.show_error(format!(
@@ -523,7 +523,7 @@ impl App {
         match keys[..] {
             ['y', c] => {
                 let s = w.results.table.state.selected().unwrap_or(0);
-                match ctx.results.items.get(s) {
+                match ctx.results.response.items.get(s) {
                     Some(item) => {
                         let link = match c {
                             't' => item.torrent_link.to_owned(),

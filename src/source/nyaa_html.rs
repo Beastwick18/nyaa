@@ -12,7 +12,7 @@ use urlencoding::encode;
 
 use crate::{
     cats, cond_vec, popup_enum,
-    results::{ResultColumn, ResultHeader, ResultRow, ResultTable},
+    results::{ResultColumn, ResultHeader, ResultResponse, ResultRow, ResultTable},
     sel,
     sync::SearchQuery,
     theme::Theme,
@@ -109,12 +109,10 @@ popup_enum! {
 pub struct NyaaHtmlSource;
 
 pub fn nyaa_table(
-    items: Vec<Item>,
+    items: &[Item],
     theme: &Theme,
     sel_sort: &SelectedSort,
-    columns: Option<NyaaColumns>,
-    last_page: usize,
-    total_results: usize,
+    columns: &Option<NyaaColumns>,
 ) -> ResultTable {
     let raw_date_width = items.iter().map(|i| i.date.len()).max().unwrap_or_default() as u16;
     let date_width = max(raw_date_width, 6);
@@ -148,11 +146,11 @@ pub fn nyaa_table(
                     ItemType::Remake => theme.remake,
                     ItemType::None => theme.fg,
                 }),
-                item.size.clone().into(),
-                item.date.clone().into(),
+                item.size.clone().fg(theme.fg),
+                item.date.clone().fg(theme.fg),
                 item.seeders.to_string().fg(theme.trusted),
                 item.leechers.to_string().fg(theme.remake),
-                shorten_number(item.downloads).into(),
+                shorten_number(item.downloads).fg(theme.fg),
             ])
             .aligned(align, binding.to_owned())
             .fg(theme.fg)
@@ -178,27 +176,24 @@ pub fn nyaa_table(
         headers,
         rows,
         binding,
-        items,
-        last_page,
-        total_results,
     }
 }
 
 impl Source for NyaaHtmlSource {
     async fn search(
         client: &reqwest::Client,
-        search: SearchQuery,
-        config: SourceConfig,
-        theme: Theme,
-    ) -> Result<ResultTable, Box<dyn Error + Send + Sync>> {
+        search: &SearchQuery,
+        config: &SourceConfig,
+        date_format: Option<String>,
+    ) -> Result<ResultResponse, Box<dyn Error + Send + Sync>> {
         let nyaa = config.nyaa.to_owned().unwrap_or_default();
         if nyaa.rss {
-            return nyaa_rss::search_rss(client, search, config, theme).await;
+            return nyaa_rss::search_rss(client, search, config, date_format).await;
         }
         let cat = search.category;
         let filter = search.filter;
         let page = search.page;
-        let user = search.user.unwrap_or_default();
+        let user = search.user.to_owned().unwrap_or_default();
         let sort = NyaaSort::try_from(search.sort.sort)
             .unwrap_or(NyaaSort::Date)
             .to_url();
@@ -277,7 +272,7 @@ impl Source for NyaaHtmlSource {
                 let bytes = to_bytes(&size);
 
                 let mut date = inner(e, date_sel, "");
-                if let Some(date_format) = search.date_format.to_owned() {
+                if let Some(date_format) = date_format.to_owned() {
                     let naive =
                         NaiveDateTime::parse_from_str(&date, "%Y-%m-%d %H:%M").unwrap_or_default();
                     let date_time: DateTime<Local> = Local.from_utc_datetime(&naive);
@@ -325,24 +320,21 @@ impl Source for NyaaHtmlSource {
             })
             .collect();
 
-        Ok(nyaa_table(
+        Ok(ResultResponse {
             items,
-            &theme,
-            &search.sort,
-            nyaa.columns,
-            last_page,
             total_results,
-        ))
+            last_page,
+        })
     }
     async fn sort(
         client: &reqwest::Client,
-        search: SearchQuery,
-        config: SourceConfig,
-        theme: Theme,
-    ) -> Result<ResultTable, Box<dyn Error + Send + Sync>> {
+        search: &SearchQuery,
+        config: &SourceConfig,
+        date_format: Option<String>,
+    ) -> Result<ResultResponse, Box<dyn Error + Send + Sync>> {
         let nyaa = config.nyaa.to_owned().unwrap_or_default();
         let sort = search.sort;
-        let mut res = NyaaHtmlSource::search(client, search, config, theme).await;
+        let mut res = NyaaHtmlSource::search(client, search, config, date_format).await;
 
         if nyaa.rss {
             if let Ok(res) = &mut res {
@@ -353,19 +345,19 @@ impl Source for NyaaHtmlSource {
     }
     async fn filter(
         client: &reqwest::Client,
-        search: SearchQuery,
-        config: SourceConfig,
-        theme: Theme,
-    ) -> Result<ResultTable, Box<dyn Error + Send + Sync>> {
-        NyaaHtmlSource::search(client, search, config, theme).await
+        search: &SearchQuery,
+        config: &SourceConfig,
+        date_format: Option<String>,
+    ) -> Result<ResultResponse, Box<dyn Error + Send + Sync>> {
+        NyaaHtmlSource::search(client, search, config, date_format).await
     }
     async fn categorize(
         client: &reqwest::Client,
-        search: SearchQuery,
-        config: SourceConfig,
-        theme: Theme,
-    ) -> Result<ResultTable, Box<dyn Error + Send + Sync>> {
-        NyaaHtmlSource::search(client, search, config, theme).await
+        search: &SearchQuery,
+        config: &SourceConfig,
+        date_format: Option<String>,
+    ) -> Result<ResultResponse, Box<dyn Error + Send + Sync>> {
+        NyaaHtmlSource::search(client, search, config, date_format).await
     }
 
     fn info() -> SourceInfo {
@@ -433,5 +425,15 @@ impl Source for NyaaHtmlSource {
 
     fn default_filter(cfg: &SourceConfig) -> usize {
         cfg.nyaa.to_owned().unwrap_or_default().default_filter as usize
+    }
+
+    fn format_table(
+        items: &[Item],
+        search: &SearchQuery,
+        config: &SourceConfig,
+        theme: &Theme,
+    ) -> ResultTable {
+        let nyaa = config.nyaa.to_owned().unwrap_or_default();
+        nyaa_table(items, theme, &search.sort, &nyaa.columns)
     }
 }

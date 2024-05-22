@@ -11,7 +11,7 @@ use urlencoding::encode;
 
 use crate::{
     cats, collection, popup_enum,
-    results::{ResultColumn, ResultHeader, ResultRow, ResultTable},
+    results::{ResultColumn, ResultHeader, ResultResponse, ResultRow, ResultTable},
     sel,
     sync::SearchQuery,
     theme::Theme,
@@ -45,6 +45,8 @@ impl Default for TgxConfig {
         }
     }
 }
+
+// TODO: TgxColumns config
 
 popup_enum! {
     TgxSort;
@@ -115,34 +117,34 @@ fn get_status_color(status: String) -> Option<Color> {
 impl Source for TorrentGalaxyHtmlSource {
     async fn filter(
         client: &reqwest::Client,
-        search: SearchQuery,
-        config: SourceConfig,
-        theme: Theme,
-    ) -> Result<ResultTable, Box<dyn Error + Send + Sync>> {
-        TorrentGalaxyHtmlSource::search(client, search, config, theme).await
+        search: &SearchQuery,
+        config: &SourceConfig,
+        date_format: Option<String>,
+    ) -> Result<ResultResponse, Box<dyn Error + Send + Sync>> {
+        TorrentGalaxyHtmlSource::search(client, search, config, date_format).await
     }
     async fn categorize(
         client: &reqwest::Client,
-        search: SearchQuery,
-        config: SourceConfig,
-        theme: Theme,
-    ) -> Result<ResultTable, Box<dyn Error + Send + Sync>> {
-        TorrentGalaxyHtmlSource::search(client, search, config, theme).await
+        search: &SearchQuery,
+        config: &SourceConfig,
+        date_format: Option<String>,
+    ) -> Result<ResultResponse, Box<dyn Error + Send + Sync>> {
+        TorrentGalaxyHtmlSource::search(client, search, config, date_format).await
     }
     async fn sort(
         client: &reqwest::Client,
-        search: SearchQuery,
-        config: SourceConfig,
-        theme: Theme,
-    ) -> Result<ResultTable, Box<dyn Error + Send + Sync>> {
-        TorrentGalaxyHtmlSource::search(client, search, config, theme).await
+        search: &SearchQuery,
+        config: &SourceConfig,
+        date_format: Option<String>,
+    ) -> Result<ResultResponse, Box<dyn Error + Send + Sync>> {
+        TorrentGalaxyHtmlSource::search(client, search, config, date_format).await
     }
     async fn search(
         client: &reqwest::Client,
-        search: SearchQuery,
-        config: SourceConfig,
-        theme: Theme,
-    ) -> Result<ResultTable, Box<dyn Error + Send + Sync>> {
+        search: &SearchQuery,
+        config: &SourceConfig,
+        _date_format: Option<String>,
+    ) -> Result<ResultResponse, Box<dyn Error + Send + Sync>> {
         let tgx = config.tgx.to_owned().unwrap_or_default();
         let base_url = Url::parse(&add_protocol(tgx.base_url, true))?.join("torrents.php")?;
         let query = encode(&search.query);
@@ -335,81 +337,10 @@ impl Source for TorrentGalaxyHtmlSource {
             }
         }
 
-        let raw_date_width = items.iter().map(|i| i.date.len()).max().unwrap_or_default() as u16;
-        let date_width = max(raw_date_width, 6);
-
-        let raw_uploader_width = items
-            .iter()
-            .map(|i| i.extra.get("uploader").map(|u| u.len()).unwrap_or(0))
-            .max()
-            .unwrap_or_default() as u16;
-        let uploader_width = max(raw_uploader_width, 8);
-
-        let header = ResultHeader::new([
-            ResultColumn::Normal("Cat".to_owned(), Constraint::Length(3)),
-            ResultColumn::Normal("".to_owned(), Constraint::Length(2)),
-            ResultColumn::Normal("Name".to_owned(), Constraint::Min(3)),
-            ResultColumn::Normal("Uploader".to_owned(), Constraint::Length(uploader_width)),
-            ResultColumn::Sorted("Size".to_owned(), 9, TgxSort::Size as u32),
-            ResultColumn::Sorted("Date".to_owned(), date_width, TgxSort::Date as u32),
-            ResultColumn::Sorted("".to_owned(), 4, TgxSort::Seeders as u32),
-            ResultColumn::Sorted("".to_owned(), 4, TgxSort::Leechers as u32),
-            ResultColumn::Normal("  󰈈".to_owned(), Constraint::Length(5)),
-        ]);
-        let binding = header.get_binding();
-        let align = [
-            Alignment::Left,
-            Alignment::Left,
-            Alignment::Left,
-            Alignment::Left,
-            Alignment::Right,
-            Alignment::Left,
-            Alignment::Right,
-            Alignment::Right,
-            Alignment::Left,
-        ];
-        let rows: Vec<ResultRow> = items
-            .iter()
-            .map(|item| {
-                ResultRow::new([
-                    item.icon.label.fg(item.icon.color),
-                    item.extra
-                        .get("lang")
-                        .map(|l| get_lang(l.to_owned()))
-                        .unwrap_or("??".to_owned())
-                        .into(),
-                    item.title.to_owned().fg(match item.item_type {
-                        ItemType::Trusted => theme.trusted,
-                        ItemType::Remake => theme.remake,
-                        ItemType::None => theme.fg,
-                    }),
-                    item.extra
-                        .get("uploader")
-                        .unwrap_or(&"???".to_owned())
-                        .to_owned()
-                        .fg(item
-                            .extra
-                            .get("uploader_status")
-                            .and_then(|u| get_status_color(u.to_owned()))
-                            .unwrap_or(theme.fg)),
-                    item.size.clone().into(),
-                    item.date.clone().into(),
-                    item.seeders.to_string().fg(theme.trusted),
-                    item.leechers.to_string().fg(theme.remake),
-                    shorten_number(item.downloads).into(),
-                ])
-                .aligned(align, &binding)
-                .fg(theme.fg)
-            })
-            .collect();
-
-        Ok(ResultTable {
-            headers: header.get_row(search.sort.dir, search.sort.sort as u32),
-            rows,
-            binding,
+        Ok(ResultResponse {
             items,
-            last_page,
             total_results,
+            last_page,
         })
     }
 
@@ -499,5 +430,86 @@ impl Source for TorrentGalaxyHtmlSource {
 
     fn default_filter(cfg: &SourceConfig) -> usize {
         cfg.tgx.to_owned().unwrap_or_default().default_filter as usize
+    }
+
+    fn format_table(
+        items: &[Item],
+        search: &SearchQuery,
+        _config: &SourceConfig,
+        theme: &Theme,
+    ) -> ResultTable {
+        let raw_date_width = items.iter().map(|i| i.date.len()).max().unwrap_or_default() as u16;
+        let date_width = max(raw_date_width, 6);
+
+        let raw_uploader_width = items
+            .iter()
+            .map(|i| i.extra.get("uploader").map(|u| u.len()).unwrap_or(0))
+            .max()
+            .unwrap_or_default() as u16;
+        let uploader_width = max(raw_uploader_width, 8);
+
+        let header = ResultHeader::new([
+            ResultColumn::Normal("Cat".to_owned(), Constraint::Length(3)),
+            ResultColumn::Normal("".to_owned(), Constraint::Length(2)),
+            ResultColumn::Normal("Name".to_owned(), Constraint::Min(3)),
+            ResultColumn::Normal("Uploader".to_owned(), Constraint::Length(uploader_width)),
+            ResultColumn::Sorted("Size".to_owned(), 9, TgxSort::Size as u32),
+            ResultColumn::Sorted("Date".to_owned(), date_width, TgxSort::Date as u32),
+            ResultColumn::Sorted("".to_owned(), 4, TgxSort::Seeders as u32),
+            ResultColumn::Sorted("".to_owned(), 4, TgxSort::Leechers as u32),
+            ResultColumn::Normal("  󰈈".to_owned(), Constraint::Length(5)),
+        ]);
+        let binding = header.get_binding();
+        let align = [
+            Alignment::Left,
+            Alignment::Left,
+            Alignment::Left,
+            Alignment::Left,
+            Alignment::Right,
+            Alignment::Left,
+            Alignment::Right,
+            Alignment::Right,
+            Alignment::Left,
+        ];
+        let rows: Vec<ResultRow> = items
+            .iter()
+            .map(|item| {
+                ResultRow::new([
+                    item.icon.label.fg(item.icon.color),
+                    item.extra
+                        .get("lang")
+                        .map(|l| get_lang(l.to_owned()))
+                        .unwrap_or("??".to_owned())
+                        .fg(theme.fg),
+                    item.title.to_owned().fg(match item.item_type {
+                        ItemType::Trusted => theme.trusted,
+                        ItemType::Remake => theme.remake,
+                        ItemType::None => theme.fg,
+                    }),
+                    item.extra
+                        .get("uploader")
+                        .unwrap_or(&"???".to_owned())
+                        .to_owned()
+                        .fg(item
+                            .extra
+                            .get("uploader_status")
+                            .and_then(|u| get_status_color(u.to_owned()))
+                            .unwrap_or(theme.fg)),
+                    item.size.clone().fg(theme.fg),
+                    item.date.clone().fg(theme.fg),
+                    item.seeders.to_string().fg(theme.trusted),
+                    item.leechers.to_string().fg(theme.remake),
+                    shorten_number(item.downloads).fg(theme.fg),
+                ])
+                .aligned(align, &binding)
+                .fg(theme.fg)
+            })
+            .collect();
+
+        ResultTable {
+            headers: header.get_row(search.sort.dir, search.sort.sort as u32),
+            rows,
+            binding,
+        }
     }
 }

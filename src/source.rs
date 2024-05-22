@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     app::{Context, LoadType},
     popup_enum,
-    results::ResultTable,
+    results::{ResultResponse, ResultTable},
     sync::SearchQuery,
     theme::Theme,
     util::conv::add_protocol,
@@ -117,92 +117,95 @@ popup_enum! {
 pub trait Source {
     async fn search(
         client: &reqwest::Client,
-        search: SearchQuery,
-        config: SourceConfig,
-        theme: Theme,
-    ) -> Result<ResultTable, Box<dyn Error + Send + Sync>>;
+        search: &SearchQuery,
+        config: &SourceConfig,
+        date_format: Option<String>,
+    ) -> Result<ResultResponse, Box<dyn Error + Send + Sync>>;
     async fn sort(
         client: &reqwest::Client,
-        search: SearchQuery,
-        config: SourceConfig,
-        theme: Theme,
-    ) -> Result<ResultTable, Box<dyn Error + Send + Sync>>;
+        search: &SearchQuery,
+        config: &SourceConfig,
+        date_format: Option<String>,
+    ) -> Result<ResultResponse, Box<dyn Error + Send + Sync>>;
     async fn filter(
         client: &reqwest::Client,
-        search: SearchQuery,
-        config: SourceConfig,
-        theme: Theme,
-    ) -> Result<ResultTable, Box<dyn Error + Send + Sync>>;
+        search: &SearchQuery,
+        config: &SourceConfig,
+        date_format: Option<String>,
+    ) -> Result<ResultResponse, Box<dyn Error + Send + Sync>>;
     async fn categorize(
         client: &reqwest::Client,
-        search: SearchQuery,
-        config: SourceConfig,
-        theme: Theme,
-    ) -> Result<ResultTable, Box<dyn Error + Send + Sync>>;
+        search: &SearchQuery,
+        config: &SourceConfig,
+        date_format: Option<String>,
+    ) -> Result<ResultResponse, Box<dyn Error + Send + Sync>>;
     fn info() -> SourceInfo;
     fn load_config(config: &mut SourceConfig);
 
     fn default_category(config: &SourceConfig) -> usize;
     fn default_sort(config: &SourceConfig) -> usize;
     fn default_filter(config: &SourceConfig) -> usize;
+
+    fn format_table(
+        items: &[Item],
+        sort: &SearchQuery,
+        config: &SourceConfig,
+        theme: &Theme,
+    ) -> ResultTable;
 }
 
 impl Sources {
-    // pub async fn load_test(
-    //     &self,
-    //     client: &reqwest::Client,
-    //     search: SearchQuery,
-    //     config: SourceConfig,
-    //     theme: Theme,
-    // ) -> Option<Result<ResultTable, Box<dyn Error>>> {
-    //     None
-    // }
-
     pub async fn load(
         &self,
         load_type: LoadType,
         client: &reqwest::Client,
-        search: SearchQuery,
-        config: SourceConfig,
-        theme: Theme,
-    ) -> Result<ResultTable, Box<dyn Error + Send + Sync>> {
+        search: &SearchQuery,
+        config: &SourceConfig,
+        date_format: Option<String>,
+    ) -> Result<ResultResponse, Box<dyn Error + Send + Sync>> {
         match self {
             Sources::Nyaa => match load_type {
                 LoadType::Searching | LoadType::Sourcing => {
-                    NyaaHtmlSource::search(client, search, config, theme).await
+                    NyaaHtmlSource::search(client, search, config, date_format).await
                 }
-                LoadType::Sorting => NyaaHtmlSource::sort(client, search, config, theme).await,
-                LoadType::Filtering => NyaaHtmlSource::filter(client, search, config, theme).await,
+                LoadType::Sorting => {
+                    NyaaHtmlSource::sort(client, search, config, date_format).await
+                }
+                LoadType::Filtering => {
+                    NyaaHtmlSource::filter(client, search, config, date_format).await
+                }
                 LoadType::Categorizing => {
-                    NyaaHtmlSource::categorize(client, search, config, theme).await
+                    NyaaHtmlSource::categorize(client, search, config, date_format).await
                 }
                 LoadType::Downloading | LoadType::Batching => unreachable!(),
             },
             Sources::SubekiNyaa => match load_type {
                 LoadType::Searching | LoadType::Sourcing => {
-                    SubekiHtmlSource::search(client, search, config, theme).await
+                    SubekiHtmlSource::search(client, search, config, date_format).await
                 }
-                LoadType::Sorting => SubekiHtmlSource::sort(client, search, config, theme).await,
+                LoadType::Sorting => {
+                    SubekiHtmlSource::sort(client, search, config, date_format).await
+                }
                 LoadType::Filtering => {
-                    SubekiHtmlSource::filter(client, search, config, theme).await
+                    SubekiHtmlSource::filter(client, search, config, date_format).await
                 }
                 LoadType::Categorizing => {
-                    SubekiHtmlSource::categorize(client, search, config, theme).await
+                    SubekiHtmlSource::categorize(client, search, config, date_format).await
                 }
                 LoadType::Downloading | LoadType::Batching => unreachable!(),
             },
             Sources::TorrentGalaxy => match load_type {
                 LoadType::Searching | LoadType::Sourcing => {
-                    TorrentGalaxyHtmlSource::search(client, search, config, theme).await
+                    TorrentGalaxyHtmlSource::search(client, search, config, date_format).await
                 }
                 LoadType::Sorting => {
-                    TorrentGalaxyHtmlSource::sort(client, search, config, theme).await
+                    TorrentGalaxyHtmlSource::sort(client, search, config, date_format).await
                 }
                 LoadType::Filtering => {
-                    TorrentGalaxyHtmlSource::filter(client, search, config, theme).await
+                    TorrentGalaxyHtmlSource::filter(client, search, config, date_format).await
                 }
                 LoadType::Categorizing => {
-                    TorrentGalaxyHtmlSource::categorize(client, search, config, theme).await
+                    TorrentGalaxyHtmlSource::categorize(client, search, config, date_format).await
                 }
                 LoadType::Downloading | LoadType::Batching => unreachable!(),
             },
@@ -246,6 +249,22 @@ impl Sources {
             Sources::Nyaa => NyaaHtmlSource::default_filter(config),
             Sources::SubekiNyaa => SubekiHtmlSource::default_filter(config),
             Sources::TorrentGalaxy => TorrentGalaxyHtmlSource::default_filter(config),
+        }
+    }
+
+    pub fn format_table(
+        self,
+        items: &[Item],
+        search: &SearchQuery,
+        config: &SourceConfig,
+        theme: &Theme,
+    ) -> ResultTable {
+        match self {
+            Sources::Nyaa => NyaaHtmlSource::format_table(items, search, config, theme),
+            Sources::SubekiNyaa => SubekiHtmlSource::format_table(items, search, config, theme),
+            Sources::TorrentGalaxy => {
+                TorrentGalaxyHtmlSource::format_table(items, search, config, theme)
+            }
         }
     }
 }

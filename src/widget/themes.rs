@@ -89,6 +89,12 @@ impl Widget for ThemePopup {
                         self.selected = idx;
                         ctx.theme = theme.to_owned();
                         ctx.config.theme = theme.name.to_owned();
+                        ctx.results.table = ctx.src.format_table(
+                            &ctx.results.response.items,
+                            &ctx.results.search,
+                            &ctx.config.sources,
+                            &ctx.theme,
+                        );
                         match ctx.config.clone().store() {
                             Ok(_) => ctx.notify(format!("Updated theme to \"{}\"", theme.name)),
                             Err(e) => ctx.show_error(format!(

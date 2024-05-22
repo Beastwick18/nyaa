@@ -6,16 +6,16 @@ use rss::{extension::Extension, Channel};
 use urlencoding::encode;
 
 use crate::{
+    results::ResultResponse,
     sync::SearchQuery,
-    theme::Theme,
     util::conv::to_bytes,
     widget::sort::{SelectedSort, SortDir},
 };
 
 use super::{
     add_protocol,
-    nyaa_html::{nyaa_table, NyaaHtmlSource, NyaaSort},
-    Item, ItemType, ResultTable, Source, SourceConfig,
+    nyaa_html::{NyaaHtmlSource, NyaaSort},
+    Item, ItemType, Source, SourceConfig,
 };
 
 type ExtensionMap = BTreeMap<String, Vec<Extension>>;
@@ -57,13 +57,13 @@ pub fn sort_items(items: &mut [Item], sort: SelectedSort) {
 
 pub async fn search_rss(
     client: &reqwest::Client,
-    search: SearchQuery,
-    config: SourceConfig,
-    theme: Theme,
-) -> Result<ResultTable, Box<dyn Error + Send + Sync>> {
+    search: &SearchQuery,
+    config: &SourceConfig,
+    date_format: Option<String>,
+) -> Result<ResultResponse, Box<dyn Error + Send + Sync>> {
     let nyaa = config.nyaa.to_owned().unwrap_or_default();
+    let query = search.query.to_owned();
     let cat = search.category;
-    let query = search.query;
     let filter = search.filter;
     let user = search.user.to_owned().unwrap_or_default();
     let last_page = 1;
@@ -122,8 +122,7 @@ pub async fn search_rss(
                 (_, true) => ItemType::Remake,
                 _ => ItemType::None,
             };
-            let date_format = search
-                .date_format
+            let date_format = date_format
                 .to_owned()
                 .unwrap_or("%Y-%m-%d %H:%M".to_owned());
 
@@ -149,12 +148,18 @@ pub async fn search_rss(
         .collect();
     let total_results = items.len();
     sort_items(&mut items, search.sort);
-    Ok(nyaa_table(
+    Ok(ResultResponse {
         items,
-        &theme,
-        &search.sort,
-        nyaa.columns,
         last_page,
         total_results,
-    ))
+    })
+    // Ok(items)
+    // Ok(nyaa_table(
+    //     items,
+    //     &theme,
+    //     &search.sort,
+    //     nyaa.columns,
+    //     last_page,
+    //     total_results,
+    // ))
 }

@@ -3,8 +3,8 @@ use std::cmp::max;
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::{
     layout::{Margin, Rect},
-    style::{Style, Stylize},
-    symbols::{self},
+    style::{Style, Stylize as _},
+    symbols,
     text::Line,
     widgets::{Clear, Paragraph, Row, ScrollbarOrientation, StatefulWidget, Table, Widget},
     Frame,
@@ -51,7 +51,7 @@ pub struct ResultsWidget {
 impl ResultsWidget {
     fn try_select_toggle(&self, ctx: &mut Context) {
         if let Some(sel) = self.table.state.selected() {
-            if let Some(item) = ctx.results.items.get(sel) {
+            if let Some(item) = ctx.results.response.items.get(sel) {
                 if let Some(p) = ctx.batch.iter().position(|s| s.id == item.id) {
                     ctx.batch.remove(p);
                 } else {
@@ -63,7 +63,7 @@ impl ResultsWidget {
 
     fn try_select(&self, ctx: &mut Context) {
         if let Some(sel) = self.table.state.selected() {
-            if let Some(item) = ctx.results.items.get(sel) {
+            if let Some(item) = ctx.results.response.items.get(sel) {
                 if !ctx.batch.iter().any(|s| s.id == item.id) {
                     ctx.batch.push(item.to_owned());
                 }
@@ -90,7 +90,7 @@ impl super::Widget for ResultsWidget {
             Mode::Normal | Mode::KeyCombo(_) => ctx.theme.border_focused_color,
             _ => ctx.theme.border_color,
         };
-        let header: Row = ctx.results.headers.clone().into();
+        let header: Row = ctx.results.table.headers.clone().into();
         let header = header.fg(focus_color).underlined();
 
         Clear.render(area, buf);
@@ -111,6 +111,7 @@ impl super::Widget for ResultsWidget {
             }
             _ => ctx
                 .results
+                .table
                 .rows
                 .clone()
                 .into_iter()
@@ -127,15 +128,15 @@ impl super::Widget for ResultsWidget {
         let num_items = items.len();
         let first_item = (ctx.page - 1) * 75;
         let focused = matches!(ctx.mode, Mode::Normal | Mode::KeyCombo(_));
-        let table = Table::new(items, ctx.results.binding.to_owned())
+        let table = Table::new(items, ctx.results.table.binding.to_owned())
             .header(header)
             .block(border_block(&ctx.theme, focused).title(title!(
                 "Results {}-{} ({} total): Page {}/{}",
                 first_item + 1,
                 num_items + first_item,
-                ctx.results.total_results,
+                ctx.results.response.total_results,
                 ctx.page,
-                ctx.results.last_page,
+                ctx.results.response.last_page,
             )))
             .highlight_style(Style::default().bg(ctx.theme.hl_bg));
         StatefulWidget::render(table, area, buf, &mut self.table.state);
@@ -146,7 +147,7 @@ impl super::Widget for ResultsWidget {
             Paragraph::new("No results").render(center, buf);
         }
 
-        if let Some(visible_items) = ctx.results.items.get(self.table.state.offset()..) {
+        if let Some(visible_items) = ctx.results.response.items.get(self.table.state.offset()..) {
             let selected_ids: Vec<String> = ctx.batch.clone().into_iter().map(|i| i.id).collect();
             let vert_left = ctx.theme.border.to_border_set().vertical_left;
             let lines = visible_items
@@ -227,7 +228,7 @@ impl super::Widget for ResultsWidget {
                     }
                 }
                 (Char('n') | Char('l') | Right, &KeyModifiers::NONE) => {
-                    if ctx.page < ctx.results.last_page {
+                    if ctx.page < ctx.results.response.last_page {
                         ctx.page += 1;
                         ctx.mode = Mode::Loading(LoadType::Searching);
                     }
@@ -243,9 +244,9 @@ impl super::Widget for ResultsWidget {
                         .table
                         .state
                         .selected()
-                        .is_some_and(|s| s + 1 != ctx.results.items.len())
+                        .is_some_and(|s| s + 1 != ctx.results.response.items.len())
                     {
-                        self.table.next(ctx.results.items.len(), 1);
+                        self.table.next(ctx.results.response.items.len(), 1);
                         if self.control_space {
                             self.try_select_toggle(ctx);
                         }
@@ -256,17 +257,18 @@ impl super::Widget for ResultsWidget {
                         if self.control_space {
                             self.try_select_toggle(ctx);
                         }
-                        self.table.next(ctx.results.items.len(), -1);
+                        self.table.next(ctx.results.response.items.len(), -1);
                     }
                 }
                 (Char('J'), &KeyModifiers::SHIFT) => {
-                    self.table.next(ctx.results.items.len(), 4);
+                    self.table.next(ctx.results.response.items.len(), 4);
                 }
                 (Char('K'), &KeyModifiers::SHIFT) => {
-                    self.table.next(ctx.results.items.len(), -4);
+                    self.table.next(ctx.results.response.items.len(), -4);
                 }
                 (Char('G'), &KeyModifiers::SHIFT) => {
-                    self.table.select(max(ctx.results.items.len(), 1) - 1);
+                    self.table
+                        .select(max(ctx.results.response.items.len(), 1) - 1);
                 }
                 (Char('g'), &KeyModifiers::NONE) => {
                     self.table.select(0);
@@ -278,8 +280,10 @@ impl super::Widget for ResultsWidget {
                     }
                 }
                 (Char('L') | Char('N'), &KeyModifiers::SHIFT) => {
-                    if ctx.page != ctx.results.last_page && ctx.results.last_page > 0 {
-                        ctx.page = ctx.results.last_page;
+                    if ctx.page != ctx.results.response.last_page
+                        && ctx.results.response.last_page > 0
+                    {
+                        ctx.page = ctx.results.response.last_page;
                         ctx.mode = Mode::Loading(LoadType::Searching);
                     }
                 }
@@ -298,6 +302,7 @@ impl super::Widget for ResultsWidget {
                 (Char('o'), &KeyModifiers::NONE) => {
                     let link = ctx
                         .results
+                        .response
                         .items
                         .get(self.table.state.selected().unwrap_or(0))
                         .map(|item| item.post_link.clone())
@@ -321,7 +326,7 @@ impl super::Widget for ResultsWidget {
                 }
                 (Char(' '), &KeyModifiers::NONE) => {
                     if let Some(sel) = self.table.state.selected() {
-                        if let Some(item) = &mut ctx.results.items.get_mut(sel) {
+                        if let Some(item) = &mut ctx.results.response.items.get_mut(sel) {
                             if let Some(p) = ctx.batch.iter().position(|s| s.id == item.id) {
                                 ctx.batch.remove(p);
                             } else {

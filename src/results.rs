@@ -5,7 +5,31 @@ use ratatui::{
     widgets::{Cell, Row},
 };
 
-use crate::{source::Item, widget::sort::SortDir};
+use crate::{source::Item, sync::SearchQuery, widget::sort::SortDir};
+
+#[derive(Clone, Default)]
+pub struct Results {
+    pub search: SearchQuery,
+    pub response: ResultResponse,
+    pub table: ResultTable,
+}
+
+impl Results {
+    pub fn new(search: SearchQuery, response: ResultResponse, table: ResultTable) -> Self {
+        Self {
+            search,
+            response,
+            table,
+        }
+    }
+}
+
+#[derive(Default, Clone)]
+pub struct ResultResponse {
+    pub items: Vec<Item>,
+    pub last_page: usize,
+    pub total_results: usize,
+}
 
 pub struct ResultHeader<S: PartialEq + Copy> {
     cols: Vec<ResultColumn<S>>,
@@ -90,9 +114,6 @@ pub struct ResultTable {
     pub headers: ResultRow,
     pub rows: Vec<ResultRow>,
     pub binding: Vec<Constraint>,
-    pub items: Vec<Item>,
-    pub last_page: usize,
-    pub total_results: usize,
 }
 
 #[derive(Clone)]
