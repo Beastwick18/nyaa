@@ -52,9 +52,6 @@ impl Config {
     pub fn load() -> Result<Config, ConfyError> {
         confy::load::<Config>(APP_NAME, CONFIG_FILE)
     }
-    pub fn store(self) -> Result<(), ConfyError> {
-        confy::store::<Config>(APP_NAME, CONFIG_FILE, self)
-    }
     pub fn path() -> Result<PathBuf, ConfyError> {
         confy::get_configuration_file_path(APP_NAME, None).and_then(|p| {
             p.parent()

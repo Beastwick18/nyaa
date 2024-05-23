@@ -1,5 +1,6 @@
 use std::{collections::VecDeque, error::Error, fmt::Display};
 
+use confy::ConfyError;
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use indexmap::IndexMap;
 use ratatui::{
@@ -12,7 +13,7 @@ use tokio::{sync::mpsc, task::AbortHandle};
 use crate::{
     client::Client,
     clip,
-    config::Config,
+    config::{Config, CONFIG_FILE},
     results::Results,
     source::{nyaa_html::NyaaHtmlSource, request_client, Item, Source, SourceInfo, Sources},
     sync::{self, SearchQuery},
@@ -137,16 +138,24 @@ pub struct Context {
     pub batch: Vec<Item>,
     pub last_key: String,
     pub results: Results,
+    failed_config_load: bool,
     should_quit: bool,
 }
 
 impl Context {
-    pub fn show_error<S: ToString>(&mut self, error: S) {
+    pub fn show_error<S: Display>(&mut self, error: S) {
         self.errors.push_back(error.to_string());
     }
 
     pub fn notify<S: ToString>(&mut self, notification: S) {
         self.notification = Some(notification.to_string());
+    }
+
+    pub fn save_config(&mut self) -> Result<(), ConfyError> {
+        if !self.failed_config_load {
+            return confy::store::<&Config>(APP_NAME, CONFIG_FILE, &self.config);
+        }
+        Ok(())
     }
 
     pub fn quit(&mut self) {
@@ -173,6 +182,7 @@ impl Default for Context {
             batch: vec![],
             last_key: "".to_owned(),
             should_quit: false,
+            failed_config_load: true,
             results: Results::default(),
         }
     }
@@ -214,9 +224,10 @@ impl App {
 
         match Config::load() {
             Ok(config) => {
+                ctx.failed_config_load = false;
                 if let Err(e) = config.apply(ctx, w) {
                     ctx.show_error(e);
-                } else if let Err(e) = ctx.config.clone().store() {
+                } else if let Err(e) = ctx.save_config() {
                     ctx.show_error(e);
                 }
             }

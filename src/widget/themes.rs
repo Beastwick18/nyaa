@@ -86,6 +86,7 @@ impl Widget for ThemePopup {
                 KeyCode::Enter => {
                     let idx = self.table.selected().unwrap_or(0);
                     if let Some((_, theme)) = ctx.themes.get_index(idx) {
+                        let theme_name = theme.name.clone();
                         self.selected = idx;
                         ctx.theme = theme.clone();
                         ctx.config.theme.clone_from(&theme.name);
@@ -95,8 +96,8 @@ impl Widget for ThemePopup {
                             &ctx.config.sources,
                             &ctx.theme,
                         );
-                        match ctx.config.clone().store() {
-                            Ok(_) => ctx.notify(format!("Updated theme to \"{}\"", theme.name)),
+                        match ctx.save_config() {
+                            Ok(_) => ctx.notify(format!("Updated theme to \"{}\"", theme_name)),
                             Err(e) => ctx.show_error(format!(
                                 "Failed to update default theme in config file:\n{}",
                                 e

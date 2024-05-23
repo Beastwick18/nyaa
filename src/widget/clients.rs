@@ -71,9 +71,9 @@ impl Widget for ClientsPopup {
                         ctx.client = *c;
 
                         c.load_config(ctx);
-                        ctx.notify(format!("Updated download client to \"{}\"", c));
-                        if let Err(e) = ctx.config.to_owned().store() {
-                            ctx.show_error(format!("Failed to update config:\n{}", e))
+                        match ctx.save_config() {
+                            Ok(_) => ctx.notify(format!("Updated download client to \"{}\"", c)),
+                            Err(e) => ctx.show_error(format!("Failed to update config:\n{}", e)),
                         }
                         ctx.mode = Mode::Normal;
                     }
