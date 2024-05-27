@@ -10,6 +10,9 @@ readme = "README.md"
 repository = "https://github.com/Beastwick18/nyaa/"
 license = "GPL-3.0-or-later"
 
+[features]
+integration-test = []
+
 [profile.release]
 strip = true
 lto = true
@@ -27,7 +30,8 @@ ratatui = "0.26.3"
 crossterm = "0.27.0"
 unicode-width = "0.1.5"
 unicode-segmentation = "1.11.0"
-confy = "0.6.0"
+toml = "0.8.13"
+directories = "5.0.1"
 shellwords = "1.1.0"
 serde = { version = "1.0.152", features = ["derive"] }
 scraper = "0.19.0"
@@ -42,6 +46,10 @@ shellexpand = "3.1.0"
 indexmap = "2.2.6"
 color-to-tui = "0.3.0"
 human_bytes = "0.4.3"
+
+[lib]
+name = "nyaa"
+path = "src/lib.rs"
 
 [target.'cfg(unix)'.dependencies]
 nix = { version = "0.28.0", features = ["signal"] }

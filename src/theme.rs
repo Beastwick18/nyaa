@@ -1,6 +1,5 @@
-use std::{fs, path::PathBuf};
+use std::{error::Error, fs, path::Path};
 
-use confy::ConfyError;
 use indexmap::IndexMap;
 use ratatui::{style::Color, widgets::BorderType};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -33,7 +32,6 @@ pub struct Theme {
     pub trusted: Color,
     #[serde(with = "color_to_tui")]
     pub remake: Color,
-    // pub warning: Color,
 }
 
 pub fn load_user_themes(ctx: &mut Context) -> Result<(), String> {
@@ -51,23 +49,30 @@ pub fn load_user_themes(ctx: &mut Context) -> Result<(), String> {
         Ok(d) => d,
         Err(e) => return Err(format!("Can't read directory \"{}\":{}\n", path_str, e)),
     };
-    dir.for_each(|f| {
-        let f = match f {
-            Ok(f) => f,
-            Err(e) => return ctx.show_error(format!("Failed to get theme file path :\n{}", e)),
-        };
-        let res = match Theme::from_path(f.path()) {
-            Ok(t) => t,
-            Err(e) => {
-                return ctx.show_error(format!(
-                    "Failed to parse theme \"{}\":\n{}",
-                    f.file_name().to_string_lossy(),
-                    e
-                ))
-            }
-        };
-        ctx.themes.insert(res.name.to_owned(), res);
-    });
+    let themes = dir
+        .filter_map(|f| {
+            let f = match f {
+                Ok(f) => f,
+                Err(e) => {
+                    ctx.show_error(format!("Failed to get theme file path :\n{}", e));
+                    return None;
+                }
+            };
+            let res = match Theme::from_path(f.path()) {
+                Ok(t) => t,
+                Err(e) => {
+                    ctx.show_error(format!(
+                        "Failed to parse theme \"{}\":\n{}",
+                        f.file_name().to_string_lossy(),
+                        e
+                    ));
+                    return None;
+                }
+            };
+            Some((res.name.to_owned(), res))
+        })
+        .collect::<IndexMap<String, Theme>>();
+    ctx.themes = themes;
     Ok(())
 }
 
@@ -127,8 +132,8 @@ impl Default for Theme {
 }
 
 impl Theme {
-    fn from_path(path: PathBuf) -> Result<Theme, ConfyError> {
-        confy::load_path::<Theme>(path)
+    fn from_path(path: impl AsRef<Path>) -> Result<Theme, Box<dyn Error>> {
+        config::load_path(path)
     }
 }
 

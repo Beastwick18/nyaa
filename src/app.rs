@@ -1,6 +1,5 @@
 use std::{collections::VecDeque, error::Error, fmt::Display};
 
-use confy::ConfyError;
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use indexmap::IndexMap;
 use ratatui::{
@@ -13,7 +12,7 @@ use tokio::{sync::mpsc, task::AbortHandle};
 use crate::{
     client::Client,
     clip,
-    config::{Config, CONFIG_FILE},
+    config::Config,
     results::Results,
     source::{nyaa_html::NyaaHtmlSource, request_client, Item, Source, SourceInfo, Sources},
     sync::{EventSync, SearchQuery},
@@ -149,9 +148,9 @@ impl Context {
         self.notification = Some(notification.to_string());
     }
 
-    pub fn save_config(&mut self) -> Result<(), ConfyError> {
+    pub fn save_config(&mut self) -> Result<(), Box<dyn Error>> {
         if !self.failed_config_load {
-            return confy::store::<&Config>(APP_NAME, CONFIG_FILE, &self.config);
+            return self.config.store();
         }
         Ok(())
     }
