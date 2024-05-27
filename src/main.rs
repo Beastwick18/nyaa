@@ -3,17 +3,17 @@ use std::{env, io::stdout};
 use app::App;
 use ratatui::{backend::CrosstermBackend, Terminal};
 
-mod app;
-mod client;
-mod clip;
-mod config;
-mod macros;
-mod results;
-mod source;
-mod sync;
-mod theme;
-mod util;
-mod widget;
+pub mod app;
+pub mod client;
+pub mod clip;
+pub mod config;
+pub mod macros;
+pub mod results;
+pub mod source;
+pub mod sync;
+pub mod theme;
+pub mod util;
+pub mod widget;
 
 #[tokio::main()]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -22,6 +22,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Try to reset terminal on panic
         let _ = util::term::reset_terminal();
         default_panic(info);
+        std::process::exit(1);
     }));
 
     // TODO: Use real command line package
@@ -38,7 +39,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut app = App::default();
 
-    app.run_app(&mut terminal).await?;
+    app.run_app::<_, sync::AppSync>(&mut terminal).await?;
 
     util::term::reset_terminal()?;
     terminal.show_cursor()?;

@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use urlencoding::encode;
 
 use crate::{
-    cats, collection, popup_enum,
+    cats, collection, cond_vec, popup_enum,
     results::{ResultColumn, ResultHeader, ResultResponse, ResultRow, ResultTable},
     sel,
     sync::SearchQuery,
@@ -32,6 +32,7 @@ pub struct TgxConfig {
     pub default_filter: TgxFilter,
     pub default_category: String,
     pub default_search: String,
+    pub columns: Option<TgxColumns>,
 }
 
 impl Default for TgxConfig {
@@ -42,11 +43,39 @@ impl Default for TgxConfig {
             default_filter: TgxFilter::NoFilter,
             default_category: "AllCategories".to_owned(),
             default_search: Default::default(),
+            columns: None,
         }
     }
 }
 
-// TODO: TgxColumns config
+#[derive(Clone, Copy, Serialize, Deserialize, Default)]
+pub struct TgxColumns {
+    category: Option<bool>,
+    language: Option<bool>,
+    title: Option<bool>,
+    uploader: Option<bool>,
+    size: Option<bool>,
+    date: Option<bool>,
+    seeders: Option<bool>,
+    leechers: Option<bool>,
+    views: Option<bool>,
+}
+
+impl TgxColumns {
+    fn array(self) -> [bool; 9] {
+        [
+            self.category.unwrap_or(true),
+            self.language.unwrap_or(true),
+            self.title.unwrap_or(true),
+            self.uploader.unwrap_or(true),
+            self.size.unwrap_or(true),
+            self.date.unwrap_or(true),
+            self.seeders.unwrap_or(true),
+            self.leechers.unwrap_or(true),
+            self.views.unwrap_or(true),
+        ]
+    }
+}
 
 popup_enum! {
     TgxSort;
@@ -435,9 +464,10 @@ impl Source for TorrentGalaxyHtmlSource {
     fn format_table(
         items: &[Item],
         search: &SearchQuery,
-        _config: &SourceConfig,
+        config: &SourceConfig,
         theme: &Theme,
     ) -> ResultTable {
+        let tgx = config.tgx.to_owned().unwrap_or_default();
         let raw_date_width = items.iter().map(|i| i.date.len()).max().unwrap_or_default() as u16;
         let date_width = max(raw_date_width, 6);
 
@@ -459,7 +489,7 @@ impl Source for TorrentGalaxyHtmlSource {
             ResultColumn::Sorted("".to_owned(), 4, TgxSort::Leechers as u32),
             ResultColumn::Normal("  󰈈".to_owned(), Constraint::Length(5)),
         ]);
-        let binding = header.get_binding();
+        let mut binding = header.get_binding();
         let align = [
             Alignment::Left,
             Alignment::Left,
@@ -471,7 +501,7 @@ impl Source for TorrentGalaxyHtmlSource {
             Alignment::Right,
             Alignment::Left,
         ];
-        let rows: Vec<ResultRow> = items
+        let mut rows: Vec<ResultRow> = items
             .iter()
             .map(|item| {
                 ResultRow::new([
@@ -505,9 +535,24 @@ impl Source for TorrentGalaxyHtmlSource {
                 .fg(theme.fg)
             })
             .collect();
+        let mut headers = header.get_row(search.sort.dir, search.sort.sort as u32);
+        if let Some(columns) = tgx.columns {
+            let cols = columns.array();
+
+            headers.cells = cond_vec!(cols ; headers.cells);
+            rows = rows
+                .clone()
+                .into_iter()
+                .map(|mut r| {
+                    r.cells = cond_vec!(cols ; r.cells.to_owned());
+                    r
+                })
+                .collect::<Vec<ResultRow>>();
+            binding = cond_vec!(cols ; binding);
+        }
 
         ResultTable {
-            headers: header.get_row(search.sort.dir, search.sort.sort as u32),
+            headers,
             rows,
             binding,
         }

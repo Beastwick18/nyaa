@@ -77,16 +77,12 @@ impl Config {
         }
 
         ctx.src.load_config(&mut ctx.config.sources);
-        ctx.client.clone().load_config(ctx);
+        ctx.src.apply(ctx, w);
+
+        ctx.client.load_config(ctx);
         theme::load_user_themes(ctx)?;
 
         // Load defaults for default source
-        w.category.selected = ctx.src.default_category(&ctx.config.sources);
-        w.category.major = 0;
-        w.category.minor = 0;
-
-        w.sort.selected.sort = ctx.src.default_sort(&ctx.config.sources);
-        w.filter.selected = ctx.src.default_filter(&ctx.config.sources);
         Ok(())
     }
 }

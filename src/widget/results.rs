@@ -60,24 +60,12 @@ impl ResultsWidget {
             }
         }
     }
-
-    fn try_select(&self, ctx: &mut Context) {
-        if let Some(sel) = self.table.state.selected() {
-            if let Some(item) = ctx.results.response.items.get(sel) {
-                if !ctx.batch.iter().any(|s| s.id == item.id) {
-                    ctx.batch.push(item.to_owned());
-                }
-            }
-        }
-    }
 }
 
 impl Default for ResultsWidget {
     fn default() -> Self {
         ResultsWidget {
             table: VirtualStatefulTable::new(),
-            // date_width: 6,
-            // raw_date_width: 4,
             control_space: false,
         }
     }
@@ -311,7 +299,7 @@ impl super::Widget for ResultsWidget {
                     self.control_space = !self.control_space;
                     if self.control_space {
                         ctx.notify("Entered VISUAL mode");
-                        self.try_select(ctx);
+                        self.try_select_toggle(ctx);
                     } else {
                         ctx.notify("Exited VISUAL mode");
                     }

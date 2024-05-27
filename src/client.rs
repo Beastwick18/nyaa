@@ -150,7 +150,7 @@ impl Client {
         ctx.batch.retain(|i| !success_ids.contains(&i.id)); // Remove successes from batch
     }
 
-    pub fn load_config(&self, ctx: &mut Context) {
+    pub fn load_config(self, ctx: &mut Context) {
         match self {
             Self::Cmd => cmd::load_config(ctx),
             Self::Qbit => qbit::load_config(ctx),
@@ -159,6 +159,6 @@ impl Client {
             Self::DefaultApp => default_app::load_config(ctx),
             Self::Download => download::load_config(ctx),
         };
-        ctx.config.download_client = *self;
+        ctx.config.download_client = self;
     }
 }

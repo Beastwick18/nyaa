@@ -16,7 +16,7 @@ use crate::{
     config::{Config, CONFIG_FILE},
     results::Results,
     source::{nyaa_html::NyaaHtmlSource, request_client, Item, Source, SourceInfo, Sources},
-    sync::{self, SearchQuery},
+    sync::{EventSync, SearchQuery},
     theme::{self, Theme},
     util::conv::key_to_string,
     widget::{
@@ -131,8 +131,6 @@ pub struct Context {
     pub notification: Option<String>,
     pub page: usize,
     pub user: Option<String>,
-    // pub last_page: usize,
-    // pub total_results: usize,
     pub src: Sources,
     pub client: Client,
     pub batch: Vec<Item>,
@@ -147,7 +145,7 @@ impl Context {
         self.errors.push_back(error.to_string());
     }
 
-    pub fn notify<S: ToString>(&mut self, notification: S) {
+    pub fn notify<S: Display>(&mut self, notification: S) {
         self.notification = Some(notification.to_string());
     }
 
@@ -165,11 +163,10 @@ impl Context {
 
 impl Default for Context {
     fn default() -> Self {
-        let themes = theme::default_themes();
         Context {
             mode: Mode::Loading(LoadType::Searching),
             load_type: None,
-            themes,
+            themes: theme::default_themes(),
             src_info: NyaaHtmlSource::info(),
             theme: Theme::default(),
             config: Config::default(),
@@ -206,21 +203,18 @@ pub struct Widgets {
 }
 
 impl App {
-    pub async fn run_app<B: Backend>(
+    pub async fn run_app<B: Backend, S: EventSync>(
         &mut self,
         terminal: &mut Terminal<B>,
     ) -> Result<(), Box<dyn Error>> {
         let w = &mut Widgets::default();
-        w.category
-            .table
-            .select(w.category.major + w.category.minor + 1);
         let ctx = &mut Context::default();
 
         let (tx_res, mut rx_res) =
             mpsc::channel::<Result<Results, Box<dyn Error + Send + Sync>>>(32);
         let (tx_evt, mut rx_evt) = mpsc::channel::<Event>(100);
 
-        tokio::task::spawn(sync::read_event_loop(tx_evt));
+        tokio::task::spawn(S::read_event_loop(tx_evt));
 
         match Config::load() {
             Ok(config) => {
@@ -276,18 +270,7 @@ impl App {
                     }
                     LoadType::Sourcing => {
                         // On sourcing, update info, reset things like category, etc.
-                        w.category.selected = ctx.src.default_category(&ctx.config.sources);
-                        w.category.major = 0;
-                        w.category.minor = 0;
-                        w.category.max_cat = ctx.src_info.cats.len();
-
-                        w.sort.selected.sort = ctx.src.default_sort(&ctx.config.sources);
-                        w.filter.selected = ctx.src.default_filter(&ctx.config.sources);
-
-                        // Go back to first page when changing source
-                        ctx.page = 1;
-
-                        ctx.src_info = ctx.src.info();
+                        ctx.src.apply(ctx, w);
                     }
                     _ => {}
                 }
@@ -305,7 +288,7 @@ impl App {
                     user: ctx.user.clone(),
                 };
 
-                let task = tokio::spawn(sync::load_results(
+                let task = tokio::spawn(S::load_results(
                     tx_res.clone(),
                     load_type,
                     ctx.src,
@@ -398,6 +381,11 @@ impl App {
         ctx: &mut Context,
         #[cfg(unix)] terminal: &mut Terminal<B>,
     ) {
+        #[cfg(feature = "integration-test")]
+        if let Event::FocusLost = evt {
+            ctx.quit();
+        }
+
         if let Event::Key(KeyEvent {
             code,
             kind: KeyEventKind::Press,

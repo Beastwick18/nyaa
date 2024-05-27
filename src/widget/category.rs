@@ -59,13 +59,12 @@ pub struct CategoryPopup {
     pub selected: usize,
     pub major: usize,
     pub minor: usize,
-    pub max_cat: usize,
     pub table: VirtualStatefulTable,
 }
 
 impl CategoryPopup {
-    fn next_tab(&mut self) {
-        self.major = match self.major + 1 >= self.max_cat {
+    fn next_tab(&mut self, max_cat: usize) {
+        self.major = match self.major + 1 >= max_cat {
             true => 0,
             false => self.major + 1,
         };
@@ -75,9 +74,9 @@ impl CategoryPopup {
         }
     }
 
-    fn prev_tab(&mut self) {
+    fn prev_tab(&mut self, max_cat: usize) {
         self.major = match self.major == 0 {
-            true => self.max_cat - 1,
+            true => max_cat - 1,
             false => self.major - 1,
         };
         self.minor = 0;
@@ -174,7 +173,7 @@ impl Widget for CategoryPopup {
                     if let Some(cat) = ctx.src_info.cats.get(self.major) {
                         self.minor = match self.minor + 1 >= cat.entries.len() {
                             true => {
-                                self.next_tab();
+                                self.next_tab(ctx.src_info.cats.len());
                                 0
                             }
                             false => self.minor + 1,
@@ -186,7 +185,7 @@ impl Widget for CategoryPopup {
                     if ctx.src_info.cats.get(self.major).is_some() {
                         self.minor = match self.minor < 1 {
                             true => {
-                                self.prev_tab();
+                                self.prev_tab(ctx.src_info.cats.len());
                                 match ctx.src_info.cats.get(self.major) {
                                     Some(cat) => cat.entries.len() - 1,
                                     None => 0,
@@ -208,11 +207,11 @@ impl Widget for CategoryPopup {
                     self.table.select(self.major + self.minor + 1);
                 }
                 KeyCode::Tab | KeyCode::Char('J') => {
-                    self.next_tab();
+                    self.next_tab(ctx.src_info.cats.len());
                     self.table.select(self.major + self.minor + 1);
                 }
                 KeyCode::BackTab | KeyCode::Char('K') => {
-                    self.prev_tab();
+                    self.prev_tab(ctx.src_info.cats.len());
                     self.table.select(self.major + self.minor + 1);
                 }
                 _ => {}

@@ -4,7 +4,7 @@ use reqwest::Proxy;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    app::{Context, LoadType},
+    app::{Context, LoadType, Widgets},
     popup_enum,
     results::{ResultResponse, ResultTable},
     sync::SearchQuery,
@@ -115,30 +115,30 @@ popup_enum! {
 }
 
 pub trait Source {
-    async fn search(
+    fn search(
         client: &reqwest::Client,
         search: &SearchQuery,
         config: &SourceConfig,
         date_format: Option<String>,
-    ) -> Result<ResultResponse, Box<dyn Error + Send + Sync>>;
-    async fn sort(
+    ) -> impl std::future::Future<Output = Result<ResultResponse, Box<dyn Error + Send + Sync>>> + Send;
+    fn sort(
         client: &reqwest::Client,
         search: &SearchQuery,
         config: &SourceConfig,
         date_format: Option<String>,
-    ) -> Result<ResultResponse, Box<dyn Error + Send + Sync>>;
-    async fn filter(
+    ) -> impl std::future::Future<Output = Result<ResultResponse, Box<dyn Error + Send + Sync>>> + Send;
+    fn filter(
         client: &reqwest::Client,
         search: &SearchQuery,
         config: &SourceConfig,
         date_format: Option<String>,
-    ) -> Result<ResultResponse, Box<dyn Error + Send + Sync>>;
-    async fn categorize(
+    ) -> impl std::future::Future<Output = Result<ResultResponse, Box<dyn Error + Send + Sync>>> + Send;
+    fn categorize(
         client: &reqwest::Client,
         search: &SearchQuery,
         config: &SourceConfig,
         date_format: Option<String>,
-    ) -> Result<ResultResponse, Box<dyn Error + Send + Sync>>;
+    ) -> impl std::future::Future<Output = Result<ResultResponse, Box<dyn Error + Send + Sync>>> + Send;
     fn info() -> SourceInfo;
     fn load_config(config: &mut SourceConfig);
 
@@ -210,6 +210,21 @@ impl Sources {
                 LoadType::Downloading | LoadType::Batching => unreachable!(),
             },
         }
+    }
+
+    pub fn apply(self, ctx: &mut Context, w: &mut Widgets) {
+        ctx.src_info = self.info();
+        w.category.selected = self.default_category(&ctx.config.sources);
+        w.category.major = 0;
+        w.category.minor = 0;
+
+        w.category.table.select(1);
+
+        w.sort.selected.sort = self.default_sort(&ctx.config.sources);
+        w.filter.selected = self.default_filter(&ctx.config.sources);
+
+        // Go back to first page when changing source
+        ctx.page = 1;
     }
 
     pub fn info(self) -> SourceInfo {
