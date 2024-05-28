@@ -55,14 +55,7 @@ impl Default for Config {
 
 impl Config {
     pub fn load() -> Result<Config, Box<dyn Error>> {
-        #[cfg(not(feature = "integration-test"))]
-        {
-            get_configuration_file_path(APP_NAME, CONFIG_FILE).and_then(load_path)
-        }
-        #[cfg(feature = "integration-test")]
-        {
-            Ok(Config::default())
-        }
+        get_configuration_file_path(APP_NAME, CONFIG_FILE).and_then(load_path)
     }
     pub fn store(&self) -> Result<(), Box<dyn Error>> {
         get_configuration_file_path(APP_NAME, CONFIG_FILE).and_then(|p| store_path(p, self))
@@ -151,13 +144,17 @@ pub fn get_configuration_file_path<'a>(
 }
 
 pub fn get_configuration_folder(app_name: &str) -> Result<PathBuf, Box<dyn Error>> {
-    let project = ProjectDirs::from("rs", "", app_name)
-        .ok_or_else(|| "could not determine home directory path".to_string())?;
+    if cfg!(feature = "integration-test") {
+        Ok(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/config"))
+    } else {
+        let project = ProjectDirs::from("rs", "", app_name)
+            .ok_or_else(|| "could not determine home directory path".to_string())?;
 
-    let path = project.config_dir();
-    let config_dir_str = path
-        .to_str()
-        .ok_or_else(|| format!("{path:?} is not valid Unicode"))?;
+        let path = project.config_dir();
+        let config_dir_str = path
+            .to_str()
+            .ok_or_else(|| format!("{path:?} is not valid Unicode"))?;
 
-    Ok(config_dir_str.into())
+        Ok(config_dir_str.into())
+    }
 }

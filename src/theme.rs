@@ -49,7 +49,6 @@ pub fn load_user_themes(ctx: &mut Context) -> Result<(), String> {
         Ok(d) => d,
         Err(e) => return Err(format!("Can't read directory \"{}\":{}\n", path_str, e)),
     };
-    let x = 10;
     let themes = dir
         .filter_map(|f| {
             let f = match f {
@@ -74,7 +73,6 @@ pub fn load_user_themes(ctx: &mut Context) -> Result<(), String> {
         })
         .collect::<IndexMap<String, Theme>>();
 
-    #[cfg(not(feature = "integration-test"))]
     ctx.themes.extend(themes);
     Ok(())
 }
