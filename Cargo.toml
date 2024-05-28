@@ -11,6 +11,7 @@ repository = "https://github.com/Beastwick18/nyaa/"
 license = "GPL-3.0-or-later"
 
 [features]
+default = []
 integration-test = []
 
 [profile.release]

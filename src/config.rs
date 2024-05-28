@@ -55,7 +55,14 @@ impl Default for Config {
 
 impl Config {
     pub fn load() -> Result<Config, Box<dyn Error>> {
-        get_configuration_file_path(APP_NAME, CONFIG_FILE).and_then(load_path)
+        #[cfg(not(feature = "integration-test"))]
+        {
+            get_configuration_file_path(APP_NAME, CONFIG_FILE).and_then(load_path)
+        }
+        #[cfg(feature = "integration-test")]
+        {
+            Ok(Config::default())
+        }
     }
     pub fn store(&self) -> Result<(), Box<dyn Error>> {
         get_configuration_file_path(APP_NAME, CONFIG_FILE).and_then(|p| store_path(p, self))

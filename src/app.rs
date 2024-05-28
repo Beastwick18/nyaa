@@ -149,6 +149,7 @@ impl Context {
     }
 
     pub fn save_config(&mut self) -> Result<(), Box<dyn Error>> {
+        #[cfg(not(feature = "integration-test"))]
         if !self.failed_config_load {
             return self.config.store();
         }

@@ -72,7 +72,7 @@ pub fn load_user_themes(ctx: &mut Context) -> Result<(), String> {
             Some((res.name.to_owned(), res))
         })
         .collect::<IndexMap<String, Theme>>();
-    ctx.themes = themes;
+    ctx.themes.extend(themes);
     Ok(())
 }
 

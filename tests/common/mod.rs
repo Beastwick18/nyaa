@@ -21,15 +21,37 @@ pub type QueryFn = fn(
     Option<String>,
 ) -> (Result<Results, Box<dyn Error + Send + Sync>>, bool);
 
+type ResultsFn = fn(
+    nyaa::app::LoadType,
+    nyaa::source::Sources,
+    reqwest::Client,
+    nyaa::sync::SearchQuery,
+    nyaa::source::SourceConfig,
+    nyaa::theme::Theme,
+    Option<String>,
+) -> Results;
+
 static INPUTS_MX: Mutex<Vec<Event>> = Mutex::new(Vec::new());
-static QUERY_FN: Mutex<Option<QueryFn>> = Mutex::new(None);
+// static QUERY_FN: Mutex<Option<QueryFn>> = Mutex::new(None);
+// static WAIT_FOR_RESULTS: Mutex<bool> = Mutex::new(false);
+// static RESULTS_FN: Mutex<Option<ResultsFn>> = Mutex::new(None);
+// static RESULTS_SEND: Mutex<Option<Sender<bool>>> = Mutex::new(None);
+// static RESULTS_RECV: Mutex<Option<Receiver<bool>>> = Mutex::new(None);
 
 pub fn clear_events() {
     INPUTS_MX.lock().unwrap().clear();
+    // *WAIT_FOR_RESULTS.lock().unwrap() = false;
+    // let (send, recv) = broadcast::channel(1);
+    // *RESULTS_SEND.lock().unwrap() = Some(send);
+    // *RESULTS_RECV.lock().unwrap() = Some(recv);
 }
 
-// pub fn set_query_fn(queryfn: QueryFn) {
-//     QUERY_FN.lock().unwrap().clone_from(&Some(queryfn));
+// pub fn wait_for_results(wait: bool) {
+//     *WAIT_FOR_RESULTS.lock().unwrap() = wait;
+// }
+
+// pub fn set_results(res: ResultsFn) {
+//     *RESULTS.lock().unwrap() = Some(res);
 // }
 
 pub struct EventBuilder {
@@ -44,7 +66,13 @@ impl EventBuilder {
     pub fn string<S: Into<String>>(&mut self, string: S) -> &mut Self {
         let evts = Into::<String>::into(string)
             .chars()
-            .map(|c| Event::Key(KeyEvent::new(KeyCode::Char(c), KeyModifiers::NONE)))
+            .map(|c| {
+                let modif = match c.is_uppercase() || "~!@#$%^&*()_+{}|:\"<>?".contains(c) {
+                    true => KeyModifiers::SHIFT,
+                    false => KeyModifiers::NONE,
+                };
+                Event::Key(KeyEvent::new(KeyCode::Char(c), modif))
+            })
             .collect::<Vec<Event>>();
         self.events.extend(evts);
         self
@@ -128,23 +156,38 @@ impl EventSync for TestSync {
         tx_res: tokio::sync::mpsc::Sender<
             Result<nyaa::results::Results, Box<dyn std::error::Error + Send + Sync>>,
         >,
-        loadtype: nyaa::app::LoadType,
-        src: nyaa::source::Sources,
-        client: reqwest::Client,
-        query: nyaa::sync::SearchQuery,
-        config: nyaa::source::SourceConfig,
-        theme: nyaa::theme::Theme,
-        date_format: Option<String>,
+        _loadtype: nyaa::app::LoadType,
+        _src: nyaa::source::Sources,
+        _client: reqwest::Client,
+        _query: nyaa::sync::SearchQuery,
+        _config: nyaa::source::SourceConfig,
+        _theme: nyaa::theme::Theme,
+        _date_format: Option<String>,
     ) {
-        let queryfn = QUERY_FN
-            .lock()
-            .unwrap()
-            .unwrap_or(|_, _, _, _, _, _, _| (Ok(Results::default()), false));
-        let (res, quit) = queryfn(loadtype, src, client, query, config, theme, date_format);
-        let _ = tx_res.send(res).await;
-        if quit {
-            INPUTS_MX.lock().unwrap().push(Event::FocusLost);
-        }
+        // let queryfn = QUERY_FN
+        //     .lock()
+        //     .unwrap()
+        //     .unwrap_or(|_, _, _, _, _, _, _| (Ok(Results::default()), false));
+        // let (res, quit) = queryfn(loadtype, src, client, query, config, theme, date_format);
+        // if let Some(res_fn) = *RESULTS_FN.lock().unwrap() {
+        //     let res = res_fn(loadtype, src, client, query, config, theme, date_format);
+        //     let _ = tx_res.send(Ok(res)).await;
+        //     if let Some(sender) = RESULTS_SEND.lock().unwrap().as_mut() {
+        //         let _ = sender.send(true);
+        //     }
+        //     return;
+        // }
+        // let res = (*RESULTS_FN.lock().unwrap())
+        //     .map(|f| f(loadtype, src, client, query, config, theme, date_format))
+        //     .unwrap_or_default();
+
+        let _ = tx_res.send(Ok(Results::default())).await;
+        // if let Some(sender) = RESULTS_SEND.lock().unwrap().as_mut() {
+        //     // let _ = sender.send(true);
+        // }
+        // if quit {
+        //     INPUTS_MX.lock().unwrap().push(Event::FocusLost);
+        // }
         // for evt in inputs.into_iter() {
         //     let _ = tx_evt.send(evt).await;
         // }
@@ -193,6 +236,15 @@ impl EventSync for TestSync {
     }
 
     async fn read_event_loop(tx_evt: tokio::sync::mpsc::Sender<crossterm::event::Event>) {
+        // if *WAIT_FOR_RESULTS.lock().unwrap() {
+        //     let _ = RESULTS_RECV.lock().unwrap().as_mut().unwrap().recv().await;
+        //     // let mut res2 = res.as_mut().unwrap();
+        //     // let _ = res2.recv().await;
+        //     // let recv = res.as_mut().unwrap();
+        //     // tokio::select! {
+        //     //     x = recv.recv() => {}
+        //     // };
+        // }
         let inputs = INPUTS_MX.lock().unwrap().clone();
         for evt in inputs.into_iter() {
             let _ = tx_evt.send(evt).await;

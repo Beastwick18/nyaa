@@ -1,0 +1,2 @@
+[alias]
+integration-test = "test --features integration-test -- --test-threads=1"
