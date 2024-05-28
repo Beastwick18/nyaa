@@ -19,4 +19,4 @@ jobs:
     - name: Build
       run: cargo build --verbose
     - name: Run tests
-      run: cargo integration-test
+      run: cargo test --features integration-test --verbose -- --test-threads=1
