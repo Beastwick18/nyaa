@@ -8,6 +8,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-Dwarnings" # Fail on warnings
 
 jobs:
   build:
@@ -18,5 +19,13 @@ jobs:
     - uses: actions/checkout@v4
     - name: Build
       run: cargo build --verbose
+    - name: Clippy
+      run: cargo clippy --verbose
+  test:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
     - name: Run tests
       run: cargo test --features integration-test --verbose -- --test-threads=1
