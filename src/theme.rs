@@ -72,6 +72,8 @@ pub fn load_user_themes(ctx: &mut Context) -> Result<(), String> {
             Some((res.name.to_owned(), res))
         })
         .collect::<IndexMap<String, Theme>>();
+
+    #[cfg(not(feature = "integration-test"))]
     ctx.themes.extend(themes);
     Ok(())
 }
