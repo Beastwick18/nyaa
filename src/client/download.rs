@@ -1,11 +1,11 @@
-use std::{error::Error, fs, path::PathBuf, time::Duration};
+use std::{error::Error, fs, path::PathBuf};
 
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 
 use crate::{app::Context, source::Item};
 
-use super::ClientConfig;
+use super::{multidownload, ClientConfig, DownloadClient, DownloadError, DownloadResult};
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(default)]
@@ -13,6 +13,8 @@ pub struct DownloadConfig {
     save_dir: String,
     filename: Option<String>,
 }
+
+pub struct DownloadFileClient;
 
 impl Default for DownloadConfig {
     fn default() -> Self {
@@ -41,12 +43,8 @@ async fn download_torrent(
     torrent_link: String,
     filename: String,
     save_dir: String,
-    timeout: u64,
+    client: reqwest::Client,
 ) -> Result<String, Box<dyn Error>> {
-    let client = reqwest::Client::builder()
-        .gzip(true)
-        .timeout(Duration::from_secs(timeout))
-        .build()?;
     let response = client.get(torrent_link.to_owned()).send().await?;
     if response.status() != StatusCode::OK {
         // Throw error if response code is not OK
@@ -60,29 +58,59 @@ async fn download_torrent(
     Ok(buf.to_string_lossy().to_string())
 }
 
-pub async fn download(item: Item, conf: ClientConfig, timeout: u64) -> Result<String, String> {
-    let conf = match conf.download.to_owned() {
-        Some(c) => c,
-        None => {
-            return Err("Failed to get download config".to_owned());
-        }
-    };
+impl DownloadClient for DownloadFileClient {
+    async fn download(item: Item, conf: ClientConfig, client: reqwest::Client) -> DownloadResult {
+        let conf = match conf.download.to_owned() {
+            Some(c) => c,
+            None => {
+                return DownloadResult::error(DownloadError(
+                    "Failed to get download config".to_owned(),
+                ));
+            }
+        };
 
-    let filename = conf.filename.unwrap_or(item.file_name.to_owned());
-    match download_torrent(
-        item.torrent_link.to_owned(),
-        filename,
-        conf.save_dir.clone(),
-        timeout,
-    )
-    .await
-    {
-        Ok(path) => Ok(format!("Saved to \"{}\"", path)),
-        Err(e) => Err(format!(
-            "Failed to download torrent to {}:\n{}",
-            conf.save_dir.to_owned(),
-            e
+        let filename = conf.filename.unwrap_or(item.file_name.to_owned());
+        let (success_msg, success_ids, errors) = match download_torrent(
+            item.torrent_link.to_owned(),
+            filename,
+            conf.save_dir.clone(),
+            client,
         )
-        .to_owned()),
+        .await
+        {
+            Ok(path) => (
+                Some(format!("Saved to \"{}\"", path)),
+                vec![item.id],
+                vec![],
+            ),
+            Err(e) => (
+                None,
+                vec![],
+                vec![DownloadError(
+                    format!(
+                        "Failed to download torrent to {}:\n{}",
+                        conf.save_dir.to_owned(),
+                        e
+                    )
+                    .to_owned(),
+                )],
+            ),
+        };
+        DownloadResult::new(success_msg, success_ids, errors, false)
+    }
+
+    async fn batch_download(
+        items: Vec<Item>,
+        conf: ClientConfig,
+        client: reqwest::Client,
+    ) -> DownloadResult {
+        let save_dir = conf.download.clone().unwrap_or_default().save_dir.clone();
+        multidownload::<DownloadFileClient, _>(
+            |s| format!("Saved {} torrents to folder {}", s, save_dir),
+            &items,
+            &conf,
+            &client,
+        )
+        .await
     }
 }

@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{app::Context, source::Item, util::cmd::CommandBuilder};
 
-use super::ClientConfig;
+use super::{multidownload, ClientConfig, DownloadClient, DownloadError, DownloadResult};
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(default)]
@@ -10,6 +10,8 @@ pub struct CmdConfig {
     cmd: String,
     shell_cmd: String,
 }
+
+pub struct CmdClient;
 
 impl Default for CmdConfig {
     fn default() -> Self {
@@ -30,21 +32,65 @@ pub fn load_config(app: &mut Context) {
     }
 }
 
-pub async fn download(item: Item, conf: ClientConfig) -> Result<String, String> {
-    let cmd = match conf.cmd.to_owned() {
-        Some(c) => c,
-        None => {
-            return Err("Failed to get cmd config".to_owned());
-        }
-    };
-    match CommandBuilder::new(cmd.cmd)
-        .sub("{magnet}", &item.magnet_link)
-        .sub("{torrent}", &item.torrent_link)
-        .sub("{title}", &item.title)
-        .sub("{file}", &item.file_name)
-        .run(cmd.shell_cmd)
-    {
-        Ok(_) => Ok("Successfully ran command".to_owned()),
-        Err(e) => Err(e.to_string()),
+impl DownloadClient for CmdClient {
+    async fn download(item: Item, conf: ClientConfig, _: reqwest::Client) -> DownloadResult {
+        let cmd = match conf.cmd.to_owned() {
+            Some(c) => c,
+            None => {
+                return DownloadResult::error(DownloadError("Failed to get cmd config".to_owned()));
+            }
+        };
+        let res = CommandBuilder::new(cmd.cmd)
+            .sub("{magnet}", &item.magnet_link)
+            .sub("{torrent}", &item.torrent_link)
+            .sub("{title}", &item.title)
+            .sub("{file}", &item.file_name)
+            .run(cmd.shell_cmd)
+            .map_err(|e| DownloadError(e.to_string()));
+
+        let (success_ids, errors) = match res {
+            Ok(()) => (vec![item.id], vec![]),
+            Err(e) => (vec![], vec![DownloadError(e.to_string())]),
+        };
+        DownloadResult::new(
+            "Successfully ran command".to_owned(),
+            success_ids,
+            errors,
+            false,
+        )
+    }
+
+    async fn batch_download(
+        items: Vec<Item>,
+        conf: ClientConfig,
+        client: reqwest::Client,
+    ) -> DownloadResult {
+        multidownload::<CmdClient, _>(
+            |s| format!("Successfully ran command on {} torrents", s),
+            &items,
+            &conf,
+            &client,
+        )
+        .await
     }
 }
+
+// pub async fn download(item: Item, conf: ClientConfig) -> Result<(), DownloadError> {
+//     let cmd = match conf.cmd.to_owned() {
+//         Some(c) => c,
+//         None => {
+//             return Err(DownloadError("Failed to get cmd config".to_owned()));
+//         }
+//     };
+//     CommandBuilder::new(cmd.cmd)
+//         .sub("{magnet}", &item.magnet_link)
+//         .sub("{torrent}", &item.torrent_link)
+//         .sub("{title}", &item.title)
+//         .sub("{file}", &item.file_name)
+//         .run(cmd.shell_cmd)
+//         .map_err(|e| DownloadError(e.to_string()))
+// }
+//
+// pub fn success_msg() -> &'static str {
+//     "Successfully ran command"
+// }

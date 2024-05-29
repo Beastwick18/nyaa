@@ -1,4 +1,4 @@
-use std::{error::Error, time::Duration};
+use std::error::Error;
 
 use reqwest::{Response, StatusCode, Url};
 use serde::{Deserialize, Serialize};
@@ -6,7 +6,7 @@ use urlencoding::encode;
 
 use crate::{app::Context, source::Item, util::conv::add_protocol};
 
-use super::ClientConfig;
+use super::{multidownload, ClientConfig, DownloadClient, DownloadError, DownloadResult};
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(default)]
@@ -16,6 +16,8 @@ pub struct RqbitConfig {
     pub overwrite: Option<bool>,
     pub output_folder: Option<String>,
 }
+
+pub struct RqbitClient;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct RqbitForm {
@@ -37,9 +39,8 @@ impl Default for RqbitConfig {
 async fn add_torrent(
     conf: &RqbitConfig,
     link: String,
-    timeout: Duration,
+    client: &reqwest::Client,
 ) -> Result<Response, Box<dyn Error>> {
-    let client = reqwest::Client::new();
     let base_url = add_protocol(conf.base_url.clone(), false);
     let mut url = Url::parse(&base_url)?.join("/torrents")?;
     let mut query: Vec<String> = vec![];
@@ -51,7 +52,7 @@ async fn add_torrent(
     }
     url.set_query(Some(&query.join("&")));
 
-    match client.post(url).body(link).timeout(timeout).send().await {
+    match client.post(url).body(link).send().await {
         Ok(res) => Ok(res),
         Err(e) => Err(e.into()),
     }
@@ -63,30 +64,53 @@ pub fn load_config(app: &mut Context) {
     }
 }
 
-pub async fn download(item: Item, conf: ClientConfig, timeout: u64) -> Result<String, String> {
-    let conf = match conf.rqbit.clone() {
-        Some(q) => q,
-        None => {
-            return Err("Failed to get rqbit config".into());
+impl DownloadClient for RqbitClient {
+    async fn download(item: Item, conf: ClientConfig, client: reqwest::Client) -> DownloadResult {
+        let conf = match conf.rqbit.clone() {
+            Some(q) => q,
+            None => {
+                return DownloadResult::error(DownloadError("Failed to get rqbit config".into()));
+            }
+        };
+        let link = match conf.use_magnet.unwrap_or(true) {
+            true => item.magnet_link.to_owned(),
+            false => item.torrent_link.to_owned(),
+        };
+        let res = match add_torrent(&conf, link, &client).await {
+            Ok(r) => r,
+            Err(e) => {
+                return DownloadResult::error(DownloadError(format!(
+                    "Failed to get response from rqbit\n{}",
+                    e
+                )));
+            }
+        };
+        if res.status() != StatusCode::OK {
+            return DownloadResult::error(DownloadError(format!(
+                "rqbit returned status code {}",
+                res.status().as_u16()
+            )));
         }
-    };
-    let timeout = Duration::from_secs(timeout);
-    let link = match conf.use_magnet.unwrap_or(true) {
-        true => item.magnet_link.to_owned(),
-        false => item.torrent_link.to_owned(),
-    };
-    let res = match add_torrent(&conf, link, timeout).await {
-        Ok(r) => r,
-        Err(e) => {
-            return Err(format!("Failed to get response from rqbit\n{}", e));
-        }
-    };
-    if res.status() != StatusCode::OK {
-        return Err(format!(
-            "rqbit returned status code {}",
-            res.status().as_u16()
-        ));
+
+        DownloadResult::new(
+            "Successfully sent torrent to rqbit".to_owned(),
+            vec![item.id],
+            vec![],
+            false,
+        )
     }
 
-    Ok("Successfully sent torrent to rqbit".to_owned())
+    async fn batch_download(
+        items: Vec<Item>,
+        conf: ClientConfig,
+        client: reqwest::Client,
+    ) -> DownloadResult {
+        multidownload::<RqbitClient, _>(
+            |s| format!("Successfully sent {} torrents to rqbit", s),
+            &items,
+            &conf,
+            &client,
+        )
+        .await
+    }
 }

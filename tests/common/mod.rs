@@ -1,7 +1,13 @@
 use std::{error::Error, sync::Mutex};
 
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
-use nyaa::{app::App, results::Results, sync::EventSync};
+use nyaa::{
+    app::App,
+    client::{Client, ClientConfig, DownloadResult},
+    results::Results,
+    source::Item,
+    sync::EventSync,
+};
 use ratatui::{
     backend::{Backend as _, TestBackend},
     buffer::Buffer,
@@ -250,5 +256,15 @@ impl EventSync for TestSync {
             let _ = tx_evt.send(evt).await;
         }
         let _ = tx_evt.send(Event::FocusLost).await;
+    }
+
+    async fn download(
+        _tx_dl: tokio::sync::mpsc::Sender<DownloadResult>,
+        _batch: bool,
+        _items: Vec<Item>,
+        _config: ClientConfig,
+        _rq_client: reqwest::Client,
+        _client: Client,
+    ) {
     }
 }

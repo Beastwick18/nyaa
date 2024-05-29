@@ -18,7 +18,7 @@ impl NotificationWidget {
     }
 
     pub fn add_notification(&mut self, notif: String) {
-        let mut new_notif = NotifyBox::new(notif, 0.25);
+        let mut new_notif = NotifyBox::new(notif, 5.0);
 
         self.notifs.sort_unstable_by_key(|a| a.offset());
         let first_gap = self.notifs.iter().try_fold(0, |prev, x| {

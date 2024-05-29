@@ -15,7 +15,7 @@ const MAX_WIDTH: u16 = 75;
 pub struct NotifyBox {
     content: String,
     pub time: f64,
-    pub rate: f64,
+    pub duration: f64,
     width: u16,
     height: u16,
     offset: u16,
@@ -24,7 +24,7 @@ pub struct NotifyBox {
 }
 
 impl NotifyBox {
-    pub fn new(content: String, rate: f64) -> Self {
+    pub fn new(content: String, duration: f64) -> Self {
         let width = (MAX_WIDTH - 2).min(content.len() as u16);
         let lines = textwrap::wrap(&content, width as usize);
         let actual_width = lines.iter().fold(0, |acc, x| acc.max(x.len())) as u16;
@@ -36,7 +36,7 @@ impl NotifyBox {
             content,
             offset: 0,
             time: 0.0,
-            rate,
+            duration,
             enter_state: AnimateState::new(),
             leave_state: AnimateState::new(),
         }
@@ -63,11 +63,15 @@ impl NotifyBox {
 #[derive(Copy, Clone)]
 pub struct AnimateState {
     time: f64,
+    done: bool,
 }
 
 impl AnimateState {
     fn new() -> Self {
-        Self { time: 0.0 }
+        Self {
+            time: 0.0,
+            done: false,
+        }
     }
 
     fn linear(
@@ -77,6 +81,9 @@ impl AnimateState {
         rate: f64,
         deltatime: f64,
     ) -> (i32, i32) {
+        if self.time >= 1.0 {
+            self.done = true;
+        }
         let pos = (
             ((self.time * (stop_pos.0 - start_pos.0) as f64) + start_pos.0 as f64) as i32,
             ((self.time * (stop_pos.1 - start_pos.1) as f64) + start_pos.1 as f64) as i32,
@@ -86,7 +93,7 @@ impl AnimateState {
     }
 
     fn is_done(self) -> bool {
-        self.time >= 1.0
+        self.done
     }
 }
 
@@ -100,17 +107,19 @@ impl NotifyBox {
     }
 
     pub fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
-        let width = self.width.min(area.width);
-        let height = self.height.min(area.height);
+        let orig_width = self.width.min(area.width);
+        let orig_height = self.height.min(area.height);
 
         let start_pos = (
             // (area.right() - width) as i32 - 2,
-            area.right() as i32 + 4,
-            (area.bottom() as i32 - height as i32) - 1 - self.offset as i32,
+            area.right() as i32 + 2,
+            // (area.top() as i32) + self.offset as i32, // Top aligned
+            (area.bottom() as i32 - self.height as i32 - 1) - self.offset as i32,
         );
         let stop_pos = (
-            (area.right() as i32 - width as i32) - 2,
-            (area.bottom() as i32 - height as i32) - 1 - self.offset as i32,
+            (area.right() as i32 - orig_width as i32) - 2,
+            // (area.top() as i32) + self.offset as i32,
+            (area.bottom() as i32 - self.height as i32 - 1) - self.offset as i32,
         );
         let pos = match self.time >= 1.0 {
             false => self
@@ -121,8 +130,8 @@ impl NotifyBox {
                 .linear(stop_pos, start_pos, ANIM_SPEED, ctx.deltatime),
         };
         let mut border = Borders::ALL;
-        let mut width = width;
-        let mut height = height;
+        let mut width = orig_width;
+        let mut height = orig_height;
         if pos.0 < 0 {
             border &= !Borders::LEFT & Borders::ALL;
             width = max(0, width as i32 + min(pos.0, 0)) as u16;
@@ -156,14 +165,20 @@ impl NotifyBox {
             .fg(ctx.theme.fg)
             .borders(border)
             .border_type(ctx.theme.border);
-        super::clear(rect, f.buffer_mut(), ctx.theme.bg);
+
+        let clear_x = min(max(pos.0 - 1, 0) as u16, area.right() - width);
+        let clear_width = (rect.width as i32 + 2)
+            .min(area.right() as i32 - pos.0)
+            .max(0) as u16;
+        let clear = Rect::new(clear_x, rect.y, clear_width, rect.height);
+        super::clear(clear, f.buffer_mut(), ctx.theme.bg);
         Paragraph::new(self.content.clone())
             .block(block)
             .scroll((scroll_y, scroll_x))
             .render(rect, f.buffer_mut());
 
         if self.enter_state.is_done() {
-            self.time = 1.0_f64.min(self.time + self.rate * ctx.deltatime);
+            self.time = 1.0_f64.min(self.time + ctx.deltatime / self.duration);
         }
     }
 }

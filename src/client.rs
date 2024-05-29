@@ -1,11 +1,17 @@
+use std::fmt::Display;
+
 use serde::{Deserialize, Serialize};
 use tokio::task::JoinSet;
 
-use crate::{app::Context, popup_enum, source::Item};
+use crate::{app::Context, client::cmd::CmdClient, popup_enum, source::Item};
 
 use self::{
-    cmd::CmdConfig, default_app::DefaultAppConfig, download::DownloadConfig, qbit::QbitConfig,
-    rqbit::RqbitConfig, transmission::TransmissionConfig,
+    cmd::CmdConfig,
+    default_app::{DefaultAppClient, DefaultAppConfig},
+    download::{DownloadConfig, DownloadFileClient},
+    qbit::{QbitClient, QbitConfig},
+    rqbit::{RqbitClient, RqbitConfig},
+    transmission::{TransmissionClient, TransmissionConfig},
 };
 
 pub mod cmd;
@@ -14,6 +20,64 @@ pub mod download;
 pub mod qbit;
 pub mod rqbit;
 pub mod transmission;
+
+pub struct DownloadError(String);
+
+pub trait DownloadClient {
+    fn download(
+        item: Item,
+        conf: ClientConfig,
+        client: reqwest::Client,
+    ) -> impl std::future::Future<Output = DownloadResult> + std::marker::Send + 'static;
+    fn batch_download(
+        items: Vec<Item>,
+        conf: ClientConfig,
+        client: reqwest::Client,
+    ) -> impl std::future::Future<Output = DownloadResult> + std::marker::Send + 'static;
+}
+
+impl Display for DownloadError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+pub struct DownloadResult {
+    pub success_msg: Option<String>,
+    pub success_ids: Vec<String>,
+    pub batch: bool,
+    pub errors: Vec<DownloadError>,
+}
+
+impl DownloadResult {
+    pub fn new<S: Into<Option<String>>>(
+        success_msg: S,
+        success_ids: Vec<String>,
+        errors: Vec<DownloadError>,
+        batch: bool,
+    ) -> Self {
+        DownloadResult {
+            success_msg: success_msg.into(),
+            success_ids,
+            batch,
+            errors,
+        }
+    }
+
+    pub fn error(error: DownloadError) -> Self {
+        DownloadResult {
+            success_msg: None,
+            success_ids: vec![],
+            batch: false,
+            errors: vec![error],
+        }
+    }
+}
+
+// pub enum DownloadResult {
+//     Success(String, String),
+//     Failure(String, DownloadError),
+// }
 
 popup_enum! {
     Client;
@@ -53,101 +117,142 @@ pub struct ClientConfig {
     pub rqbit: Option<RqbitConfig>,
 }
 
-impl Client {
-    pub async fn download(&self, item: Item, ctx: &mut Context) {
-        let conf = ctx.config.client.to_owned();
-        let timeout = ctx.config.timeout;
-        let item = item.clone();
-        let result = match self {
-            Self::Cmd => cmd::download(item, conf).await,
-            Self::Qbit => qbit::download(item, conf, timeout).await,
-            Self::Transmission => transmission::download(item, conf, timeout).await,
-            Self::Rqbit => rqbit::download(item, conf, timeout).await,
-            Self::DefaultApp => default_app::download(item, conf).await,
-            Self::Download => download::download(item, conf, timeout).await,
+pub async fn multidownload<C: DownloadClient, F>(
+    success_msg: F,
+    items: &[Item],
+    conf: &ClientConfig,
+    client: &reqwest::Client,
+) -> DownloadResult
+where
+    F: Fn(usize) -> String,
+{
+    let mut set = JoinSet::new();
+    for item in items.iter() {
+        let item = item.to_owned();
+        set.spawn(C::download(item.clone(), conf.clone(), client.clone()));
+    }
+    let mut results: Vec<DownloadResult> = vec![];
+    while let Some(res) = set.join_next().await {
+        let res = match res {
+            Ok(res) => res,
+            Err(e) => {
+                results.push(DownloadResult::error(DownloadError(e.to_string())));
+                continue;
+            }
         };
-        match result {
-            Ok(o) => ctx.notify(o),
-            Err(e) => ctx.show_error(e),
-        }
+        results.push(res);
     }
 
-    pub async fn download_async(
+    let (success, failure): (Vec<DownloadResult>, Vec<DownloadResult>) =
+        results.into_iter().partition(|d| d.errors.is_empty());
+    let success_ids = success.into_iter().fold(vec![], |acc, s| {
+        acc.into_iter().chain(s.success_ids).collect()
+    });
+    let errors = failure
+        .into_iter()
+        .fold(vec![], |acc, s| acc.into_iter().chain(s.errors).collect());
+
+    DownloadResult::new(success_msg(success_ids.len()), success_ids, errors, true)
+}
+
+impl Client {
+    // pub async fn download(&self, item: Item, ctx: &mut Context) {
+    //     let conf = ctx.config.client.to_owned();
+    //     let timeout = ctx.config.timeout;
+    //     let item = item.clone();
+    //     let result = match self {
+    //         Self::Cmd => cmd::download(item, conf).await,
+    //         Self::Qbit => qbit::download(item, conf, timeout).await,
+    //         Self::Transmission => transmission::download(item, conf, timeout).await,
+    //         Self::Rqbit => rqbit::download(item, conf, timeout).await,
+    //         Self::DefaultApp => default_app::download(item, conf).await,
+    //         Self::Download => download::download(item, conf, timeout).await,
+    //     };
+    //     match result {
+    //         Ok(o) => ctx.notify(o),
+    //         Err(e) => ctx.show_error(e),
+    //     }
+    // }
+
+    pub async fn download(
         self,
         item: Item,
         conf: ClientConfig,
-        timeout: u64,
-    ) -> Result<String, String> {
-        let id = item.id.clone();
-        let result = match self {
-            Self::Cmd => cmd::download(item, conf).await,
-            Self::Qbit => qbit::download(item, conf, timeout).await,
-            Self::Transmission => transmission::download(item, conf, timeout).await,
-            Self::Rqbit => rqbit::download(item, conf, timeout).await,
-            Self::DefaultApp => default_app::download(item, conf).await,
-            Self::Download => download::download(item, conf, timeout).await,
-        };
-        match result {
-            Ok(_) => Ok(id),
-            Err(e) => Err(e),
+        client: reqwest::Client,
+    ) -> DownloadResult {
+        match self {
+            Self::Cmd => CmdClient::download(item, conf, client).await,
+            Self::Qbit => QbitClient::download(item, conf, client).await,
+            Self::Transmission => TransmissionClient::download(item, conf, client).await,
+            Self::Rqbit => RqbitClient::download(item, conf, client).await,
+            Self::DefaultApp => DefaultAppClient::download(item, conf, client).await,
+            Self::Download => DownloadFileClient::download(item, conf, client).await,
         }
     }
 
-    async fn try_batch_download(
-        self,
+    pub async fn batch_download(
+        &self,
         items: Vec<Item>,
         conf: ClientConfig,
-        timeout: u64,
-    ) -> Option<Result<String, String>> {
+        client: reqwest::Client,
+    ) -> DownloadResult {
         match self {
-            Self::Qbit => Some(qbit::batch_download(items, conf, timeout).await),
-            _ => None,
+            Client::Cmd => CmdClient::batch_download(items, conf, client).await,
+            Client::DefaultApp => DefaultAppClient::batch_download(items, conf, client).await,
+            Client::Download => DownloadFileClient::batch_download(items, conf, client).await,
+            Client::Rqbit => RqbitClient::batch_download(items, conf, client).await,
+            Client::Qbit => QbitClient::batch_download(items, conf, client).await,
+            Client::Transmission => TransmissionClient::batch_download(items, conf, client).await,
         }
-    }
+        // let conf = ctx.config.client.to_owned();
+        // let timeout = ctx.config.timeout;
 
-    pub async fn batch_download(&self, items: Vec<Item>, ctx: &mut Context) {
-        let conf = ctx.config.client.to_owned();
-        let timeout = ctx.config.timeout;
-
-        if let Some(res) = self
-            .try_batch_download(items.to_owned(), conf.to_owned(), timeout)
-            .await
-        {
-            match res {
-                Ok(o) => ctx.notify(o),
-                Err(e) => ctx.show_error(e),
-            }
-        }
-
-        let mut set = JoinSet::new();
-        for item in items.iter() {
-            let item = item.to_owned();
-            set.spawn(self.download_async(item.to_owned(), conf.to_owned(), timeout));
-        }
-        let mut success_ids = vec![];
-        while let Some(res) = set.join_next().await {
-            let res = match res {
-                Ok(res) => res,
-                Err(e) => {
-                    ctx.show_error(format!("Failed to join download thread:\n{}", e));
-                    continue;
-                }
-            };
-            match res {
-                Ok(o) => {
-                    success_ids.push(o);
-                }
-                Err(e) => {
-                    ctx.show_error(e);
-                }
-            }
-        }
-        ctx.notify(format!(
-            "Successfully downloaded {} torrents with {}",
-            success_ids.len(),
-            self,
-        ));
-        ctx.batch.retain(|i| !success_ids.contains(&i.id)); // Remove successes from batch
+        // if let Some(res) = self
+        //     .try_batch_download(items.to_owned(), conf.to_owned(), timeout)
+        //     .await
+        // {
+        //     return match res {
+        //         Ok(o) => items
+        //             .iter()
+        //             .map(|i| DownloadResult::Success(i.title.to_owned(), o))
+        //             .collect(),
+        //         Err(e) => items
+        //             .iter()
+        //             .map(|i| DownloadResult::Failure(i.title.to_owned(), DownloadError(e.clone())))
+        //             .collect(),
+        //     };
+        // }
+        //
+        // let mut set = JoinSet::new();
+        // for item in items.iter() {
+        //     let item = item.to_owned();
+        //     set.spawn(self.download_async(item.to_owned(), conf.to_owned(), timeout));
+        // }
+        // let mut success_ids = vec![];
+        // while let Some(res) = set.join_next().await {
+        //     let res = match res {
+        //         Ok(res) => res,
+        //         Err(e) => {
+        //             // ctx.show_error(format!("Failed to join download thread:\n{}", e));
+        //             continue;
+        //         }
+        //     };
+        //     match res {
+        //         Ok(o) => {
+        //             success_ids.push(o);
+        //         }
+        //         Err(e) => {
+        //             // ctx.show_error(e);
+        //         }
+        //     }
+        // }
+        // vec![]
+        // ctx.notify(format!(
+        //     "Successfully downloaded {} torrents with {}",
+        //     success_ids.len(),
+        //     self,
+        // ));
+        // ctx.batch.retain(|i| !success_ids.contains(&i.id)); // Remove successes from batch
     }
 
     pub fn load_config(self, ctx: &mut Context) {

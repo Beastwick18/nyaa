@@ -10,7 +10,7 @@ use ratatui::{
 use tokio::{sync::mpsc, task::AbortHandle};
 
 use crate::{
-    client::Client,
+    client::{Client, DownloadResult},
     clip,
     config::Config,
     results::Results,
@@ -128,7 +128,6 @@ pub struct Context {
     pub theme: Theme,
     pub config: Config,
     pub errors: VecDeque<String>,
-    pub notifications: Vec<String>,
     pub page: usize,
     pub user: Option<String>,
     pub src: Sources,
@@ -137,6 +136,7 @@ pub struct Context {
     pub last_key: String,
     pub results: Results,
     pub deltatime: f64,
+    notifications: Vec<String>,
     failed_config_load: bool,
     should_quit: bool,
     should_redraw: bool,
@@ -228,6 +228,7 @@ impl App {
         let (tx_res, mut rx_res) =
             mpsc::channel::<Result<Results, Box<dyn Error + Send + Sync>>>(32);
         let (tx_evt, mut rx_evt) = mpsc::channel::<Event>(100);
+        let (tx_dl, mut rx_dl) = mpsc::channel::<DownloadResult>(100);
 
         tokio::task::spawn(S::read_event_loop(tx_evt));
 
@@ -274,7 +275,6 @@ impl App {
             self.get_help(ctx);
             terminal.draw(|f| self.draw(ctx, f))?;
             if let Mode::Loading(load_type) = ctx.mode {
-                ctx.load_type = Some(load_type);
                 ctx.mode = Mode::Normal;
                 match load_type {
                     LoadType::Downloading => {
@@ -285,15 +285,32 @@ impl App {
                             .selected()
                             .and_then(|i| ctx.results.response.items.get(i))
                         {
-                            ctx.client.clone().download(i.to_owned(), ctx).await;
+                            tokio::spawn(S::download(
+                                tx_dl.clone(),
+                                false,
+                                vec![i.to_owned()],
+                                ctx.config.client.clone(),
+                                client.clone(),
+                                ctx.client,
+                            ));
+                            ctx.notify(format!("Downloading torrent with {}", ctx.client));
                         }
                         continue;
                     }
                     LoadType::Batching => {
-                        ctx.client
-                            .clone()
-                            .batch_download(ctx.batch.clone(), ctx)
-                            .await;
+                        tokio::spawn(S::download(
+                            tx_dl.clone(),
+                            true,
+                            ctx.batch.clone(),
+                            ctx.config.client.clone(),
+                            client.clone(),
+                            ctx.client,
+                        ));
+                        ctx.notify(format!(
+                            "Downloading {} torrents with {}",
+                            ctx.batch.len(),
+                            ctx.client
+                        ));
                         continue;
                     }
                     LoadType::Sourcing => {
@@ -302,6 +319,8 @@ impl App {
                     }
                     _ => {}
                 }
+
+                ctx.load_type = Some(load_type);
 
                 if let Some(handle) = last_load_abort.as_ref() {
                     handle.abort();
@@ -353,17 +372,32 @@ impl App {
                     last_load_abort = None;
                     last_time = None;
                 },
+                Some(dl) = rx_dl.recv() => {
+                    if dl.batch {
+                        for id in dl.success_ids.iter() {
+                            ctx.batch.retain(|i| i.id.ne(id));
+                        }
+                    }
+                    if !dl.success_ids.is_empty() {
+                        if let Some(notif) = dl.success_msg {
+                            ctx.notify(notif);
+                        }
+                    }
+                    for e in dl.errors.iter() {
+                        ctx.show_error(e)
+                    }
+                }
                 _ = async{}, if self.widgets.notification.is_animating() => {
-
-                    let now = Instant::now();
-                    ctx.deltatime = (now - last_time.unwrap_or(now)).as_secs_f64();
-                    last_time = Some(now);
-                    continue;
                 },
                 else => {
                     break;
                 }
             };
+            if self.widgets.notification.is_animating() {
+                let now = Instant::now();
+                ctx.deltatime = (now - last_time.unwrap_or(now)).as_secs_f64();
+                last_time = Some(now);
+            }
         }
         Ok(())
     }
