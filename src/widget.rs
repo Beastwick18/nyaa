@@ -22,6 +22,8 @@ pub mod error;
 pub mod filter;
 pub mod help;
 pub mod input;
+pub mod notifications;
+pub mod notify_box;
 pub mod page;
 pub mod results;
 pub mod search;

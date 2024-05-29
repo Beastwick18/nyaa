@@ -18,31 +18,6 @@ use crate::{
 
 use super::{border_block, centered_rect, TitlePosition, VirtualStatefulTable};
 
-// #[derive(Clone, Copy, Serialize, Deserialize, Default)]
-// pub struct ColumnsConfig {
-//     category: Option<bool>,
-//     title: Option<bool>,
-//     size: Option<bool>,
-//     date: Option<bool>,
-//     seeders: Option<bool>,
-//     leechers: Option<bool>,
-//     downloads: Option<bool>,
-// }
-
-// impl ColumnsConfig {
-//     fn array(self) -> [bool; 7] {
-//         [
-//             self.category.unwrap_or(true),
-//             self.title.unwrap_or(true),
-//             self.size.unwrap_or(true),
-//             self.date.unwrap_or(true),
-//             self.seeders.unwrap_or(true),
-//             self.leechers.unwrap_or(true),
-//             self.downloads.unwrap_or(true),
-//         ]
-//     }
-// }
-
 pub struct ResultsWidget {
     pub table: VirtualStatefulTable,
     control_space: bool,
@@ -127,24 +102,28 @@ impl super::Widget for ResultsWidget {
             Paragraph::new("No results").render(center, buf);
         }
 
-        if let Some(visible_items) = ctx.results.response.items.get(self.table.state.offset()..) {
-            let selected_ids: Vec<String> = ctx.batch.clone().into_iter().map(|i| i.id).collect();
-            let vert_left = ctx.theme.border.to_border_set().vertical_left;
-            let lines = visible_items
-                .iter()
-                .map(|i| {
-                    Line::from(
-                        match selected_ids.contains(&i.id) {
-                            true => symbols::border::QUADRANT_BLOCK,
-                            false => vert_left,
-                        }
-                        .to_owned(),
-                    )
-                })
-                .collect::<Vec<Line>>();
-            let para = Paragraph::new(lines);
-            let pararea = Rect::new(area.x, area.y + 2, 1, area.height - 3);
-            para.render(pararea, buf);
+        if area.height >= 3 {
+            if let Some(visible_items) = ctx.results.response.items.get(self.table.state.offset()..)
+            {
+                let selected_ids: Vec<String> =
+                    ctx.batch.clone().into_iter().map(|i| i.id).collect();
+                let vert_left = ctx.theme.border.to_border_set().vertical_left;
+                let lines = visible_items
+                    .iter()
+                    .map(|i| {
+                        Line::from(
+                            match selected_ids.contains(&i.id) {
+                                true => symbols::border::QUADRANT_BLOCK,
+                                false => vert_left,
+                            }
+                            .to_owned(),
+                        )
+                    })
+                    .collect::<Vec<Line>>();
+                let para = Paragraph::new(lines);
+                let para_area = Rect::new(area.x, area.y + 2, 1, area.height - 3);
+                para.render(para_area, buf);
+            }
         }
 
         let dl_src = title!(
@@ -163,11 +142,14 @@ impl super::Widget for ResultsWidget {
             }
         }
 
-        if let Some(notif) = ctx.notification.clone() {
-            if let Some((bl, area)) = TitlePosition::BottomLeft.try_widget(notif, area, false) {
-                f.render_widget(bl, area);
-            }
-        }
+        // if let Some(notif) = ctx.notification.clone() {
+        // if let Some((bl, area)) =
+        //     TitlePosition::BottomLeft.try_widget(format!("{} draws", self.draw_count), area, false)
+        // {
+        //     f.render_widget(bl, area);
+        //     self.draw_count += 1;
+        // }
+        // }
     }
 
     fn handle_event(&mut self, ctx: &mut Context, e: &Event) {
@@ -318,12 +300,20 @@ impl super::Widget for ResultsWidget {
                 (Tab | BackTab, _) => {
                     ctx.mode = Mode::Batch;
                 }
+                (Char('b'), _) => {
+                    ctx.notify("Test 1");
+                    ctx.notify("Test 2");
+                    ctx.notify("Test 3");
+                }
+                // TODO: Dismiss popup notifs
+                //
                 (Esc, &KeyModifiers::NONE) => {
-                    ctx.notification = None;
                     if self.control_space {
                         ctx.notify("Exited VISUAL mode");
+                        self.control_space = false;
+                    } else {
+                        ctx.dismiss_notifications();
                     }
-                    self.control_space = false;
                 }
                 _ => {}
             }

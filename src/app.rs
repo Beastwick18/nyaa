@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, error::Error, fmt::Display};
+use std::{collections::VecDeque, error::Error, fmt::Display, time::Instant};
 
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use indexmap::IndexMap;
@@ -25,6 +25,7 @@ use crate::{
         error::ErrorPopup,
         filter::FilterPopup,
         help::HelpPopup,
+        notifications::NotificationWidget,
         page::PagePopup,
         results::ResultsWidget,
         search::SearchWidget,
@@ -127,7 +128,7 @@ pub struct Context {
     pub theme: Theme,
     pub config: Config,
     pub errors: VecDeque<String>,
-    pub notification: Option<String>,
+    pub notifications: Vec<String>,
     pub page: usize,
     pub user: Option<String>,
     pub src: Sources,
@@ -135,8 +136,11 @@ pub struct Context {
     pub batch: Vec<Item>,
     pub last_key: String,
     pub results: Results,
+    pub deltatime: f64,
     failed_config_load: bool,
     should_quit: bool,
+    should_redraw: bool,
+    should_dismiss_notifications: bool,
 }
 
 impl Context {
@@ -145,7 +149,15 @@ impl Context {
     }
 
     pub fn notify<S: Display>(&mut self, notification: S) {
-        self.notification = Some(notification.to_string());
+        self.notifications.push(notification.to_string());
+    }
+
+    pub fn dismiss_notifications(&mut self) {
+        self.should_dismiss_notifications = true;
+    }
+
+    pub fn redraw(&mut self) {
+        self.should_redraw = true;
     }
 
     pub fn save_config(&mut self) -> Result<(), Box<dyn Error>> {
@@ -171,22 +183,26 @@ impl Default for Context {
             theme: Theme::default(),
             config: Config::default(),
             errors: VecDeque::new(),
-            notification: None,
+            notifications: vec![],
             page: 1,
             user: None,
             src: Sources::Nyaa,
             client: Client::Cmd,
             batch: vec![],
             last_key: "".to_owned(),
-            should_quit: false,
-            failed_config_load: true,
             results: Results::default(),
+            deltatime: 0.0,
+            failed_config_load: true,
+            should_quit: false,
+            should_redraw: false,
+            should_dismiss_notifications: false,
         }
     }
 }
 
 #[derive(Default)]
 pub struct Widgets {
+    pub notification: NotificationWidget,
     pub batch: BatchWidget,
     pub category: CategoryPopup,
     pub sort: SortPopup,
@@ -207,7 +223,6 @@ impl App {
         &mut self,
         terminal: &mut Terminal<B>,
     ) -> Result<(), Box<dyn Error>> {
-        let w = &mut Widgets::default();
         let ctx = &mut Context::default();
 
         let (tx_res, mut rx_res) =
@@ -219,7 +234,7 @@ impl App {
         match Config::load() {
             Ok(config) => {
                 ctx.failed_config_load = false;
-                if let Err(e) = config.apply(ctx, w) {
+                if let Err(e) = config.apply(ctx, &mut self.widgets) {
                     ctx.show_error(e);
                 } else if let Err(e) = ctx.save_config() {
                     ctx.show_error(e);
@@ -227,7 +242,7 @@ impl App {
             }
             Err(e) => {
                 ctx.show_error(format!("Failed to load config:\n{}", e));
-                if let Err(e) = ctx.config.clone().apply(ctx, w) {
+                if let Err(e) = ctx.config.clone().apply(ctx, &mut self.widgets) {
                     ctx.show_error(e);
                 }
             }
@@ -235,8 +250,20 @@ impl App {
 
         let client = request_client(ctx)?;
         let mut last_load_abort: Option<AbortHandle> = None;
+        let mut last_time: Option<Instant> = None;
 
         while !ctx.should_quit {
+            if !ctx.notifications.is_empty() {
+                ctx.notifications
+                    .clone()
+                    .into_iter()
+                    .for_each(|n| self.widgets.notification.add_notification(n));
+                ctx.notifications.clear();
+            }
+            if ctx.should_dismiss_notifications {
+                self.widgets.notification.dismiss_all();
+                ctx.should_dismiss_notifications = false;
+            }
             if !ctx.errors.is_empty() {
                 ctx.mode = Mode::Error;
             }
@@ -244,14 +271,15 @@ impl App {
                 ctx.mode = Mode::Normal;
             }
 
-            self.get_help(w, ctx);
-            terminal.draw(|f| self.draw(w, ctx, f))?;
+            self.get_help(ctx);
+            terminal.draw(|f| self.draw(ctx, f))?;
             if let Mode::Loading(load_type) = ctx.mode {
                 ctx.load_type = Some(load_type);
                 ctx.mode = Mode::Normal;
                 match load_type {
                     LoadType::Downloading => {
-                        if let Some(i) = w
+                        if let Some(i) = self
+                            .widgets
                             .results
                             .table
                             .selected()
@@ -270,7 +298,7 @@ impl App {
                     }
                     LoadType::Sourcing => {
                         // On sourcing, update info, reset things like category, etc.
-                        ctx.src.apply(ctx, w);
+                        ctx.src.apply(ctx, &mut self.widgets);
                     }
                     _ => {}
                 }
@@ -280,11 +308,11 @@ impl App {
                 }
 
                 let search = SearchQuery {
-                    query: w.search.input.input.clone(),
+                    query: self.widgets.search.input.input.clone(),
                     page: ctx.page,
-                    category: w.category.selected,
-                    filter: w.filter.selected,
-                    sort: w.sort.selected,
+                    category: self.widgets.category.selected,
+                    filter: self.widgets.filter.selected,
+                    sort: self.widgets.sort.selected,
                     user: ctx.user.clone(),
                 };
 
@@ -303,6 +331,15 @@ impl App {
             }
 
             tokio::select! {
+                biased;
+                Some(evt) = rx_evt.recv() => {
+                    #[cfg(unix)]
+                    self.on(&evt, ctx, terminal);
+                    #[cfg(not(unix))]
+                    self.on::<B>(&evt, ctx);
+
+                    last_time = None;
+                },
                 Some(rt) = rx_res.recv() => {
                     match rt {
                         Ok(rt) => ctx.results = rt,
@@ -314,12 +351,14 @@ impl App {
                     }
                     ctx.load_type = None;
                     last_load_abort = None;
+                    last_time = None;
                 },
-                Some(evt) = rx_evt.recv() => {
-                    #[cfg(unix)]
-                    self.on(&evt, w, ctx, terminal);
-                    #[cfg(not(unix))]
-                    self.on::<B>(&evt, w, ctx);
+                _ = async{}, if self.widgets.notification.is_animating() => {
+
+                    let now = Instant::now();
+                    ctx.deltatime = (now - last_time.unwrap_or(now)).as_secs_f64();
+                    last_time = Some(now);
+                    continue;
                 },
                 else => {
                     break;
@@ -329,7 +368,7 @@ impl App {
         Ok(())
     }
 
-    pub fn draw(&mut self, widgets: &mut Widgets, ctx: &mut Context, f: &mut Frame) {
+    pub fn draw(&mut self, ctx: &mut Context, f: &mut Frame) {
         let layout_vertical = Layout::new(
             Direction::Vertical,
             [Constraint::Length(3), Constraint::Min(1)],
@@ -344,40 +383,40 @@ impl App {
         )
         .split(layout_vertical[1]);
 
-        widgets.search.draw(f, ctx, layout_vertical[0]);
+        self.widgets.search.draw(f, ctx, layout_vertical[0]);
         // Dont draw batch pane if empty
         match ctx.batch.is_empty() {
-            true => widgets.results.draw(f, ctx, layout_vertical[1]),
+            true => self.widgets.results.draw(f, ctx, layout_vertical[1]),
             false => {
-                widgets.results.draw(f, ctx, layout_horizontal[0]);
-                widgets.batch.draw(f, ctx, layout_horizontal[1]);
+                self.widgets.results.draw(f, ctx, layout_horizontal[0]);
+                self.widgets.batch.draw(f, ctx, layout_horizontal[1]);
             }
         }
         match ctx.mode {
-            Mode::Category => widgets.category.draw(f, ctx, f.size()),
-            Mode::Sort(_) => widgets.sort.draw(f, ctx, f.size()),
-            Mode::Filter => widgets.filter.draw(f, ctx, f.size()),
-            Mode::Theme => widgets.theme.draw(f, ctx, f.size()),
+            Mode::Category => self.widgets.category.draw(f, ctx, f.size()),
+            Mode::Sort(_) => self.widgets.sort.draw(f, ctx, f.size()),
+            Mode::Filter => self.widgets.filter.draw(f, ctx, f.size()),
+            Mode::Theme => self.widgets.theme.draw(f, ctx, f.size()),
             Mode::Error => {
                 // Get the oldest error first
                 if let Some(error) = ctx.errors.pop_front() {
-                    widgets.error.with_error(error);
+                    self.widgets.error.with_error(error);
                 }
-                widgets.error.draw(f, ctx, f.size());
+                self.widgets.error.draw(f, ctx, f.size());
             }
-            Mode::Help => widgets.help.draw(f, ctx, f.size()),
-            Mode::Page => widgets.page.draw(f, ctx, f.size()),
-            Mode::User => widgets.user.draw(f, ctx, f.size()),
-            Mode::Sources => widgets.sources.draw(f, ctx, f.size()),
-            Mode::Clients => widgets.clients.draw(f, ctx, f.size()),
+            Mode::Help => self.widgets.help.draw(f, ctx, f.size()),
+            Mode::Page => self.widgets.page.draw(f, ctx, f.size()),
+            Mode::User => self.widgets.user.draw(f, ctx, f.size()),
+            Mode::Sources => self.widgets.sources.draw(f, ctx, f.size()),
+            Mode::Clients => self.widgets.clients.draw(f, ctx, f.size()),
             Mode::KeyCombo(_) | Mode::Normal | Mode::Search | Mode::Loading(_) | Mode::Batch => {}
         }
+        self.widgets.notification.draw(f, ctx, f.size());
     }
 
     fn on<B: Backend>(
         &mut self,
         evt: &Event,
-        w: &mut Widgets,
         ctx: &mut Context,
         #[cfg(unix)] terminal: &mut Terminal<B>,
     ) {
@@ -412,20 +451,20 @@ impl App {
             };
         }
         match ctx.mode.to_owned() {
-            Mode::Category => w.category.handle_event(ctx, evt),
-            Mode::Sort(_) => w.sort.handle_event(ctx, evt),
-            Mode::Normal => w.results.handle_event(ctx, evt),
-            Mode::Batch => w.batch.handle_event(ctx, evt),
-            Mode::Search => w.search.handle_event(ctx, evt),
-            Mode::Filter => w.filter.handle_event(ctx, evt),
-            Mode::Theme => w.theme.handle_event(ctx, evt),
-            Mode::Error => w.error.handle_event(ctx, evt),
-            Mode::Page => w.page.handle_event(ctx, evt),
-            Mode::User => w.user.handle_event(ctx, evt),
-            Mode::Help => w.help.handle_event(ctx, evt),
-            Mode::Sources => w.sources.handle_event(ctx, evt),
-            Mode::Clients => w.clients.handle_event(ctx, evt),
-            Mode::KeyCombo(keys) => self.on_combo(w, ctx, keys, evt),
+            Mode::Category => self.widgets.category.handle_event(ctx, evt),
+            Mode::Sort(_) => self.widgets.sort.handle_event(ctx, evt),
+            Mode::Normal => self.widgets.results.handle_event(ctx, evt),
+            Mode::Batch => self.widgets.batch.handle_event(ctx, evt),
+            Mode::Search => self.widgets.search.handle_event(ctx, evt),
+            Mode::Filter => self.widgets.filter.handle_event(ctx, evt),
+            Mode::Theme => self.widgets.theme.handle_event(ctx, evt),
+            Mode::Error => self.widgets.error.handle_event(ctx, evt),
+            Mode::Page => self.widgets.page.handle_event(ctx, evt),
+            Mode::User => self.widgets.user.handle_event(ctx, evt),
+            Mode::Help => self.widgets.help.handle_event(ctx, evt),
+            Mode::Sources => self.widgets.sources.handle_event(ctx, evt),
+            Mode::Clients => self.widgets.clients.handle_event(ctx, evt),
+            Mode::KeyCombo(keys) => self.on_combo(ctx, keys, evt),
             Mode::Loading(_) => {}
         }
         if ctx.mode != Mode::Help {
@@ -452,7 +491,7 @@ impl App {
         }
     }
 
-    fn get_help(&mut self, w: &mut Widgets, ctx: &Context) {
+    fn get_help(&mut self, ctx: &Context) {
         let help = match ctx.mode {
             Mode::Category => CategoryPopup::get_help(),
             Mode::Sort(_) => SortPopup::get_help(),
@@ -471,12 +510,12 @@ impl App {
             Mode::Loading(_) => None,
         };
         if let Some(msg) = help {
-            w.help.with_items(msg, ctx.mode.clone());
-            w.help.table.select(0);
+            self.widgets.help.with_items(msg, ctx.mode.clone());
+            self.widgets.help.table.select(0);
         }
     }
 
-    fn on_combo(&mut self, w: &Widgets, ctx: &mut Context, mut keys: Vec<char>, e: &Event) {
+    fn on_combo(&mut self, ctx: &mut Context, mut keys: Vec<char>, e: &Event) {
         if let Event::Key(KeyEvent {
             code,
             kind: KeyEventKind::Press,
@@ -496,7 +535,7 @@ impl App {
         }
         match keys[..] {
             ['y', c] => {
-                let s = w.results.table.state.selected().unwrap_or(0);
+                let s = self.widgets.results.table.state.selected().unwrap_or(0);
                 match ctx.results.response.items.get(s) {
                     Some(item) => {
                         let link = match c {

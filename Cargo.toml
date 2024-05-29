@@ -28,6 +28,7 @@ tokio = { version = "1.36.0", features = ["rt", "macros", "rt-multi-thread"] }
 tokio-util = "0.7.11"
 urlencoding = "2.1.0"
 ratatui = "0.26.3"
+textwrap = "0.16.1"
 crossterm = "0.27.0"
 unicode-width = "0.1.5"
 unicode-segmentation = "1.11.0"
