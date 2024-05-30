@@ -144,13 +144,11 @@ impl super::Widget for ResultsWidget {
             }
         }
 
-        // if let Some(notif) = ctx.notification.clone() {
-        if let Some((bl, area)) =
-            TitlePosition::BottomLeft.try_widget(format!("{} draws", self.draw_count), area, false)
-        {
-            f.render_widget(bl, area);
-            self.draw_count += 1;
-        }
+        // if let Some((bl, area)) =
+        //     TitlePosition::BottomLeft.try_widget(format!("{} draws", self.draw_count), area, false)
+        // {
+        //     f.render_widget(bl, area);
+        //     self.draw_count += 1;
         // }
     }
 

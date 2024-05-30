@@ -226,24 +226,11 @@ impl NotifyBox {
     }
 
     pub fn update(&mut self, deltatime: f64, area: Rect) -> bool {
-        // let (start_pos, stop_pos) =
-        //     self.position
-        //         .get_start_stop(area, self.width, self.height, self.offset);
-        // let last_pos = self.pos;
-        // let pos = match self.time >= 1.0 {
-        //     false => self
-        //         .enter_state
-        //         .linear(start_pos, stop_pos, ANIM_SPEED, deltatime),
-        //     true => self
-        //         .leave_state
-        //         .linear(stop_pos, start_pos, ANIM_SPEED, deltatime),
-        // };
-
+        let last_pos = self.pos;
+        self.pos = Some(self.next_pos(deltatime, area));
         if self.enter_state.is_done() {
             self.time = 1.0_f64.min(self.time + deltatime / self.duration);
         }
-        let last_pos = self.pos;
-        self.pos = Some(self.next_pos(deltatime, area));
         last_pos != self.pos
     }
 }
