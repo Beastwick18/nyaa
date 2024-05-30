@@ -1,30 +1,79 @@
-use std::cmp::{max, min};
-
 use ratatui::{
-    layout::Rect,
+    layout::{Offset, Rect},
     style::Stylize as _,
     widgets::{Block, Borders, Paragraph, Widget as _},
     Frame,
 };
+use serde::{Deserialize, Serialize};
 
 use crate::{app::Context, style};
 
 const ANIM_SPEED: f64 = 8.0;
 const MAX_WIDTH: u16 = 75;
 
+#[derive(Clone, Copy, Deserialize, Serialize)]
+pub enum NotifyPosition {
+    TopLeft,
+    TopRight,
+    BottomLeft,
+    BottomRight,
+}
+
+impl NotifyPosition {
+    pub fn is_top(self) -> bool {
+        matches!(self, Self::TopLeft | Self::TopRight)
+    }
+
+    pub fn is_left(self) -> bool {
+        matches!(self, Self::TopLeft | Self::BottomLeft)
+    }
+
+    pub fn get_start_stop(
+        self,
+        area: Rect,
+        width: u16,
+        height: u16,
+        offset: u16,
+    ) -> ((i32, i32), (i32, i32)) {
+        let start_x = if self.is_left() {
+            area.left() as i32 - width as i32
+        } else {
+            area.right() as i32 + 1
+        };
+        let stop_x = if self.is_left() {
+            area.left() as i32 + 2
+        } else {
+            area.right() as i32 - width as i32 - 2
+        };
+        // let start_y = if self.is_top() {
+        //     (area.top() as i32 + 4) + offset as i32 - (height / 2) as i32
+        // } else {
+        //     (area.bottom() as i32 - 1) - offset as i32
+        // };
+        let stop_y = if self.is_top() {
+            (area.top() as i32 + 4) + offset as i32
+        } else {
+            (area.bottom() as i32 - height as i32 - 1) - offset as i32
+        };
+        ((start_x, stop_y), (stop_x, stop_y))
+    }
+}
+
 pub struct NotifyBox {
     content: String,
     pub time: f64,
     pub duration: f64,
+    position: NotifyPosition,
     width: u16,
     height: u16,
     offset: u16,
     enter_state: AnimateState,
     leave_state: AnimateState,
+    pos: Option<(i32, i32)>,
 }
 
 impl NotifyBox {
-    pub fn new(content: String, duration: f64) -> Self {
+    pub fn new(content: String, duration: f64, position: NotifyPosition) -> Self {
         let width = (MAX_WIDTH - 2).min(content.len() as u16);
         let lines = textwrap::wrap(&content, width as usize);
         let actual_width = lines.iter().fold(0, |acc, x| acc.max(x.len())) as u16;
@@ -34,11 +83,13 @@ impl NotifyBox {
             width: actual_width + 2,
             height,
             content,
+            position,
             offset: 0,
             time: 0.0,
             duration,
             enter_state: AnimateState::new(),
             leave_state: AnimateState::new(),
+            pos: None,
         }
     }
 
@@ -107,58 +158,38 @@ impl NotifyBox {
     }
 
     pub fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
-        let orig_width = self.width.min(area.width);
-        let orig_height = self.height.min(area.height);
-
-        let start_pos = (
-            // (area.right() - width) as i32 - 2,
-            area.right() as i32 + 2,
-            // (area.top() as i32) + self.offset as i32, // Top aligned
-            (area.bottom() as i32 - self.height as i32 - 1) - self.offset as i32,
-        );
-        let stop_pos = (
-            (area.right() as i32 - orig_width as i32) - 2,
-            // (area.top() as i32) + self.offset as i32,
-            (area.bottom() as i32 - self.height as i32 - 1) - self.offset as i32,
-        );
-        let pos = match self.time >= 1.0 {
-            false => self
-                .enter_state
-                .linear(start_pos, stop_pos, ANIM_SPEED, ctx.deltatime),
-            true => self
-                .leave_state
-                .linear(stop_pos, start_pos, ANIM_SPEED, ctx.deltatime),
+        let pos = self.pos.unwrap_or(self.next_pos(ctx.deltatime, area));
+        let offset = Offset {
+            x: self.width as i32,
+            y: self.height as i32,
         };
-        let mut border = Borders::ALL;
-        let mut width = orig_width;
-        let mut height = orig_height;
-        if pos.0 < 0 {
-            border &= !Borders::LEFT & Borders::ALL;
-            width = max(0, width as i32 + min(pos.0, 0)) as u16;
-        }
-        if pos.0 + width as i32 > area.right() as i32 {
-            border &= !Borders::RIGHT & Borders::ALL;
-            width -= min((pos.0 + width as i32) - area.right() as i32, width as i32) as u16;
-        }
-        if pos.1 < 0 {
-            border &= !Borders::TOP & Borders::ALL;
-            height = max(0, height as i32 + min(pos.1, 0)) as u16;
-        }
-        if pos.1 + height as i32 > area.bottom() as i32 {
-            border &= !Borders::BOTTOM & Borders::ALL;
-            height -= min(
-                (pos.1 + height as i32) - area.bottom() as i32,
-                height as i32,
-            ) as u16;
-        }
+        let offset_back = Offset {
+            x: -(self.width as i32),
+            y: -(self.height as i32),
+        };
         let rect = Rect::new(
-            min(max(pos.0, 0) as u16, area.right() - width),
-            min(max(pos.1, 0) as u16, area.bottom() - height),
-            width,
-            height,
-        );
-        let scroll_x = min(0, pos.0 + 1).unsigned_abs() as u16;
-        let scroll_y = min(0, pos.1 + 1).unsigned_abs() as u16;
+            (pos.0 + self.width as i32).max(0) as u16,
+            (pos.1 + self.height as i32).max(0) as u16,
+            self.width,
+            self.height,
+        )
+        .intersection(area.offset(offset))
+        .offset(offset_back);
+        let mut border = Borders::NONE;
+        if pos.0 >= 0 {
+            border |= Borders::LEFT
+        }
+        if pos.0 + self.width as i32 <= area.right() as i32 {
+            border |= Borders::RIGHT
+        }
+        if pos.1 >= 0 {
+            border |= Borders::TOP
+        }
+        if pos.1 + self.height as i32 <= area.bottom() as i32 {
+            border |= Borders::BOTTOM
+        }
+        let scroll_x = (pos.0 + 1).min(0).unsigned_abs() as u16;
+        let scroll_y = (pos.1 + 1).min(0).unsigned_abs() as u16;
         let block = Block::new()
             .border_style(style!(fg:ctx.theme.border_focused_color))
             .bg(ctx.theme.bg)
@@ -166,19 +197,53 @@ impl NotifyBox {
             .borders(border)
             .border_type(ctx.theme.border);
 
-        let clear_x = min(max(pos.0 - 1, 0) as u16, area.right() - width);
-        let clear_width = (rect.width as i32 + 2)
-            .min(area.right() as i32 - pos.0)
-            .max(0) as u16;
-        let clear = Rect::new(clear_x, rect.y, clear_width, rect.height);
+        let clear = Rect::new(
+            (pos.0 - 1) as u16,
+            pos.1 as u16,
+            self.width + 2,
+            self.height,
+        )
+        .intersection(area);
         super::clear(clear, f.buffer_mut(), ctx.theme.bg);
         Paragraph::new(self.content.clone())
             .block(block)
             .scroll((scroll_y, scroll_x))
             .render(rect, f.buffer_mut());
+    }
+
+    fn next_pos(&mut self, deltatime: f64, area: Rect) -> (i32, i32) {
+        let (start_pos, stop_pos) =
+            self.position
+                .get_start_stop(area, self.width, self.height, self.offset);
+        match self.time >= 1.0 {
+            false => self
+                .enter_state
+                .linear(start_pos, stop_pos, ANIM_SPEED, deltatime),
+            true => self
+                .leave_state
+                .linear(stop_pos, start_pos, ANIM_SPEED, deltatime),
+        }
+    }
+
+    pub fn update(&mut self, deltatime: f64, area: Rect) -> bool {
+        // let (start_pos, stop_pos) =
+        //     self.position
+        //         .get_start_stop(area, self.width, self.height, self.offset);
+        // let last_pos = self.pos;
+        // let pos = match self.time >= 1.0 {
+        //     false => self
+        //         .enter_state
+        //         .linear(start_pos, stop_pos, ANIM_SPEED, deltatime),
+        //     true => self
+        //         .leave_state
+        //         .linear(stop_pos, start_pos, ANIM_SPEED, deltatime),
+        // };
 
         if self.enter_state.is_done() {
-            self.time = 1.0_f64.min(self.time + ctx.deltatime / self.duration);
+            self.time = 1.0_f64.min(self.time + deltatime / self.duration);
         }
+        let last_pos = self.pos;
+        self.pos = Some(self.next_pos(deltatime, area));
+        last_pos != self.pos
     }
 }

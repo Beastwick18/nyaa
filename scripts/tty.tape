@@ -4,7 +4,7 @@ Set FontFamily "JetBrainsMono Nerd Font"
 Set FontSize 20
 Set Width 1280
 Set Height 720
-Set Framerate 30
+Set Framerate 20
 Set Shell zsh
 Set TypingSpeed 100ms
 Set Padding 10

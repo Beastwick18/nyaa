@@ -74,23 +74,3 @@ impl DownloadClient for CmdClient {
         .await
     }
 }
-
-// pub async fn download(item: Item, conf: ClientConfig) -> Result<(), DownloadError> {
-//     let cmd = match conf.cmd.to_owned() {
-//         Some(c) => c,
-//         None => {
-//             return Err(DownloadError("Failed to get cmd config".to_owned()));
-//         }
-//     };
-//     CommandBuilder::new(cmd.cmd)
-//         .sub("{magnet}", &item.magnet_link)
-//         .sub("{torrent}", &item.torrent_link)
-//         .sub("{title}", &item.title)
-//         .sub("{file}", &item.file_name)
-//         .run(cmd.shell_cmd)
-//         .map_err(|e| DownloadError(e.to_string()))
-// }
-//
-// pub fn success_msg() -> &'static str {
-//     "Successfully ran command"
-// }

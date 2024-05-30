@@ -349,55 +349,71 @@ impl App {
                 continue; // Redraw
             }
 
-            tokio::select! {
-                biased;
-                Some(evt) = rx_evt.recv() => {
-                    #[cfg(unix)]
-                    self.on(&evt, ctx, terminal);
-                    #[cfg(not(unix))]
-                    self.on::<B>(&evt, ctx);
+            loop {
+                tokio::select! {
+                    biased;
+                    Some(evt) = rx_evt.recv() => {
+                        #[cfg(unix)]
+                        self.on(&evt, ctx, terminal);
+                        #[cfg(not(unix))]
+                        self.on::<B>(&evt, ctx);
 
-                    last_time = None;
-                },
-                Some(rt) = rx_res.recv() => {
-                    match rt {
-                        Ok(rt) => ctx.results = rt,
-                        Err(e) => {
-                            // Clear results on error
-                            ctx.results = Results::default();
-                            ctx.show_error(e);
-                        },
-                    }
-                    ctx.load_type = None;
-                    last_load_abort = None;
-                    last_time = None;
-                },
-                Some(dl) = rx_dl.recv() => {
-                    if dl.batch {
-                        for id in dl.success_ids.iter() {
-                            ctx.batch.retain(|i| i.id.ne(id));
+                        last_time = None;
+                        break;
+                    },
+                    Some(rt) = rx_res.recv() => {
+                        match rt {
+                            Ok(rt) => ctx.results = rt,
+                            Err(e) => {
+                                // Clear results on error
+                                ctx.results = Results::default();
+                                ctx.show_error(e);
+                            },
                         }
-                    }
-                    if !dl.success_ids.is_empty() {
-                        if let Some(notif) = dl.success_msg {
-                            ctx.notify(notif);
+                        ctx.load_type = None;
+                        last_load_abort = None;
+                        last_time = None;
+                        break;
+                    },
+                    Some(dl) = rx_dl.recv() => {
+                        if dl.batch {
+                            for id in dl.success_ids.iter() {
+                                ctx.batch.retain(|i| i.id.ne(id));
+                            }
                         }
+                        if !dl.success_ids.is_empty() {
+                            if let Some(notif) = dl.success_msg {
+                                ctx.notify(notif);
+                            }
+                        }
+                        for e in dl.errors.iter() {
+                            ctx.show_error(e)
+                        }
+                        break;
                     }
-                    for e in dl.errors.iter() {
-                        ctx.show_error(e)
+                    _ = async{}, if self.widgets.notification.is_animating() => {
+                        if let Ok(size) = terminal.size() {
+                            let now = Instant::now();
+                            ctx.deltatime = (now - last_time.unwrap_or(now)).as_secs_f64();
+                            last_time = Some(now);
+
+                            if self.widgets.notification.update(ctx.deltatime, size) {
+                                break;
+                            }
+                        } else {
+                            break;
+                        }
+                    },
+                    else => {
+                        break;
                     }
-                }
-                _ = async{}, if self.widgets.notification.is_animating() => {
-                },
-                else => {
-                    break;
-                }
-            };
-            if self.widgets.notification.is_animating() {
-                let now = Instant::now();
-                ctx.deltatime = (now - last_time.unwrap_or(now)).as_secs_f64();
-                last_time = Some(now);
+                };
             }
+            // if self.widgets.notification.is_animating() {
+            //     let now = Instant::now();
+            //     ctx.deltatime = (now - last_time.unwrap_or(now)).as_secs_f64();
+            //     last_time = Some(now);
+            // }
         }
         Ok(())
     }

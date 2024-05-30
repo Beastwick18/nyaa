@@ -21,6 +21,7 @@ use super::{border_block, centered_rect, TitlePosition, VirtualStatefulTable};
 pub struct ResultsWidget {
     pub table: VirtualStatefulTable,
     control_space: bool,
+    draw_count: usize,
 }
 
 impl ResultsWidget {
@@ -42,6 +43,7 @@ impl Default for ResultsWidget {
         ResultsWidget {
             table: VirtualStatefulTable::new(),
             control_space: false,
+            draw_count: 0,
         }
     }
 }
@@ -143,12 +145,12 @@ impl super::Widget for ResultsWidget {
         }
 
         // if let Some(notif) = ctx.notification.clone() {
-        // if let Some((bl, area)) =
-        //     TitlePosition::BottomLeft.try_widget(format!("{} draws", self.draw_count), area, false)
-        // {
-        //     f.render_widget(bl, area);
-        //     self.draw_count += 1;
-        // }
+        if let Some((bl, area)) =
+            TitlePosition::BottomLeft.try_widget(format!("{} draws", self.draw_count), area, false)
+        {
+            f.render_widget(bl, area);
+            self.draw_count += 1;
+        }
         // }
     }
 

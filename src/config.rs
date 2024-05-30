@@ -11,6 +11,7 @@ use crate::{
     clip::ClipboardConfig,
     source::{SourceConfig, Sources},
     theme::{self, Theme},
+    widget::notifications::NotificationConfig,
 };
 use directories::ProjectDirs;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -29,6 +30,8 @@ pub struct Config {
     pub request_proxy: Option<String>,
     pub timeout: u64, // TODO: treat as "global" timeout, can overwrite per-source
 
+    #[serde(rename = "notifications")]
+    pub notifications: Option<NotificationConfig>,
     #[serde(rename = "clipboard")]
     pub clipboard: Option<ClipboardConfig>,
     #[serde(rename = "client")]
@@ -46,6 +49,7 @@ impl Default for Config {
             date_format: None,
             request_proxy: None,
             timeout: 30,
+            notifications: None,
             clipboard: None,
             client: ClientConfig::default(),
             sources: SourceConfig::default(),
@@ -80,6 +84,9 @@ impl Config {
 
         ctx.src.load_config(&mut ctx.config.sources);
         ctx.src.apply(ctx, w);
+        if let Some(conf) = ctx.config.notifications {
+            w.notification.load_config(&conf);
+        }
 
         ctx.client.load_config(ctx);
         theme::load_user_themes(ctx)?;

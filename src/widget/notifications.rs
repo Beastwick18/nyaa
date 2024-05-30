@@ -2,23 +2,49 @@ use std::ops::ControlFlow;
 
 use crossterm::event::Event;
 use ratatui::{layout::Rect, Frame};
+use serde::{Deserialize, Serialize};
 
 use crate::app::Context;
 
-use super::{notify_box::NotifyBox, Widget};
+use super::{
+    notify_box::{NotifyBox, NotifyPosition},
+    Widget,
+};
 
-#[derive(Default)]
+#[derive(Clone, Copy, Serialize, Deserialize)]
+pub struct NotificationConfig {
+    pub position: Option<NotifyPosition>,
+    pub duration: Option<f64>,
+}
+
 pub struct NotificationWidget {
-    pub notifs: Vec<NotifyBox>,
+    notifs: Vec<NotifyBox>,
+    duration: f64,
+    position: NotifyPosition,
+}
+
+impl Default for NotificationWidget {
+    fn default() -> Self {
+        Self {
+            notifs: vec![],
+            duration: 5.0,
+            position: NotifyPosition::BottomRight,
+        }
+    }
 }
 
 impl NotificationWidget {
+    pub fn load_config(&mut self, conf: &NotificationConfig) {
+        self.position = conf.position.unwrap_or(self.position);
+        self.duration = conf.duration.unwrap_or(self.duration).max(0.01);
+    }
+
     pub fn is_animating(&self) -> bool {
         !self.notifs.is_empty()
     }
 
     pub fn add_notification(&mut self, notif: String) {
-        let mut new_notif = NotifyBox::new(notif, 5.0);
+        let mut new_notif = NotifyBox::new(notif, self.duration, self.position);
 
         self.notifs.sort_unstable_by_key(|a| a.offset());
         let first_gap = self.notifs.iter().try_fold(0, |prev, x| {
@@ -44,6 +70,14 @@ impl NotificationWidget {
 
     pub fn dismiss_all(&mut self) {
         self.notifs.iter_mut().for_each(|n| n.time = 1.0);
+    }
+
+    pub fn update(&mut self, deltatime: f64, area: Rect) -> bool {
+        let mut res = false;
+        for n in self.notifs.iter_mut() {
+            res = res || n.update(deltatime, area);
+        }
+        res
     }
 }
 

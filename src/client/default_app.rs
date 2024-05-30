@@ -60,21 +60,3 @@ impl DownloadClient for DefaultAppClient {
         .await
     }
 }
-
-// pub async fn download(item: Item, conf: ClientConfig) -> Result<(), DownloadError> {
-//     let conf = match conf.default_app.to_owned() {
-//         Some(c) => c,
-//         None => {
-//             return Err(DownloadError("Failed to get default app config".to_owned()));
-//         }
-//     };
-//     let link = match conf.use_magnet {
-//         None | Some(true) => item.magnet_link.to_owned(),
-//         Some(false) => item.torrent_link.to_owned(),
-//     };
-//     open::that_detached(&link).map_err(|e| DownloadError(e.to_string()))
-// }
-//
-// pub fn success_msg() -> &'static str {
-//     "Successfully opened link in default app"
-// }
