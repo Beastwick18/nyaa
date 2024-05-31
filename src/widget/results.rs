@@ -35,6 +35,16 @@ impl ResultsWidget {
             }
         }
     }
+
+    fn try_select(&self, ctx: &mut Context) {
+        if let Some(sel) = self.table.state.selected() {
+            if let Some(item) = ctx.results.response.items.get(sel) {
+                if !ctx.batch.iter().any(|s| s.id == item.id) {
+                    ctx.batch.push(item.to_owned());
+                }
+            }
+        }
+    }
 }
 
 impl Default for ResultsWidget {
@@ -274,12 +284,12 @@ impl super::Widget for ResultsWidget {
                         ctx.notify(format!("Opened {}", link));
                     }
                 }
-                (Char('y'), &KeyModifiers::NONE) => ctx.mode = Mode::KeyCombo(vec!['y']),
+                (Char('y'), &KeyModifiers::NONE) => ctx.mode = Mode::KeyCombo("y".to_string()),
                 (Char(' '), &KeyModifiers::CONTROL) => {
                     self.control_space = !self.control_space;
                     if self.control_space {
                         ctx.notify("Entered VISUAL mode");
-                        self.try_select_toggle(ctx);
+                        self.try_select(ctx);
                     } else {
                         ctx.notify("Exited VISUAL mode");
                     }

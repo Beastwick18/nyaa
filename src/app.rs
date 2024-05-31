@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, error::Error, fmt::Display, time::Instant};
+use std::{error::Error, fmt::Display, time::Instant};
 
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use indexmap::IndexMap;
@@ -76,7 +76,7 @@ impl Display for LoadType {
 pub enum Mode {
     Normal,
     Loading(LoadType),
-    KeyCombo(Vec<char>),
+    KeyCombo(String),
     Search,
     Category,
     Sort(SortDir),
@@ -124,7 +124,6 @@ pub struct Context {
     pub src_info: SourceInfo,
     pub theme: Theme,
     pub config: Config,
-    pub errors: VecDeque<String>,
     pub page: usize,
     pub user: Option<String>,
     pub src: Sources,
@@ -133,6 +132,7 @@ pub struct Context {
     pub last_key: String,
     pub results: Results,
     pub deltatime: f64,
+    errors: Vec<String>,
     notifications: Vec<String>,
     failed_config_load: bool,
     should_quit: bool,
@@ -141,11 +141,11 @@ pub struct Context {
 
 impl Context {
     pub fn show_error<S: Display>(&mut self, error: S) {
-        self.errors.push_back(error.to_string());
+        self.errors.push(error.to_string());
     }
 
-    pub fn notify<S: Display>(&mut self, notification: S) {
-        self.notifications.push(notification.to_string());
+    pub fn notify<S: Display>(&mut self, msg: S) {
+        self.notifications.push(msg.to_string());
     }
 
     pub fn dismiss_notifications(&mut self) {
@@ -174,8 +174,8 @@ impl Default for Context {
             src_info: NyaaHtmlSource::info(),
             theme: Theme::default(),
             config: Config::default(),
-            errors: VecDeque::new(),
-            notifications: vec![],
+            errors: Vec::new(),
+            notifications: Vec::new(),
             page: 1,
             user: None,
             src: Sources::Nyaa,
@@ -413,20 +413,20 @@ impl App {
             [Constraint::Length(3), Constraint::Min(1)],
         )
         .split(f.size());
-        let layout_horizontal = Layout::new(
-            Direction::Horizontal,
-            match ctx.mode {
-                Mode::Batch => [Constraint::Ratio(1, 2), Constraint::Ratio(1, 2)],
-                _ => [Constraint::Ratio(3, 4), Constraint::Ratio(1, 4)],
-            },
-        )
-        .split(layout_vertical[1]);
 
         self.widgets.search.draw(f, ctx, layout_vertical[0]);
         // Dont draw batch pane if empty
         match ctx.batch.is_empty() {
             true => self.widgets.results.draw(f, ctx, layout_vertical[1]),
             false => {
+                let layout_horizontal = Layout::new(
+                    Direction::Horizontal,
+                    match ctx.mode {
+                        Mode::Batch => [Constraint::Ratio(1, 2), Constraint::Ratio(1, 2)],
+                        _ => [Constraint::Ratio(3, 4), Constraint::Ratio(1, 4)],
+                    },
+                )
+                .split(layout_vertical[1]);
                 self.widgets.results.draw(f, ctx, layout_horizontal[0]);
                 self.widgets.batch.draw(f, ctx, layout_horizontal[1]);
             }
@@ -477,7 +477,7 @@ impl App {
             }
             match ctx.mode.to_owned() {
                 Mode::KeyCombo(keys) => {
-                    ctx.last_key = keys.into_iter().collect::<String>();
+                    ctx.last_key = keys;
                 }
                 _ => ctx.last_key = key_to_string(*code, *modifiers),
             };
@@ -545,7 +545,7 @@ impl App {
         }
     }
 
-    fn on_combo(&mut self, ctx: &mut Context, mut keys: Vec<char>, e: &Event) {
+    fn on_combo(&mut self, ctx: &mut Context, mut keys: String, e: &Event) {
         if let Event::Key(KeyEvent {
             code,
             kind: KeyEventKind::Press,
@@ -563,7 +563,7 @@ impl App {
                 _ => {}
             }
         }
-        match keys[..] {
+        match keys.chars().collect::<Vec<char>>()[..] {
             ['y', c] => {
                 let s = self.widgets.results.table.state.selected().unwrap_or(0);
                 match ctx.results.response.items.get(s) {
@@ -588,6 +588,6 @@ impl App {
             }
             _ => ctx.mode = Mode::KeyCombo(keys.to_owned()),
         }
-        ctx.last_key = keys.into_iter().collect();
+        ctx.last_key = keys;
     }
 }
