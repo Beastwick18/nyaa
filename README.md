@@ -115,10 +115,12 @@ Like modal text editors such as Vim, there are several modes. Each have their ow
 
 - <kbd>hjkl</kbd> or arrow keys for general navigation
 - <kbd>/</kbd> or <kbd>i</kbd> to search
-- <kbd>c</kbd> to open category popup
-- <kbd>s</kbd> to open sort popup
-- <kbd>f</kbd> to open filter popup
-- <kbd>t</kbd> to open theme popup
+- <kbd>Ctrl</kbd>-<kbd>s</kbd> to change sources
+- <kbd>d</kbd> to change download client
+- <kbd>c</kbd> to change category
+- <kbd>s</kbd> to change sort (<kbd>S</kbd> for reverse sort)
+- <kbd>f</kbd> to change filter
+- <kbd>t</kbd> to change theme
 - <kbd>n</kbd>, <kbd>p</kbd> or <kbd>l</kbd>, <kbd>h</kbd> for next and previous page
 - <kbd>q</kbd> to quit
 
@@ -126,9 +128,10 @@ For a list of all modes and their respective keybinds, check [Keybinds](https://
 
 ## 🌐 Proxies
 
-If `nyaa.si` is not accessible in your region, try one of the [proxies](https://nyaatorrents.info/#proxy). Once you find one that works, replace the value for `base_url` in the default config with the working proxy url. I would recommend `nyaa.land`, as it is very compatible, and usually working. Here's what the config for `nyaa.land` would look like:
+If either `nyaa.si` or `torrentgalaxy` is not accessible in your region, try one of the proxies ([nyaa proxies](https://nyaatorrents.info/#proxy), [TorrentGalaxy proxies](https://torrends.to/proxy/torrentgalaxy)). Once you find one that works, replace the value for `base_url` in the source config with the working proxy url. For `nyaa`, I would recommend `nyaa.land`, as it is very compatible, and usually working. Here's what the config for `nyaa.land` would look like:
 
 ```toml
+[source.nyaa]
 base_url = 'nyaa.land'
 ```
 
@@ -138,7 +141,7 @@ If you have your own proxy setup, you use it by adding:
 request_proxy = "localhost:8118"
 ```
 
-to your config. Replace the value with the IP and port for your proxy.
+to the top of your config. Replace the value with the IP and port for your proxy.
 
 ## ⚙️ Configuration
 
@@ -151,42 +154,39 @@ and on windows is
 `C:\Users\%USERNAME%\AppData\Roaming\nyaa\config\config.toml`
 
 ```toml
-default_category = "AllCategories"
-default_filter = "NoFilter"
-default_sort = "Date"
-default_search = ""
 theme = "Default"
-source = "NyaaHtml"
-download_client = "transmission"
-date_format = "%Y-%m-%d %H:%M"
-base_url = "https://nyaa.si/"
-request_proxy = "localhost:8118" # None by default
-timeout = 30
+default_source = "Nyaa"
+download_client = "Cmd"
+date_format = "%Y-%m-%d %H:%M" # Unset by default
+request_proxy = "localhost:8118" # Unset by default
+timeout = 30 # Timeout for requests, measured in seconds
+
+[source.nyaa]
+...
+
+[source.torrentgalaxy]
+...
+
+[client.cmd]
+...
 
 # ...
 ```
 
-`default_category` refers to the category selected by default when the app is opened. Possible values are defined in the [Wiki](https://github.com/Beastwick18/nyaa/wiki/Category-Values).
+- `theme` refers to the theme selected by default when the app is opened. Possible values are `Default`, `Dracula`, `Gruvbox`, or `Catppuccin Macchiato`. Custom themes coming soon!
 
-`default_filter` refers to the filter selected by default when the app is opened. Possible values are `NoFilter`, `NoRemakes`, `TrustedOnly` or `Batches`.
+- `default_source` refers to the source selected by default once the app is opened. Possible values are `Nyaa`, `TorrentGalaxy`, or `Sukebei`.
+  - Each source has its own configuration. Check the [wiki]() for more information on each sources config.
 
-`default_sort` refers to the sort selected by default when the app is opened. Possible values are `Date`, `Downloads`, `Seeders`, `Leechers`, or `Size`.
+- `download_client` refers to the download client selected by default once the app is opened.
+  - Each download client has its own configuration. Check the [wiki](https://github.com/Beastwick18/nyaa/wiki#download-clients) for more information on each download clients config.
 
-`default_search` refers to the search entered once the app is opened.
+- `date_format` refers to the formatting of the dates in the Date column of the results table. Refer to [chrono's documentation](https://docs.rs/chrono/latest/chrono/format/strftime/index.html) for information on how to format the date.
 
-`theme` refers to the theme selected by default when the app is opened. Possible values are `Default`, `Dracula`, `Gruvbox`, or `Catppuccin Macchiato`. Custom themes coming soon!
+- `request_proxy` refers to the url to proxy request through. This is not to be confused with _nyaa_ proxies, which are defined with `base_url`.
 
-`source` refers to the source selected by default once the app is opened. Possible values are `NyaaHtml` and `NyaaRss`.
+- `timeout` refers to how long the program will wait for a search request before it times out. This value is measured in seconds. You may want to increase this if your request times are usually long.
 
-`download_client` refers to the download client selected by default once the app is opened. Possible values are defined in the [Wiki](https://github.com/Beastwick18/nyaa/wiki)
-
-`date_format` refers to the formatting of the dates in the Date column of the results table. Refer to [chrono's documentation](https://docs.rs/chrono/latest/chrono/format/strftime/index.html) for information on how to format the date.
-
-`base_url` refers to the url used to make requests. Change this to any nyaa mirror url in the format: `http(s)://nyaa.si` or `nyaa.si`
-
-`request_proxy` refers to the url to proxy request through. This is not to be confused with _nyaa_ proxies, which are defined with `base_url`.
-
-`timeout` refers to how long the program will wait for a search request before it times out. This value is measured in seconds. You may want to increase this if your request times are usually long.
 
 ### Download Client Integration
 

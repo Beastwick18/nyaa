@@ -1,7 +1,9 @@
 use std::{env, io::stdout};
 
 use app::App;
+use config::Config;
 use ratatui::{backend::CrosstermBackend, Terminal};
+use sync::AppSync;
 
 pub mod app;
 pub mod client;
@@ -38,8 +40,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut terminal = Terminal::new(backend)?;
 
     let mut app = App::default();
+    let sync = AppSync {};
 
-    app.run_app::<_, sync::AppSync>(&mut terminal).await?;
+    app.run_app::<_, _, Config, false>(&mut terminal, sync)
+        .await?;
 
     util::term::reset_terminal()?;
     terminal.show_cursor()?;

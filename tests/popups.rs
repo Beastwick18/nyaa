@@ -1,15 +1,14 @@
 use crossterm::event::{KeyCode, KeyModifiers};
 use ratatui::buffer::Buffer;
 
-use crate::common::{clear_events, reset_buffer, run_app, EventBuilder};
+use crate::common::{reset_buffer, run_app, EventBuilder};
 
 #[allow(dead_code)]
 mod common;
 
 #[tokio::test]
 async fn test_categories() {
-    clear_events();
-    EventBuilder::new()
+    let sync = EventBuilder::new()
         .string('c')
         .back_tab()
         .tab()
@@ -19,10 +18,10 @@ async fn test_categories() {
         .enter()
         .string('c')
         .quit()
-        .set_events();
+        .build();
 
     assert_eq!(
-        reset_buffer(&run_app(60, 22).await.unwrap()),
+        reset_buffer(&run_app(sync, 60, 22).await.unwrap()),
         Buffer::with_lines([
             "┌Search──────────────────────────────└───────────────────┘p┐",
             "│                                                          │",
@@ -52,17 +51,16 @@ async fn test_categories() {
 
 #[tokio::test]
 async fn test_filters() {
-    clear_events();
-    EventBuilder::new()
+    let sync = EventBuilder::new()
         .string('f')
         .string("jj")
         .enter()
         .string('f')
         .quit()
-        .set_events();
+        .build();
 
     assert_eq!(
-        reset_buffer(&run_app(60, 22).await.unwrap()),
+        reset_buffer(&run_app(sync, 60, 22).await.unwrap()),
         Buffer::with_lines([
             "┌Search─────────────────────────└────────────────────────┘p┐",
             "│                                                          │",
@@ -92,17 +90,16 @@ async fn test_filters() {
 
 #[tokio::test]
 async fn test_sort() {
-    clear_events();
-    EventBuilder::new()
+    let sync = EventBuilder::new()
         .string('s')
         .string("jj")
         .enter()
         .string('s')
         .quit()
-        .set_events();
+        .build();
 
     assert_eq!(
-        reset_buffer(&run_app(60, 22).await.unwrap()),
+        reset_buffer(&run_app(sync, 60, 22).await.unwrap()),
         Buffer::with_lines([
             "┌Search──────────────────────────────Pr└─────────────────┘p┐",
             "│                                                          │",
@@ -132,17 +129,16 @@ async fn test_sort() {
 
 #[tokio::test]
 async fn test_sort_reverse() {
-    clear_events();
-    EventBuilder::new()
+    let sync = EventBuilder::new()
         .string('S')
         .string("jj")
         .enter()
         .string('S')
         .quit()
-        .set_events();
+        .build();
 
     assert_eq!(
-        reset_buffer(&run_app(60, 22).await.unwrap()),
+        reset_buffer(&run_app(sync, 60, 22).await.unwrap()),
         Buffer::with_lines([
             "┌Search──────────────────────────────Pr└─────────────────┘p┐",
             "│                                                          │",
@@ -172,16 +168,15 @@ async fn test_sort_reverse() {
 
 #[tokio::test]
 async fn test_themes() {
-    clear_events();
-    EventBuilder::new()
+    let sync = EventBuilder::new()
         .string('t')
         .string("jjj")
         .enter()
         .quit()
-        .set_events();
+        .build();
 
     assert_eq!(
-        reset_buffer(&run_app(60, 22).await.unwrap()),
+        reset_buffer(&run_app(sync, 60, 22).await.unwrap()),
         Buffer::with_lines([
             "╭Search──────────╰───────────────────────────────────────╯p╮",
             "│                                                          │",
@@ -211,17 +206,16 @@ async fn test_themes() {
 
 #[tokio::test]
 async fn test_download_client() {
-    clear_events();
-    EventBuilder::new()
+    let sync = EventBuilder::new()
         .string('d')
         .string("jjj")
         .enter()
         .string('d')
         .quit()
-        .set_events();
+        .build();
 
     assert_eq!(
-        reset_buffer(&run_app(60, 22).await.unwrap()),
+        reset_buffer(&run_app(sync, 60, 22).await.unwrap()),
         Buffer::with_lines([
             "┌Search─────────└────────────────────────────────────────┘p┐",
             "│                                                          │",
@@ -251,17 +245,16 @@ async fn test_download_client() {
 
 #[tokio::test]
 async fn test_source() {
-    clear_events();
-    EventBuilder::new()
+    let sync = EventBuilder::new()
         .key_mod(KeyCode::Char('s'), KeyModifiers::CONTROL)
         .string("j")
         .enter()
         .key_mod(KeyCode::Char('s'), KeyModifiers::CONTROL)
         .quit()
-        .set_events();
+        .build();
 
     assert_eq!(
-        reset_buffer(&run_app(60, 22).await.unwrap()),
+        reset_buffer(&run_app(sync, 60, 22).await.unwrap()),
         Buffer::with_lines([
             "┌Search───────────────────────└──────────────────────────┘p┐",
             "│                                                          │",
@@ -291,17 +284,16 @@ async fn test_source() {
 
 #[tokio::test]
 async fn test_user() {
-    clear_events();
-    EventBuilder::new()
+    let sync = EventBuilder::new()
         .string('u')
         .string("[subsplease] reallylongnamethatshouldcutoff")
         .enter()
         .string('u')
         .quit()
-        .set_events();
+        .build();
 
     assert_eq!(
-        reset_buffer(&run_app(60, 15).await.unwrap()),
+        reset_buffer(&run_app(sync, 60, 15).await.unwrap()),
         Buffer::with_lines([
             "┌Search──────────────────────────────Press F1 or ? for help┐",
             "│                                                          │",
@@ -324,15 +316,14 @@ async fn test_user() {
 
 #[tokio::test]
 async fn test_page() {
-    clear_events();
-    EventBuilder::new()
+    let sync = EventBuilder::new()
         .key_mod(KeyCode::Char('p'), KeyModifiers::CONTROL)
         .string("test1test!2@#)(*{})")
         .quit()
-        .set_events();
+        .build();
 
     assert_eq!(
-        reset_buffer(&run_app(60, 15).await.unwrap()),
+        reset_buffer(&run_app(sync, 60, 15).await.unwrap()),
         Buffer::with_lines([
             r#"┌Search──────────────────────────────Press F1 or ? for help┐"#,
             r#"│                                                          │"#,
@@ -352,17 +343,16 @@ async fn test_page() {
         ])
     );
 
-    clear_events();
-    EventBuilder::new()
+    let sync = EventBuilder::new()
         .key_mod(KeyCode::Char('p'), KeyModifiers::CONTROL)
         .string("test1test!2@#)(*{})")
         .enter()
         .key_mod(KeyCode::Char('p'), KeyModifiers::CONTROL)
         .quit()
-        .set_events();
+        .build();
 
     assert_eq!(
-        reset_buffer(&run_app(60, 15).await.unwrap()),
+        reset_buffer(&run_app(sync, 60, 15).await.unwrap()),
         Buffer::with_lines([
             r#"┌Search──────────────────────────────Press F1 or ? for help┐"#,
             r#"│                                                          │"#,

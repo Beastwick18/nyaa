@@ -1,22 +1,23 @@
 use ratatui::buffer::Buffer;
 
-use crate::common::{clear_events, reset_buffer, run_app, EventBuilder};
+use crate::common::{reset_buffer, run_app, EventBuilder};
 
 #[allow(dead_code)]
 mod common;
 
 #[tokio::test]
 async fn test_search() {
-    clear_events();
-    EventBuilder::new()
+    let sync = EventBuilder::new()
         .string("/one punch man")
         .esc()
         .string('c')
         .quit()
-        .set_events();
+        .build();
+
+    let res = reset_buffer(&run_app(sync, 60, 22).await.unwrap());
 
     assert_eq!(
-        reset_buffer(&run_app(60, 22).await.unwrap()),
+        res,
         Buffer::with_lines([
             "┌Search──────────────────────────────Press F1 or ? for help┐",
             "│one punch man                                             │",

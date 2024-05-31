@@ -12,7 +12,7 @@ use tokio::{sync::mpsc, task::AbortHandle};
 use crate::{
     client::{Client, DownloadResult},
     clip,
-    config::Config,
+    config::{Config, ConfigManager},
     results::Results,
     source::{nyaa_html::NyaaHtmlSource, request_client, Item, Source, SourceInfo, Sources},
     sync::{EventSync, SearchQuery},
@@ -93,20 +93,21 @@ pub enum Mode {
 impl Display for Mode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let s = match self {
-            Mode::Normal | Mode::KeyCombo(_) => "Normal".to_owned(),
-            Mode::Batch => "Batch".to_owned(),
-            Mode::Search => "Search".to_owned(),
-            Mode::Category => "Category".to_owned(),
-            Mode::Sort(_) => "Sort".to_owned(),
-            Mode::Filter => "Filter".to_owned(),
-            Mode::Theme => "Theme".to_owned(),
-            Mode::Sources => "Sources".to_owned(),
-            Mode::Clients => "Clients".to_owned(),
-            Mode::Loading(_) => "Loading".to_owned(),
-            Mode::Page => "Page".to_owned(),
-            Mode::User => "User".to_owned(),
-            Mode::Help => "Help".to_owned(),
-        };
+            Mode::Normal | Mode::KeyCombo(_) => "Normal",
+            Mode::Batch => "Batch",
+            Mode::Search => "Search",
+            Mode::Category => "Category",
+            Mode::Sort(_) => "Sort",
+            Mode::Filter => "Filter",
+            Mode::Theme => "Theme",
+            Mode::Sources => "Sources",
+            Mode::Clients => "Clients",
+            Mode::Loading(_) => "Loading",
+            Mode::Page => "Page",
+            Mode::User => "User",
+            Mode::Help => "Help",
+        }
+        .to_owned();
         write!(f, "{}", s)
     }
 }
@@ -137,6 +138,7 @@ pub struct Context {
     failed_config_load: bool,
     should_quit: bool,
     should_dismiss_notifications: bool,
+    should_save_config: bool,
 }
 
 impl Context {
@@ -153,10 +155,7 @@ impl Context {
     }
 
     pub fn save_config(&mut self) -> Result<(), Box<dyn Error>> {
-        #[cfg(not(feature = "integration-test"))]
-        if !self.failed_config_load {
-            return self.config.store();
-        }
+        self.should_save_config = true;
         Ok(())
     }
 
@@ -187,6 +186,7 @@ impl Default for Context {
             failed_config_load: true,
             should_quit: false,
             should_dismiss_notifications: false,
+            should_save_config: false,
         }
     }
 }
@@ -209,9 +209,10 @@ pub struct Widgets {
 }
 
 impl App {
-    pub async fn run_app<B: Backend, S: EventSync>(
+    pub async fn run_app<B: Backend, S: EventSync + Clone, C: ConfigManager, const TEST: bool>(
         &mut self,
         terminal: &mut Terminal<B>,
+        sync: S,
     ) -> Result<(), Box<dyn Error>> {
         let ctx = &mut Context::default();
 
@@ -220,9 +221,9 @@ impl App {
         let (tx_evt, mut rx_evt) = mpsc::channel::<Event>(100);
         let (tx_dl, mut rx_dl) = mpsc::channel::<DownloadResult>(100);
 
-        tokio::task::spawn(S::read_event_loop(tx_evt));
+        tokio::task::spawn(sync.clone().read_event_loop(tx_evt));
 
-        match Config::load() {
+        match C::load() {
             Ok(config) => {
                 ctx.failed_config_load = false;
                 if let Err(e) = config.apply(ctx, &mut self.widgets) {
@@ -244,6 +245,11 @@ impl App {
         let mut last_time: Option<Instant> = None;
 
         while !ctx.should_quit {
+            if ctx.should_save_config {
+                if let Err(e) = C::store(&ctx.config) {
+                    ctx.show_error(e);
+                }
+            }
             if !ctx.notifications.is_empty() {
                 ctx.notifications
                     .clone()
@@ -279,7 +285,7 @@ impl App {
                             .selected()
                             .and_then(|i| ctx.results.response.items.get(i))
                         {
-                            tokio::spawn(S::download(
+                            tokio::spawn(sync.clone().download(
                                 tx_dl.clone(),
                                 false,
                                 vec![i.to_owned()],
@@ -292,7 +298,7 @@ impl App {
                         continue;
                     }
                     LoadType::Batching => {
-                        tokio::spawn(S::download(
+                        tokio::spawn(sync.clone().download(
                             tx_dl.clone(),
                             true,
                             ctx.batch.clone(),
@@ -329,7 +335,7 @@ impl App {
                     user: ctx.user.clone(),
                 };
 
-                let task = tokio::spawn(S::load_results(
+                let task = tokio::spawn(sync.clone().load_results(
                     tx_res.clone(),
                     load_type,
                     ctx.src,
@@ -348,9 +354,9 @@ impl App {
                     biased;
                     Some(evt) = rx_evt.recv() => {
                         #[cfg(unix)]
-                        self.on(&evt, ctx, terminal);
+                        self.on::<B, TEST>(&evt, ctx, terminal);
                         #[cfg(not(unix))]
-                        self.on::<B>(&evt, ctx);
+                        self.on::<B, TEST>(&evt, ctx);
 
                         last_time = None;
                         break;
@@ -446,15 +452,16 @@ impl App {
         self.widgets.notification.draw(f, ctx, f.size());
     }
 
-    fn on<B: Backend>(
+    fn on<B: Backend, const TEST: bool>(
         &mut self,
         evt: &Event,
         ctx: &mut Context,
         #[cfg(unix)] terminal: &mut Terminal<B>,
     ) {
-        #[cfg(feature = "integration-test")]
-        if let Event::FocusLost = evt {
-            ctx.quit();
+        if TEST {
+            if let Event::FocusLost = evt {
+                ctx.quit();
+            }
         }
 
         if let Event::Key(KeyEvent {
@@ -563,6 +570,7 @@ impl App {
                 _ => {}
             }
         }
+        ctx.last_key.clone_from(&keys);
         match keys.chars().collect::<Vec<char>>()[..] {
             ['y', c] => {
                 let s = self.widgets.results.table.state.selected().unwrap_or(0);
@@ -574,20 +582,20 @@ impl App {
                             'p' => item.post_link.to_owned(),
                             _ => return,
                         };
-                        ctx.mode = Mode::Normal;
                         match clip::copy_to_clipboard(link.to_owned(), ctx.config.clipboard.clone())
                         {
                             Ok(_) => ctx.notify(format!("Copied \"{}\" to clipboard", link)),
                             Err(e) => ctx.show_error(e),
                         }
                     }
-                    None => ctx.show_error(
-                        "Failed to copy:\nFailed to get torrent link for selected item",
-                    ),
+                    None if ['t', 'm', 'p'].contains(&c) => {
+                        ctx.show_error("Failed to copy:\nFailed to get item")
+                    }
+                    None => {}
                 }
+                ctx.mode = Mode::Normal;
             }
-            _ => ctx.mode = Mode::KeyCombo(keys.to_owned()),
+            _ => ctx.mode = Mode::KeyCombo(keys),
         }
-        ctx.last_key = keys;
     }
 }

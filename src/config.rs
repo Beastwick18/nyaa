@@ -16,6 +16,12 @@ use crate::{
 use directories::ProjectDirs;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
+pub trait ConfigManager {
+    fn load() -> Result<Config, Box<dyn Error>>;
+    fn store(cfg: &Config) -> Result<(), Box<dyn Error>>;
+    fn path() -> Result<PathBuf, Box<dyn Error>>;
+}
+
 pub static CONFIG_FILE: &str = "config";
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -57,16 +63,19 @@ impl Default for Config {
     }
 }
 
-impl Config {
-    pub fn load() -> Result<Config, Box<dyn Error>> {
+impl ConfigManager for Config {
+    fn load() -> Result<Config, Box<dyn Error>> {
         get_configuration_file_path(APP_NAME, CONFIG_FILE).and_then(load_path)
     }
-    pub fn store(&self) -> Result<(), Box<dyn Error>> {
-        get_configuration_file_path(APP_NAME, CONFIG_FILE).and_then(|p| store_path(p, self))
+    fn store(cfg: &Config) -> Result<(), Box<dyn Error>> {
+        get_configuration_file_path(APP_NAME, CONFIG_FILE).and_then(|p| store_path(p, cfg))
     }
-    pub fn path() -> Result<PathBuf, Box<dyn Error>> {
+    fn path() -> Result<PathBuf, Box<dyn Error>> {
         get_configuration_folder(APP_NAME)
     }
+}
+
+impl Config {
     pub fn apply(&self, ctx: &mut Context, w: &mut Widgets) -> Result<(), Box<dyn Error>> {
         ctx.config = self.clone();
         w.search.input.cursor = w.search.input.input.len();
@@ -90,7 +99,8 @@ impl Config {
         }
 
         ctx.client.load_config(ctx);
-        theme::load_user_themes(ctx)?;
+        let path = Self::path().map_err(|e| e.to_string())?;
+        theme::load_user_themes(ctx, path)?;
 
         // Load defaults for default source
         Ok(())
@@ -152,17 +162,13 @@ pub fn get_configuration_file_path<'a>(
 }
 
 pub fn get_configuration_folder(app_name: &str) -> Result<PathBuf, Box<dyn Error>> {
-    if cfg!(feature = "integration-test") {
-        Ok(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/config"))
-    } else {
-        let project = ProjectDirs::from("rs", "", app_name)
-            .ok_or_else(|| "could not determine home directory path".to_string())?;
+    let project = ProjectDirs::from("rs", "", app_name)
+        .ok_or_else(|| "could not determine home directory path".to_string())?;
 
-        let path = project.config_dir();
-        let config_dir_str = path
-            .to_str()
-            .ok_or_else(|| format!("{path:?} is not valid Unicode"))?;
+    let path = project.config_dir();
+    let config_dir_str = path
+        .to_str()
+        .ok_or_else(|| format!("{path:?} is not valid Unicode"))?;
 
-        Ok(config_dir_str.into())
-    }
+    Ok(config_dir_str.into())
 }

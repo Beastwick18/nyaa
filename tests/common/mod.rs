@@ -1,9 +1,10 @@
-use std::{error::Error, sync::Mutex};
+use std::{error::Error, path::PathBuf};
 
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 use nyaa::{
     app::App,
     client::{Client, ClientConfig, DownloadResult},
+    config::{Config, ConfigManager},
     results::Results,
     source::Item,
     sync::EventSync,
@@ -15,7 +16,12 @@ use ratatui::{
     Terminal,
 };
 
-pub struct TestSync;
+#[derive(Clone)]
+pub struct TestSync {
+    events: Vec<Event>,
+}
+
+pub struct TestConfig;
 
 pub type QueryFn = fn(
     nyaa::app::LoadType,
@@ -36,29 +42,6 @@ type ResultsFn = fn(
     nyaa::theme::Theme,
     Option<String>,
 ) -> Results;
-
-static INPUTS_MX: Mutex<Vec<Event>> = Mutex::new(Vec::new());
-// static QUERY_FN: Mutex<Option<QueryFn>> = Mutex::new(None);
-// static WAIT_FOR_RESULTS: Mutex<bool> = Mutex::new(false);
-// static RESULTS_FN: Mutex<Option<ResultsFn>> = Mutex::new(None);
-// static RESULTS_SEND: Mutex<Option<Sender<bool>>> = Mutex::new(None);
-// static RESULTS_RECV: Mutex<Option<Receiver<bool>>> = Mutex::new(None);
-
-pub fn clear_events() {
-    INPUTS_MX.lock().unwrap().clear();
-    // *WAIT_FOR_RESULTS.lock().unwrap() = false;
-    // let (send, recv) = broadcast::channel(1);
-    // *RESULTS_SEND.lock().unwrap() = Some(send);
-    // *RESULTS_RECV.lock().unwrap() = Some(recv);
-}
-
-// pub fn wait_for_results(wait: bool) {
-//     *WAIT_FOR_RESULTS.lock().unwrap() = wait;
-// }
-
-// pub fn set_results(res: ResultsFn) {
-//     *RESULTS.lock().unwrap() = Some(res);
-// }
 
 pub struct EventBuilder {
     events: Vec<Event>,
@@ -118,12 +101,18 @@ impl EventBuilder {
         self
     }
 
-    pub fn set_events(&self) {
-        INPUTS_MX.lock().unwrap().clone_from(&self.events);
+    pub fn build(&mut self) -> TestSync {
+        TestSync {
+            events: self.events.clone(),
+        }
     }
 }
 
-pub async fn run_app(w: u16, h: u16) -> Result<Terminal<TestBackend>, Box<dyn Error>> {
+pub async fn run_app<S: EventSync + Clone>(
+    sync: S,
+    w: u16,
+    h: u16,
+) -> Result<Terminal<TestBackend>, Box<dyn Error>> {
     let mut backend = TestBackend::new(w, h);
     let _ = backend.clear();
     let mut terminal = Terminal::new(backend)?;
@@ -131,7 +120,8 @@ pub async fn run_app(w: u16, h: u16) -> Result<Terminal<TestBackend>, Box<dyn Er
 
     let mut app = App::default();
 
-    app.run_app::<_, TestSync>(&mut terminal).await?;
+    app.run_app::<_, S, TestConfig, true>(&mut terminal, sync)
+        .await?;
     Ok(terminal)
 }
 
@@ -159,6 +149,7 @@ pub fn print_buffer(buf: &Buffer) {
 
 impl EventSync for TestSync {
     async fn load_results(
+        self,
         tx_res: tokio::sync::mpsc::Sender<
             Result<nyaa::results::Results, Box<dyn std::error::Error + Send + Sync>>,
         >,
@@ -170,95 +161,18 @@ impl EventSync for TestSync {
         _theme: nyaa::theme::Theme,
         _date_format: Option<String>,
     ) {
-        // let queryfn = QUERY_FN
-        //     .lock()
-        //     .unwrap()
-        //     .unwrap_or(|_, _, _, _, _, _, _| (Ok(Results::default()), false));
-        // let (res, quit) = queryfn(loadtype, src, client, query, config, theme, date_format);
-        // if let Some(res_fn) = *RESULTS_FN.lock().unwrap() {
-        //     let res = res_fn(loadtype, src, client, query, config, theme, date_format);
-        //     let _ = tx_res.send(Ok(res)).await;
-        //     if let Some(sender) = RESULTS_SEND.lock().unwrap().as_mut() {
-        //         let _ = sender.send(true);
-        //     }
-        //     return;
-        // }
-        // let res = (*RESULTS_FN.lock().unwrap())
-        //     .map(|f| f(loadtype, src, client, query, config, theme, date_format))
-        //     .unwrap_or_default();
-
         let _ = tx_res.send(Ok(Results::default())).await;
-        // if let Some(sender) = RESULTS_SEND.lock().unwrap().as_mut() {
-        //     // let _ = sender.send(true);
-        // }
-        // if quit {
-        //     INPUTS_MX.lock().unwrap().push(Event::FocusLost);
-        // }
-        // for evt in inputs.into_iter() {
-        //     let _ = tx_evt.send(evt).await;
-        // }
-        // let _ = tx_res
-        //     .send(queryfn(
-        //         tx_res,
-        //         loadtype,
-        //         src,
-        //         client,
-        //         query,
-        //         config,
-        //         theme,
-        //         date_format,
-        //     ))
-        //     .await;
-
-        // if let Some(func) = QUERY_FN.lock().unwrap().clone() {
-        //     func(
-        //         tx_res,
-        //         loadtype,
-        //         src,
-        //         client,
-        //         query,
-        //         config,
-        //         theme,
-        //         date_format,
-        //     );
-        // } else {
-        //     let _ = tx_res.send(Ok(Results::default())).await;
-        // }
-        // match QUERY_FN.lock().unwrap().clone() {
-        //     Some(func) => func(
-        //         tx_res,
-        //         loadtype,
-        //         src,
-        //         client,
-        //         query,
-        //         config,
-        //         theme,
-        //         date_format,
-        //     ),
-        //     None => {} // None => {
-        //                //     let _ = tx_res.send(Ok(Results::default())).await;
-        //                // }
-        // };
     }
 
-    async fn read_event_loop(tx_evt: tokio::sync::mpsc::Sender<crossterm::event::Event>) {
-        // if *WAIT_FOR_RESULTS.lock().unwrap() {
-        //     let _ = RESULTS_RECV.lock().unwrap().as_mut().unwrap().recv().await;
-        //     // let mut res2 = res.as_mut().unwrap();
-        //     // let _ = res2.recv().await;
-        //     // let recv = res.as_mut().unwrap();
-        //     // tokio::select! {
-        //     //     x = recv.recv() => {}
-        //     // };
-        // }
-        let inputs = INPUTS_MX.lock().unwrap().clone();
-        for evt in inputs.into_iter() {
+    async fn read_event_loop(self, tx_evt: tokio::sync::mpsc::Sender<crossterm::event::Event>) {
+        for evt in self.events.into_iter() {
             let _ = tx_evt.send(evt).await;
         }
         let _ = tx_evt.send(Event::FocusLost).await;
     }
 
     async fn download(
+        self,
         _tx_dl: tokio::sync::mpsc::Sender<DownloadResult>,
         _batch: bool,
         _items: Vec<Item>,
@@ -266,5 +180,19 @@ impl EventSync for TestSync {
         _rq_client: reqwest::Client,
         _client: Client,
     ) {
+    }
+}
+
+impl ConfigManager for TestConfig {
+    fn load() -> Result<nyaa::config::Config, Box<dyn Error>> {
+        Ok(Config::default())
+    }
+
+    fn store(_cfg: &nyaa::config::Config) -> Result<(), Box<dyn Error>> {
+        Ok(())
+    }
+
+    fn path() -> Result<std::path::PathBuf, Box<dyn Error>> {
+        Ok(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/config"))
     }
 }

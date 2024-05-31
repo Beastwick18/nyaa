@@ -28,9 +28,9 @@ pub mod torrent_galaxy;
 #[serde(default)]
 pub struct SourceConfig {
     pub nyaa: Option<NyaaConfig>,
-    #[serde(rename = "sukebei_nyaa")]
+    #[serde(rename = "sukebei")]
     pub sukebei: Option<SukebeiNyaaConfig>,
-    #[serde(rename = "torrent_galaxy")]
+    #[serde(rename = "torrentgalaxy")]
     pub tgx: Option<TgxConfig>,
 }
 

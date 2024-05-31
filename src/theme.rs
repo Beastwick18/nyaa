@@ -1,4 +1,8 @@
-use std::{error::Error, fs, path::Path};
+use std::{
+    error::Error,
+    fs,
+    path::{Path, PathBuf},
+};
 
 use indexmap::IndexMap;
 use ratatui::{style::Color, widgets::BorderType};
@@ -34,9 +38,9 @@ pub struct Theme {
     pub remake: Color,
 }
 
-pub fn load_user_themes(ctx: &mut Context) -> Result<(), String> {
-    let path = config::Config::path().map_err(|e| e.to_string())?;
-    let path = path.join("themes");
+pub fn load_user_themes(ctx: &mut Context, config_path: PathBuf) -> Result<(), String> {
+    // let path = path.map_err(|e| e.to_string())?;
+    let path = config_path.join("themes");
     if !path.exists() {
         return Ok(()); // Allow no theme folder
     }

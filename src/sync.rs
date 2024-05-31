@@ -15,6 +15,7 @@ use crate::{
 pub trait EventSync {
     #[allow(clippy::too_many_arguments)]
     fn load_results(
+        self,
         tx_res: mpsc::Sender<Result<Results, Box<dyn Error + Send + Sync>>>,
         load_type: LoadType,
         src: Sources,
@@ -25,6 +26,7 @@ pub trait EventSync {
         date_format: Option<String>,
     ) -> impl std::future::Future<Output = ()> + std::marker::Send + 'static;
     fn download(
+        self,
         tx_dl: mpsc::Sender<DownloadResult>,
         batch: bool,
         items: Vec<Item>,
@@ -33,10 +35,12 @@ pub trait EventSync {
         client: Client,
     ) -> impl std::future::Future<Output = ()> + std::marker::Send + 'static;
     fn read_event_loop(
+        self,
         tx_evt: mpsc::Sender<Event>,
     ) -> impl std::future::Future<Output = ()> + std::marker::Send + 'static;
 }
 
+#[derive(Clone)]
 pub struct AppSync;
 
 #[derive(Clone, Default)]
@@ -51,6 +55,7 @@ pub struct SearchQuery {
 
 impl EventSync for AppSync {
     async fn load_results(
+        self,
         tx_res: mpsc::Sender<Result<Results, Box<dyn Error + Send + Sync>>>,
         load_type: LoadType,
         src: Sources,
@@ -74,6 +79,7 @@ impl EventSync for AppSync {
     }
 
     async fn download(
+        self,
         tx_dl: mpsc::Sender<DownloadResult>,
         batch: bool,
         items: Vec<Item>,
@@ -88,7 +94,7 @@ impl EventSync for AppSync {
         let _ = tx_dl.send(res).await;
     }
 
-    async fn read_event_loop(tx_evt: mpsc::Sender<Event>) {
+    async fn read_event_loop(self, tx_evt: mpsc::Sender<Event>) {
         loop {
             if let Ok(evt) = event::read() {
                 let _ = tx_evt.send(evt).await;
