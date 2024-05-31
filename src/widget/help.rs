@@ -51,7 +51,7 @@ impl Widget for HelpPopup {
         let height = min(max_size, self.table.items.len() + 3) as u16;
 
         let center = super::centered_rect(key_min + map_min + 6, height, area);
-        let clear = super::centered_rect(center.width + 2, center.height, area);
+        // let clear = super::centered_rect(center.width + 2, center.height, area);
         let items = self.table.items.iter().map(|(key, map)| {
             Row::new([
                 Line::from(key.to_string()).alignment(Alignment::Right),
@@ -76,7 +76,7 @@ impl Widget for HelpPopup {
             .widths(Constraint::from_lengths([key_min, 1, map_min]))
             .highlight_style(style!(bg:ctx.theme.hl_bg));
 
-        super::clear(clear, buf, ctx.theme.bg);
+        super::clear(center, buf, ctx.theme.bg);
         table.render(center, buf, &mut self.table.state);
 
         // Only show scrollbar if content overflows

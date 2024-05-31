@@ -12,13 +12,13 @@ use ratatui::{
     },
     Frame,
 };
+use unicode_width::UnicodeWidthStr as _;
 
 use crate::{app::Context, style, theme::Theme};
 
 pub mod batch;
 pub mod category;
 pub mod clients;
-pub mod error;
 pub mod filter;
 pub mod help;
 pub mod input;
@@ -125,6 +125,15 @@ pub fn scrollbar(ctx: &Context, orientation: ScrollbarOrientation) -> Scrollbar<
 }
 
 pub fn clear(area: Rect, buf: &mut Buffer, fill: Color) {
+    // Deal with wide chars which might extend too far
+    if area.left() > 0 && buf.area.contains((area.left() - 1, area.top()).into()) {
+        for i in area.top()..area.bottom() {
+            let c = buf.get_mut(area.left() - 1, i);
+            if c.symbol().width() > 1 {
+                c.set_char(' ');
+            }
+        }
+    }
     Clear.render(area, buf);
     Block::new().bg(fill).render(area, buf);
 }

@@ -112,28 +112,17 @@ impl Widget for CategoryPopup {
                     " ".into(),
                     e.name.to_owned().into(),
                 ])])
-                // match i == self.minor {
-                //     true => row.bg(ctx.theme.hl_bg),
-                //     false => row,
-                // }
             });
-            // self.table.select(self.major + self.minor + 1);
             self.table.scrollbar_state = self
                 .table
                 .scrollbar_state
                 .content_length(cat.entries.len() + ctx.src_info.cats.len());
-            // let last_elem = self.major + cat.entries.len() + 1;
-            // if last_elem > center.height - 2 {
-            //
-            // }
-            // *self.table.state.offset_mut() = 0;
-            // self.table.scrollbar_state = self.table.scrollbar_state.position(0);
 
             tbl.splice(self.major + 1..self.major + 1, cat_rows);
 
             let center = super::centered_rect(33, 14, area);
-            let clear = super::centered_rect(center.width + 2, center.height, area);
-            super::clear(clear, f.buffer_mut(), ctx.theme.bg);
+            // let clear = super::centered_rect(center.width + 2, center.height, area);
+            super::clear(center, f.buffer_mut(), ctx.theme.bg);
             let table = Table::new(tbl, [Constraint::Percentage(100)])
                 .block(border_block(&ctx.theme, true).title(title!("Category")))
                 .highlight_style(Style::default().bg(ctx.theme.hl_bg));
@@ -145,7 +134,6 @@ impl Widget for CategoryPopup {
                 horizontal: 0,
             });
             StatefulWidget::render(sb, sb_area, f.buffer_mut(), &mut self.table.scrollbar_state);
-            // .render(center, f.buffer_mut());
         }
     }
 

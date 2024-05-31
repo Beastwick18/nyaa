@@ -33,81 +33,30 @@ impl NotifyPosition {
         area: Rect,
         width: u16,
         height: u16,
-        offset: u16,
-    ) -> ((i32, i32), (i32, i32)) {
-        let start_x = if self.is_left() {
+        start_offset: u16,
+        stop_offset: u16,
+    ) -> ((i32, i32), (i32, i32), (i32, i32)) {
+        let stop_x = if self.is_left() {
             area.left() as i32 - width as i32
         } else {
             area.right() as i32 + 1
         };
-        let stop_x = if self.is_left() {
+        let start_x = if self.is_left() {
             area.left() as i32 + 2
         } else {
             area.right() as i32 - width as i32 - 2
         };
-        // let start_y = if self.is_top() {
-        //     (area.top() as i32 + 4) + offset as i32 - (height / 2) as i32
-        // } else {
-        //     (area.bottom() as i32 - 1) - offset as i32
-        // };
-        let stop_y = if self.is_top() {
-            (area.top() as i32 + 4) + offset as i32
+        let start_y = if self.is_top() {
+            area.top() as i32 - height as i32 + start_offset as i32 + 1
         } else {
-            (area.bottom() as i32 - height as i32 - 1) - offset as i32
+            area.bottom() as i32 - start_offset as i32 - 1
         };
-        ((start_x, stop_y), (stop_x, stop_y))
-    }
-}
-
-pub struct NotifyBox {
-    content: String,
-    pub time: f64,
-    pub duration: f64,
-    position: NotifyPosition,
-    width: u16,
-    height: u16,
-    offset: u16,
-    enter_state: AnimateState,
-    leave_state: AnimateState,
-    pos: Option<(i32, i32)>,
-}
-
-impl NotifyBox {
-    pub fn new(content: String, duration: f64, position: NotifyPosition) -> Self {
-        let width = (MAX_WIDTH - 2).min(content.len() as u16);
-        let lines = textwrap::wrap(&content, width as usize);
-        let actual_width = lines.iter().fold(0, |acc, x| acc.max(x.len())) as u16;
-        let content = lines.join("\n");
-        let height = lines.len() as u16 + 2;
-        NotifyBox {
-            width: actual_width + 2,
-            height,
-            content,
-            position,
-            offset: 0,
-            time: 0.0,
-            duration,
-            enter_state: AnimateState::new(),
-            leave_state: AnimateState::new(),
-            pos: None,
-        }
-    }
-
-    pub fn width(&self) -> u16 {
-        self.width
-    }
-
-    pub fn height(&self) -> u16 {
-        self.height
-    }
-
-    pub fn offset(&self) -> u16 {
-        self.offset
-    }
-
-    pub fn with_offset(&mut self, offset: u16) -> &mut Self {
-        self.offset = offset;
-        self
+        let stop_y = if self.is_top() {
+            area.top() as i32 + stop_offset as i32 + 1
+        } else {
+            area.bottom() as i32 - stop_offset as i32 - height as i32 - 1
+        };
+        ((start_x, start_y), (start_x, stop_y), (stop_x, stop_y))
     }
 }
 
@@ -136,8 +85,8 @@ impl AnimateState {
             self.done = true;
         }
         let pos = (
-            ((self.time * (stop_pos.0 - start_pos.0) as f64) + start_pos.0 as f64) as i32,
-            ((self.time * (stop_pos.1 - start_pos.1) as f64) + start_pos.1 as f64) as i32,
+            ((self.time * (stop_pos.0 - start_pos.0) as f64) + start_pos.0 as f64).round() as i32,
+            ((self.time * (stop_pos.1 - start_pos.1) as f64) + start_pos.1 as f64).round() as i32,
         );
         self.time = 1.0_f64.min(self.time + rate * deltatime);
         pos
@@ -146,15 +95,87 @@ impl AnimateState {
     fn is_done(self) -> bool {
         self.done
     }
+
+    fn reset(&mut self) {
+        self.time = 0.0;
+        self.done = false;
+    }
+}
+
+pub struct NotifyBox {
+    raw_content: String,
+    content: String,
+    pub time: f64,
+    pub duration: f64,
+    position: NotifyPosition,
+    width: u16,
+    height: u16,
+    start_offset: u16,
+    stop_offset: u16,
+    enter_state: AnimateState,
+    leave_state: AnimateState,
+    pub pos: Option<(i32, i32)>,
+    error: bool,
 }
 
 impl NotifyBox {
+    pub fn new(content: String, duration: f64, position: NotifyPosition, error: bool) -> Self {
+        let raw_content = content.clone();
+        let lines = textwrap::wrap(&content, MAX_WIDTH as usize);
+        let actual_width = lines.iter().fold(0, |acc, x| acc.max(x.len())) as u16 + 2;
+        let content = lines.join("\n");
+        let height = lines.len() as u16 + 2;
+        NotifyBox {
+            width: actual_width,
+            height,
+            raw_content,
+            content,
+            position,
+            start_offset: 0,
+            stop_offset: 0,
+            time: 0.0,
+            duration,
+            enter_state: AnimateState::new(),
+            leave_state: AnimateState::new(),
+            pos: None,
+            error,
+        }
+    }
+
+    pub fn width(&self) -> u16 {
+        self.width
+    }
+
+    pub fn height(&self) -> u16 {
+        self.height
+    }
+
+    pub fn offset(&self) -> u16 {
+        self.stop_offset
+    }
+
     pub fn is_done(&self) -> bool {
         self.leave_state.is_done()
     }
 
     pub fn is_leaving(&self) -> bool {
         self.time >= 1.0
+    }
+
+    pub fn is_error(&self) -> bool {
+        self.error
+    }
+
+    pub fn add_offset(&mut self, offset: u16) {
+        self.enter_state.reset();
+
+        self.start_offset = self.stop_offset + self.height;
+        self.stop_offset += offset;
+    }
+
+    pub fn sub_offset(&mut self, offset: u16) {
+        self.stop_offset = (self.stop_offset as i32 - offset as i32).max(0) as u16;
+        self.start_offset = (self.start_offset as i32 - offset as i32).max(0) as u16;
     }
 
     pub fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
@@ -190,21 +211,35 @@ impl NotifyBox {
         }
         let scroll_x = (pos.0 + 1).min(0).unsigned_abs() as u16;
         let scroll_y = (pos.1 + 1).min(0).unsigned_abs() as u16;
-        let block = Block::new()
-            .border_style(style!(fg:ctx.theme.border_focused_color))
-            .bg(ctx.theme.bg)
-            .fg(ctx.theme.fg)
-            .borders(border)
-            .border_type(ctx.theme.border);
+        let block = match self.error {
+            false => Block::new()
+                .border_style(style!(fg:ctx.theme.border_focused_color))
+                .bg(ctx.theme.bg)
+                .fg(ctx.theme.fg)
+                .borders(border)
+                .border_type(ctx.theme.border),
+            true => {
+                let block = Block::new()
+                    .border_style(style!(fg:ctx.theme.remake))
+                    .bg(ctx.theme.bg)
+                    .fg(ctx.theme.remake)
+                    .borders(border)
+                    .border_type(ctx.theme.border);
+                match border.contains(Borders::TOP) {
+                    true => block.title("Error: Press ESC to dismiss..."),
+                    false => block,
+                }
+            }
+        };
 
-        let clear = Rect::new(
-            (pos.0 - 1) as u16,
-            pos.1 as u16,
-            self.width + 2,
-            self.height,
-        )
-        .intersection(area);
-        super::clear(clear, f.buffer_mut(), ctx.theme.bg);
+        // let clear = Rect::new(
+        //     (pos.0 - 1).max(0) as u16,
+        //     pos.1.max(0) as u16,
+        //     self.width + 2,
+        //     self.height,
+        // )
+        // .intersection(area);
+        super::clear(rect, f.buffer_mut(), ctx.theme.bg);
         Paragraph::new(self.content.clone())
             .block(block)
             .scroll((scroll_y, scroll_x))
@@ -212,23 +247,38 @@ impl NotifyBox {
     }
 
     fn next_pos(&mut self, deltatime: f64, area: Rect) -> (i32, i32) {
-        let (start_pos, stop_pos) =
-            self.position
-                .get_start_stop(area, self.width, self.height, self.offset);
+        let (start_pos, stop_pos, leave_pos) = self.position.get_start_stop(
+            area,
+            self.width,
+            self.height,
+            self.start_offset,
+            self.stop_offset,
+        );
         match self.time >= 1.0 {
             false => self
                 .enter_state
                 .linear(start_pos, stop_pos, ANIM_SPEED, deltatime),
             true => self
                 .leave_state
-                .linear(stop_pos, start_pos, ANIM_SPEED, deltatime),
+                .linear(stop_pos, leave_pos, ANIM_SPEED, deltatime),
         }
     }
 
     pub fn update(&mut self, deltatime: f64, area: Rect) -> bool {
+        let max_width = match self.error {
+            true => (area.width / 3).max(MAX_WIDTH),
+            false => area.width.min(MAX_WIDTH),
+        } as usize;
+        let lines = textwrap::wrap(&self.raw_content, max_width);
+        self.width = lines.iter().fold(0, |acc, x| acc.max(x.len())) as u16 + 2;
+        self.height = lines.len() as u16 + 2;
+        self.content = lines.join("\n");
+
         let last_pos = self.pos;
         self.pos = Some(self.next_pos(deltatime, area));
-        if self.enter_state.is_done() {
+
+        // Dont automatically dismiss errors
+        if self.enter_state.is_done() && !self.error {
             self.time = 1.0_f64.min(self.time + deltatime / self.duration);
         }
         last_pos != self.pos

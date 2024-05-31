@@ -29,7 +29,7 @@ impl Default for FilterPopup {
 impl Widget for FilterPopup {
     fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
         let center = super::centered_rect(30, ctx.src_info.filters.len() as u16 + 2, area);
-        let clear = super::centered_rect(center.width + 2, center.height, area);
+        // let clear = super::centered_rect(center.width + 2, center.height, area);
         let items =
             ctx.src_info
                 .filters
@@ -39,7 +39,7 @@ impl Widget for FilterPopup {
                     true => Row::new(vec![format!("  {}", item.to_owned())]),
                     false => Row::new(vec![format!("   {}", item.to_owned())]),
                 });
-        super::clear(clear, f.buffer_mut(), ctx.theme.bg);
+        super::clear(center, f.buffer_mut(), ctx.theme.bg);
         Table::new(items, [Constraint::Percentage(100)])
             .block(border_block(&ctx.theme, true).title(title!("Filter")))
             .highlight_style(style!(bg:ctx.theme.hl_bg))

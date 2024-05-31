@@ -31,11 +31,11 @@ impl Widget for UserPopup {
     fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
         let buf = f.buffer_mut();
         let center = super::centered_rect(30, 3, area);
-        let clear = super::centered_rect(center.width + 2, center.height, area);
+        // let clear = super::centered_rect(center.width + 2, center.height, area);
         let page_p = Paragraph::new(self.input.input.clone());
         let indicator = Paragraph::new(">")
             .block(border_block(&ctx.theme, true).title(title!("Posts by User")));
-        super::clear(clear, buf, ctx.theme.bg);
+        super::clear(center, buf, ctx.theme.bg);
         indicator.render(center, buf);
 
         let input_area = center.inner(&Margin {

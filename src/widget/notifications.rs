@@ -1,5 +1,3 @@
-use std::ops::ControlFlow;
-
 use crossterm::event::Event;
 use ratatui::{layout::Rect, Frame};
 use serde::{Deserialize, Serialize};
@@ -27,8 +25,8 @@ impl Default for NotificationWidget {
     fn default() -> Self {
         Self {
             notifs: vec![],
-            duration: 5.0,
-            position: NotifyPosition::BottomRight,
+            duration: 3.0,
+            position: NotifyPosition::TopRight,
         }
     }
 }
@@ -44,27 +42,22 @@ impl NotificationWidget {
     }
 
     pub fn add_notification(&mut self, notif: String) {
-        let mut new_notif = NotifyBox::new(notif, self.duration, self.position);
+        let new_notif = NotifyBox::new(notif, self.duration, self.position, false);
 
-        self.notifs.sort_unstable_by_key(|a| a.offset());
-        let first_gap = self.notifs.iter().try_fold(0, |prev, x| {
-            if x.offset() > prev {
-                ControlFlow::Break((prev, x.offset()))
-            } else {
-                ControlFlow::Continue(x.offset() + x.height())
-            }
-        });
-        let at_end = self
-            .notifs
-            .iter()
-            .last()
-            .map(|x| x.offset() + x.height())
-            .unwrap_or(0);
-        let offset = match first_gap {
-            ControlFlow::Break((start, stop)) if stop >= new_notif.height() + start => start,
-            _ => at_end,
-        };
-        new_notif.with_offset(offset);
+        self.notifs
+            .iter_mut()
+            .for_each(|n| n.add_offset(new_notif.height()));
+
+        self.notifs.push(new_notif);
+    }
+
+    pub fn add_error(&mut self, error: String) {
+        let new_notif = NotifyBox::new(error, 0.0, self.position, true);
+
+        self.notifs
+            .iter_mut()
+            .for_each(|n| n.add_offset(new_notif.height()));
+
         self.notifs.push(new_notif);
     }
 
@@ -73,20 +66,35 @@ impl NotificationWidget {
     }
 
     pub fn update(&mut self, deltatime: f64, area: Rect) -> bool {
-        let mut res = false;
-        for n in self.notifs.iter_mut() {
-            res = res || n.update(deltatime, area);
-        }
-        res
+        self.notifs.iter_mut().fold(false, |acc, x| {
+            let res = x.update(deltatime, area);
+            x.is_done() || res || acc
+        })
     }
 }
 
 impl Widget for NotificationWidget {
     fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
+        let res = self
+            .notifs
+            .iter()
+            .filter_map(|n| match n.is_done() {
+                true => Some((n.offset(), n.height())),
+                false => None,
+            })
+            .collect::<Vec<(u16, u16)>>();
+        for (offset, height) in res.iter() {
+            self.notifs.iter_mut().for_each(|n| {
+                if n.is_error() && n.offset() > *offset {
+                    n.sub_offset(*height);
+                }
+            })
+        }
+        self.notifs.retain(|n| !n.is_done());
+
         for n in self.notifs.iter_mut() {
             n.draw(f, ctx, area);
         }
-        self.notifs.retain(|n| !n.is_done());
     }
 
     fn handle_event(&mut self, _ctx: &mut Context, _e: &Event) {}

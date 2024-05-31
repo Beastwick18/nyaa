@@ -22,7 +22,6 @@ use crate::{
         batch::BatchWidget,
         category::CategoryPopup,
         clients::ClientsPopup,
-        error::ErrorPopup,
         filter::FilterPopup,
         help::HelpPopup,
         notifications::NotificationWidget,
@@ -86,7 +85,6 @@ pub enum Mode {
     Theme,
     Sources,
     Clients,
-    Error,
     Page,
     User,
     Help,
@@ -105,7 +103,6 @@ impl Display for Mode {
             Mode::Sources => "Sources".to_owned(),
             Mode::Clients => "Clients".to_owned(),
             Mode::Loading(_) => "Loading".to_owned(),
-            Mode::Error => "Error".to_owned(),
             Mode::Page => "Page".to_owned(),
             Mode::User => "User".to_owned(),
             Mode::Help => "Help".to_owned(),
@@ -139,7 +136,6 @@ pub struct Context {
     notifications: Vec<String>,
     failed_config_load: bool,
     should_quit: bool,
-    should_redraw: bool,
     should_dismiss_notifications: bool,
 }
 
@@ -154,10 +150,6 @@ impl Context {
 
     pub fn dismiss_notifications(&mut self) {
         self.should_dismiss_notifications = true;
-    }
-
-    pub fn redraw(&mut self) {
-        self.should_redraw = true;
     }
 
     pub fn save_config(&mut self) -> Result<(), Box<dyn Error>> {
@@ -194,7 +186,6 @@ impl Default for Context {
             deltatime: 0.0,
             failed_config_load: true,
             should_quit: false,
-            should_redraw: false,
             should_dismiss_notifications: false,
         }
     }
@@ -212,7 +203,6 @@ pub struct Widgets {
     pub clients: ClientsPopup,
     pub search: SearchWidget,
     pub results: ResultsWidget,
-    pub error: ErrorPopup,
     pub page: PagePopup,
     pub user: UserPopup,
     pub help: HelpPopup,
@@ -261,12 +251,16 @@ impl App {
                     .for_each(|n| self.widgets.notification.add_notification(n));
                 ctx.notifications.clear();
             }
+            if !ctx.errors.is_empty() {
+                ctx.errors
+                    .clone()
+                    .into_iter()
+                    .for_each(|n| self.widgets.notification.add_error(n));
+                ctx.errors.clear();
+            }
             if ctx.should_dismiss_notifications {
                 self.widgets.notification.dismiss_all();
                 ctx.should_dismiss_notifications = false;
-            }
-            if !ctx.errors.is_empty() {
-                ctx.mode = Mode::Error;
             }
             if ctx.mode == Mode::Batch && ctx.batch.is_empty() {
                 ctx.mode = Mode::Normal;
@@ -409,11 +403,6 @@ impl App {
                     }
                 };
             }
-            // if self.widgets.notification.is_animating() {
-            //     let now = Instant::now();
-            //     ctx.deltatime = (now - last_time.unwrap_or(now)).as_secs_f64();
-            //     last_time = Some(now);
-            // }
         }
         Ok(())
     }
@@ -447,13 +436,6 @@ impl App {
             Mode::Sort(_) => self.widgets.sort.draw(f, ctx, f.size()),
             Mode::Filter => self.widgets.filter.draw(f, ctx, f.size()),
             Mode::Theme => self.widgets.theme.draw(f, ctx, f.size()),
-            Mode::Error => {
-                // Get the oldest error first
-                if let Some(error) = ctx.errors.pop_front() {
-                    self.widgets.error.with_error(error);
-                }
-                self.widgets.error.draw(f, ctx, f.size());
-            }
             Mode::Help => self.widgets.help.draw(f, ctx, f.size()),
             Mode::Page => self.widgets.page.draw(f, ctx, f.size()),
             Mode::User => self.widgets.user.draw(f, ctx, f.size()),
@@ -508,7 +490,6 @@ impl App {
             Mode::Search => self.widgets.search.handle_event(ctx, evt),
             Mode::Filter => self.widgets.filter.handle_event(ctx, evt),
             Mode::Theme => self.widgets.theme.handle_event(ctx, evt),
-            Mode::Error => self.widgets.error.handle_event(ctx, evt),
             Mode::Page => self.widgets.page.handle_event(ctx, evt),
             Mode::User => self.widgets.user.handle_event(ctx, evt),
             Mode::Help => self.widgets.help.handle_event(ctx, evt),
@@ -554,7 +535,6 @@ impl App {
             Mode::User => UserPopup::get_help(),
             Mode::Sources => SourcesPopup::get_help(),
             Mode::Clients => ClientsPopup::get_help(),
-            Mode::Error => None,
             Mode::Help => None,
             Mode::KeyCombo(_) => None,
             Mode::Loading(_) => None,

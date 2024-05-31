@@ -185,6 +185,7 @@ impl DownloadClient for QbitClient {
         conf: ClientConfig,
         client: reqwest::Client,
     ) -> DownloadResult {
+        // return DownloadResult::error(DownloadError("Failed to login :\\"));
         let Some(qbit) = conf.qbit.to_owned() else {
             return DownloadResult::error(DownloadError(
                 "Failed to get qBittorrent config".to_owned(),

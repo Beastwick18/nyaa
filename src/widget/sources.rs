@@ -29,14 +29,14 @@ impl Widget for SourcesPopup {
     fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
         let buf = f.buffer_mut();
         let center = super::centered_rect(30, self.table.items.len() as u16 + 2, area);
-        let clear = super::centered_rect(center.width + 2, center.height, area);
+        // let clear = super::centered_rect(center.width + 2, center.height, area);
         let items = self.table.items.iter().map(|item| {
             Row::new(vec![match item == &ctx.src {
                 true => format!("  {}", item),
                 false => format!("   {}", item),
             }])
         });
-        super::clear(clear, buf, ctx.theme.bg);
+        super::clear(center, buf, ctx.theme.bg);
         let table = Table::new(items, [Constraint::Percentage(100)])
             .block(border_block(&ctx.theme, true).title(title!("Source")))
             .highlight_style(style!(bg:ctx.theme.hl_bg));

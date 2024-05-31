@@ -33,7 +33,7 @@ impl Widget for ThemePopup {
         let buf = f.buffer_mut();
         let height = min(min(ctx.themes.len() as u16 + 2, 10), area.height);
         let center = super::centered_rect(30, height, area);
-        let clear = super::centered_rect(center.width + 2, center.height, area);
+        // let clear = super::centered_rect(center.width + 2, center.height, area);
         let items = ctx.themes.keys().enumerate().map(|(i, item)| {
             Row::new(vec![
                 match i == self.selected {
@@ -46,7 +46,7 @@ impl Widget for ThemePopup {
         let table = Table::new(items, [Constraint::Percentage(100)])
             .block(border_block(&ctx.theme, true).title(title!("Theme")))
             .highlight_style(style!(bg:ctx.theme.hl_bg));
-        super::clear(clear, buf, ctx.theme.bg);
+        super::clear(center, buf, ctx.theme.bg);
         table.render(center, buf, &mut self.table.state);
 
         // Only show scrollbar if content overflows

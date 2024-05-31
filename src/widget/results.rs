@@ -21,7 +21,6 @@ use super::{border_block, centered_rect, TitlePosition, VirtualStatefulTable};
 pub struct ResultsWidget {
     pub table: VirtualStatefulTable,
     control_space: bool,
-    draw_count: usize,
 }
 
 impl ResultsWidget {
@@ -43,7 +42,6 @@ impl Default for ResultsWidget {
         ResultsWidget {
             table: VirtualStatefulTable::new(),
             control_space: false,
-            draw_count: 0,
         }
     }
 }
@@ -300,13 +298,6 @@ impl super::Widget for ResultsWidget {
                 (Tab | BackTab, _) => {
                     ctx.mode = Mode::Batch;
                 }
-                (Char('b'), _) => {
-                    ctx.notify("Test 1");
-                    ctx.notify("Test 2");
-                    ctx.notify("Test 3");
-                }
-                // TODO: Dismiss popup notifs
-                //
                 (Esc, &KeyModifiers::NONE) => {
                     if self.control_space {
                         ctx.notify("Exited VISUAL mode");
