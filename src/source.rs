@@ -154,6 +154,7 @@ pub trait Source {
     fn default_category(config: &SourceConfig) -> usize;
     fn default_sort(config: &SourceConfig) -> usize;
     fn default_filter(config: &SourceConfig) -> usize;
+    fn default_search(config: &SourceConfig) -> String;
 
     fn format_table(
         items: &[Item],
@@ -235,6 +236,9 @@ impl Sources {
         w.filter.selected = self.default_filter(&ctx.config.sources);
         w.filter.table.select(w.filter.selected);
 
+        w.search.input.input = self.default_search(&ctx.config.sources);
+        w.search.input.cursor = w.search.input.input.len();
+
         // Go back to first page when changing source
         ctx.page = 1;
     }
@@ -276,6 +280,14 @@ impl Sources {
             Sources::Nyaa => NyaaHtmlSource::default_filter(config),
             Sources::SubekiNyaa => SubekiHtmlSource::default_filter(config),
             Sources::TorrentGalaxy => TorrentGalaxyHtmlSource::default_filter(config),
+        }
+    }
+
+    pub fn default_search(self, config: &SourceConfig) -> String {
+        match self {
+            Sources::Nyaa => NyaaHtmlSource::default_search(config),
+            Sources::SubekiNyaa => SubekiHtmlSource::default_search(config),
+            Sources::TorrentGalaxy => TorrentGalaxyHtmlSource::default_search(config),
         }
     }
 

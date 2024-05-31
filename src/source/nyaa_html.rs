@@ -421,16 +421,33 @@ impl Source for NyaaHtmlSource {
     }
 
     fn default_category(cfg: &SourceConfig) -> usize {
-        let default = cfg.nyaa.to_owned().unwrap_or_default().default_category;
+        let default = cfg
+            .nyaa
+            .as_ref()
+            .map(|c| c.default_category.to_owned())
+            .unwrap_or_default();
         Self::info().entry_from_cfg(&default).id
     }
 
     fn default_sort(cfg: &SourceConfig) -> usize {
-        cfg.nyaa.to_owned().unwrap_or_default().default_sort as usize
+        cfg.nyaa
+            .as_ref()
+            .map(|c| c.default_sort as usize)
+            .unwrap_or_default()
     }
 
     fn default_filter(cfg: &SourceConfig) -> usize {
-        cfg.nyaa.to_owned().unwrap_or_default().default_filter as usize
+        cfg.nyaa
+            .as_ref()
+            .map(|c| c.default_filter as usize)
+            .unwrap_or_default()
+    }
+
+    fn default_search(cfg: &SourceConfig) -> String {
+        cfg.nyaa
+            .as_ref()
+            .map(|c| c.default_search.to_owned())
+            .unwrap_or_default()
     }
 
     fn format_table(
