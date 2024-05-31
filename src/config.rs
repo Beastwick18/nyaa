@@ -76,7 +76,11 @@ impl ConfigManager for Config {
 }
 
 impl Config {
-    pub fn apply(&self, ctx: &mut Context, w: &mut Widgets) -> Result<(), Box<dyn Error>> {
+    pub fn apply<C: ConfigManager>(
+        &self,
+        ctx: &mut Context,
+        w: &mut Widgets,
+    ) -> Result<(), Box<dyn Error>> {
         ctx.config = self.clone();
         w.search.input.cursor = w.search.input.input.len();
         w.sort.selected.sort = 0;
@@ -99,7 +103,7 @@ impl Config {
         }
 
         ctx.client.load_config(ctx);
-        let path = Self::path().map_err(|e| e.to_string())?;
+        let path = C::path().map_err(|e| e.to_string())?;
         theme::load_user_themes(ctx, path)?;
 
         // Load defaults for default source

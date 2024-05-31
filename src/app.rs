@@ -226,7 +226,7 @@ impl App {
         match C::load() {
             Ok(config) => {
                 ctx.failed_config_load = false;
-                if let Err(e) = config.apply(ctx, &mut self.widgets) {
+                if let Err(e) = config.apply::<C>(ctx, &mut self.widgets) {
                     ctx.show_error(e);
                 } else if let Err(e) = ctx.save_config() {
                     ctx.show_error(e);
@@ -234,7 +234,7 @@ impl App {
             }
             Err(e) => {
                 ctx.show_error(format!("Failed to load config:\n{}", e));
-                if let Err(e) = ctx.config.clone().apply(ctx, &mut self.widgets) {
+                if let Err(e) = ctx.config.clone().apply::<C>(ctx, &mut self.widgets) {
                     ctx.show_error(e);
                 }
             }
