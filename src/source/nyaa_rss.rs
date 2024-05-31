@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, collections::BTreeMap, error::Error, str::FromStr};
+use std::{cmp::Ordering, collections::BTreeMap, error::Error, str::FromStr, time::Duration};
 
 use chrono::{DateTime, Local};
 use reqwest::{StatusCode, Url};
@@ -81,7 +81,11 @@ pub async fn search_rss(
 
     // let client = super::request_client(ctx)?;
 
-    let response = client.get(url.to_owned()).send().await?;
+    let mut request = client.get(url.to_owned());
+    if let Some(timeout) = nyaa.timeout {
+        request = request.timeout(Duration::from_secs(timeout));
+    }
+    let response = request.send().await?;
     let code = response.status().as_u16();
     if code != StatusCode::OK {
         // Throw error if response code is not OK

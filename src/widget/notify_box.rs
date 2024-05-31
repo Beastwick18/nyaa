@@ -74,7 +74,25 @@ impl AnimateState {
         }
     }
 
-    fn linear(
+    // fn linear(
+    //     &mut self,
+    //     start_pos: (i32, i32),
+    //     stop_pos: (i32, i32),
+    //     rate: f64,
+    //     deltatime: f64,
+    // ) -> (i32, i32) {
+    //     if self.time >= 1.0 {
+    //         self.done = true;
+    //     }
+    //     let pos = (
+    //         ((self.time * (stop_pos.0 - start_pos.0) as f64) + start_pos.0 as f64).round() as i32,
+    //         ((self.time * (stop_pos.1 - start_pos.1) as f64) + start_pos.1 as f64).round() as i32,
+    //     );
+    //     self.time = 1.0_f64.min(self.time + rate * deltatime);
+    //     pos
+    // }
+
+    pub fn ease_out(
         &mut self,
         start_pos: (i32, i32),
         stop_pos: (i32, i32),
@@ -85,11 +103,41 @@ impl AnimateState {
             self.done = true;
         }
         let pos = (
-            ((self.time * (stop_pos.0 - start_pos.0) as f64) + start_pos.0 as f64).round() as i32,
-            ((self.time * (stop_pos.1 - start_pos.1) as f64) + start_pos.1 as f64).round() as i32,
+            ((Self::_ease_out(self.time) * (stop_pos.0 - start_pos.0) as f64) + start_pos.0 as f64)
+                .round() as i32,
+            ((Self::_ease_out(self.time) * (stop_pos.1 - start_pos.1) as f64) + start_pos.1 as f64)
+                .round() as i32,
         );
         self.time = 1.0_f64.min(self.time + rate * deltatime);
         pos
+    }
+
+    pub fn ease_in(
+        &mut self,
+        start_pos: (i32, i32),
+        stop_pos: (i32, i32),
+        rate: f64,
+        deltatime: f64,
+    ) -> (i32, i32) {
+        if self.time >= 1.0 {
+            self.done = true;
+        }
+        let pos = (
+            ((Self::_ease_in(self.time) * (stop_pos.0 - start_pos.0) as f64) + start_pos.0 as f64)
+                .round() as i32,
+            ((Self::_ease_in(self.time) * (stop_pos.1 - start_pos.1) as f64) + start_pos.1 as f64)
+                .round() as i32,
+        );
+        self.time = 1.0_f64.min(self.time + rate * deltatime);
+        pos
+    }
+
+    fn _ease_out(x: f64) -> f64 {
+        1.0 - (1.0 - x).powi(3)
+    }
+
+    fn _ease_in(x: f64) -> f64 {
+        x.powi(3)
     }
 
     fn is_done(self) -> bool {
@@ -166,19 +214,30 @@ impl NotifyBox {
         self.error
     }
 
-    pub fn add_offset(&mut self, offset: u16) {
+    pub fn add_offset<I: Into<i32> + Copy>(&mut self, offset: I) {
         self.enter_state.reset();
 
         self.start_offset = self.stop_offset + self.height;
-        self.stop_offset += offset;
+        self.stop_offset = (self.stop_offset as i32 + Into::<i32>::into(offset)).max(0) as u16;
     }
 
-    pub fn sub_offset(&mut self, offset: u16) {
-        self.stop_offset = (self.stop_offset as i32 - offset as i32).max(0) as u16;
-        self.start_offset = (self.start_offset as i32 - offset as i32).max(0) as u16;
-    }
+    // pub fn sub_offset(&mut self, offset: u16) {
+    //     self.start_offset = self.stop_offset + self.height;
+    //     self.stop_offset = (self.stop_offset as i32 - offset as i32).max(0) as u16;
+    //
+    //     self.enter_state.reset();
+    // }
 
     pub fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
+        let max_width = match self.error {
+            true => (area.width / 3).max(MAX_WIDTH),
+            false => area.width.min(MAX_WIDTH),
+        } as usize;
+        let lines = textwrap::wrap(&self.raw_content, max_width);
+        self.width = lines.iter().fold(0, |acc, x| acc.max(x.len())) as u16 + 2;
+        self.height = lines.len() as u16 + 2;
+        self.content = lines.join("\n");
+
         let pos = self.pos.unwrap_or(self.next_pos(ctx.deltatime, area));
         let offset = Offset {
             x: self.width as i32,
@@ -232,13 +291,6 @@ impl NotifyBox {
             }
         };
 
-        // let clear = Rect::new(
-        //     (pos.0 - 1).max(0) as u16,
-        //     pos.1.max(0) as u16,
-        //     self.width + 2,
-        //     self.height,
-        // )
-        // .intersection(area);
         super::clear(rect, f.buffer_mut(), ctx.theme.bg);
         Paragraph::new(self.content.clone())
             .block(block)
@@ -257,23 +309,14 @@ impl NotifyBox {
         match self.time >= 1.0 {
             false => self
                 .enter_state
-                .linear(start_pos, stop_pos, ANIM_SPEED, deltatime),
+                .ease_out(start_pos, stop_pos, ANIM_SPEED, deltatime),
             true => self
                 .leave_state
-                .linear(stop_pos, leave_pos, ANIM_SPEED, deltatime),
+                .ease_in(stop_pos, leave_pos, ANIM_SPEED / 2.0, deltatime),
         }
     }
 
     pub fn update(&mut self, deltatime: f64, area: Rect) -> bool {
-        let max_width = match self.error {
-            true => (area.width / 3).max(MAX_WIDTH),
-            false => area.width.min(MAX_WIDTH),
-        } as usize;
-        let lines = textwrap::wrap(&self.raw_content, max_width);
-        self.width = lines.iter().fold(0, |acc, x| acc.max(x.len())) as u16 + 2;
-        self.height = lines.len() as u16 + 2;
-        self.content = lines.join("\n");
-
         let last_pos = self.pos;
         self.pos = Some(self.next_pos(deltatime, area));
 

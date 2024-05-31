@@ -121,7 +121,6 @@ impl Widget for CategoryPopup {
             tbl.splice(self.major + 1..self.major + 1, cat_rows);
 
             let center = super::centered_rect(33, 14, area);
-            // let clear = super::centered_rect(center.width + 2, center.height, area);
             super::clear(center, f.buffer_mut(), ctx.theme.bg);
             let table = Table::new(tbl, [Constraint::Percentage(100)])
                 .block(border_block(&ctx.theme, true).title(title!("Category")))

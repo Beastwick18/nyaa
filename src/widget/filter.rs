@@ -29,7 +29,6 @@ impl Default for FilterPopup {
 impl Widget for FilterPopup {
     fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
         let center = super::centered_rect(30, ctx.src_info.filters.len() as u16 + 2, area);
-        // let clear = super::centered_rect(center.width + 2, center.height, area);
         let items =
             ctx.src_info
                 .filters

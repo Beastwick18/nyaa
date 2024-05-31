@@ -1,4 +1,4 @@
-use std::{cmp::max, error::Error};
+use std::{cmp::max, error::Error, time::Duration};
 
 use chrono::{DateTime, Local, NaiveDateTime, TimeZone};
 use ratatui::{
@@ -34,6 +34,7 @@ pub struct NyaaConfig {
     pub default_category: String,
     pub default_search: String,
     pub rss: bool,
+    pub timeout: Option<u64>,
     pub columns: Option<NyaaColumns>,
 }
 
@@ -71,6 +72,7 @@ impl Default for NyaaConfig {
             default_category: "AllCategories".to_owned(),
             default_search: Default::default(),
             rss: false,
+            timeout: None,
             columns: None,
         }
     }
@@ -211,7 +213,11 @@ impl Source for NyaaHtmlSource {
         )));
 
         // let client = super::request_client(ctx)?;
-        let response = client.get(url_query.to_owned()).send().await?;
+        let mut request = client.get(url_query.to_owned());
+        if let Some(timeout) = nyaa.timeout {
+            request = request.timeout(Duration::from_secs(timeout));
+        }
+        let response = request.send().await?;
         if response.status() != StatusCode::OK {
             // Throw error if response code is not OK
             let code = response.status().as_u16();

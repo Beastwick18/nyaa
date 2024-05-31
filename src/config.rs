@@ -79,6 +79,7 @@ impl Config {
         // Load user-defined themes
         if let Some((i, _, theme)) = ctx.themes.get_full(&self.theme) {
             w.theme.selected = i;
+            w.theme.table.select(i);
             ctx.theme = theme.clone();
         }
 

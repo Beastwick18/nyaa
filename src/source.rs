@@ -42,13 +42,22 @@ pub struct SourceInfo {
 }
 
 impl SourceInfo {
-    pub fn entry_from_cfg(self, s: &str) -> CatEntry {
+    pub fn get_major_minor(&self, id: usize) -> (usize, usize) {
+        for (major, cat) in self.cats.iter().enumerate() {
+            if let Some((minor, _)) = cat.entries.iter().enumerate().find(|(_, ent)| ent.id == id) {
+                return (major, minor);
+            }
+        }
+        (0, 0)
+    }
+    pub fn entry_from_cfg(&self, s: &str) -> CatEntry {
         for cat in self.cats.iter() {
             if let Some(ent) = cat.entries.iter().find(|ent| ent.cfg == s) {
                 return ent.clone();
             }
         }
         self.cats[0].entries[0].clone()
+        // self.cats[0].entries[0].clone()
     }
 
     pub fn entry_from_str(self, s: &str) -> CatEntry {
@@ -215,13 +224,16 @@ impl Sources {
     pub fn apply(self, ctx: &mut Context, w: &mut Widgets) {
         ctx.src_info = self.info();
         w.category.selected = self.default_category(&ctx.config.sources);
-        w.category.major = 0;
-        w.category.minor = 0;
 
-        w.category.table.select(1);
+        let (major, minor) = ctx.src_info.get_major_minor(w.category.selected);
+        w.category.table.select(major + minor + 1);
+        w.category.major = major;
+        w.category.minor = minor;
 
         w.sort.selected.sort = self.default_sort(&ctx.config.sources);
+        w.sort.table.select(w.sort.selected.sort);
         w.filter.selected = self.default_filter(&ctx.config.sources);
+        w.filter.table.select(w.filter.selected);
 
         // Go back to first page when changing source
         ctx.page = 1;

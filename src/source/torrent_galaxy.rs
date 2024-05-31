@@ -1,4 +1,4 @@
-use std::{cmp::max, collections::HashMap, error::Error};
+use std::{cmp::max, collections::HashMap, error::Error, time::Duration};
 
 use ratatui::{
     layout::{Alignment, Constraint},
@@ -32,6 +32,7 @@ pub struct TgxConfig {
     pub default_filter: TgxFilter,
     pub default_category: String,
     pub default_search: String,
+    pub timeout: Option<u64>,
     pub columns: Option<TgxColumns>,
 }
 
@@ -43,6 +44,7 @@ impl Default for TgxConfig {
             default_filter: TgxFilter::NoFilter,
             default_category: "AllCategories".to_owned(),
             default_search: Default::default(),
+            timeout: None,
             columns: None,
         }
     }
@@ -210,7 +212,11 @@ impl Source for TorrentGalaxyHtmlSource {
         let mut url = base_url.clone();
         url.set_query(Some(&q));
 
-        let response = client.get(url.to_owned()).send().await?;
+        let mut request = client.get(url.to_owned());
+        if let Some(timeout) = tgx.timeout {
+            request = request.timeout(Duration::from_secs(timeout));
+        }
+        let response = request.send().await?;
         if response.status() != StatusCode::OK {
             // Throw error if response code is not OK
             let code = response.status().as_u16();

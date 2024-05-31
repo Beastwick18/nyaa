@@ -136,6 +136,9 @@ impl super::Widget for BatchWidget {
                 (Char('a'), &KeyModifiers::CONTROL) => {
                     ctx.mode = Mode::Loading(LoadType::Batching);
                 }
+                (Char('x'), &KeyModifiers::CONTROL) => {
+                    ctx.batch.clear();
+                }
                 _ => {}
             };
         }
@@ -145,6 +148,7 @@ impl super::Widget for BatchWidget {
         Some(vec![
             ("Enter", "Download single torrent"),
             ("Ctrl-A", "Download all torrents"),
+            ("Ctrl-X", "Clear batch"),
             ("Esc/Tab/Shift-Tab", "Back to results"),
             ("q", "Exit app"),
             ("g/G", "Goto Top/Bottom"),

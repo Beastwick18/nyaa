@@ -61,7 +61,6 @@ impl Widget for SortPopup {
     fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
         let buf = f.buffer_mut();
         let center = super::centered_rect(30, ctx.src_info.sorts.len() as u16 + 2, area);
-        // let clear = super::centered_rect(center.width + 2, center.height, area);
         let items = ctx.src_info.sorts.iter().enumerate().map(|(i, item)| {
             Row::new([match i == self.selected.sort {
                 true => format!("  {}", item),

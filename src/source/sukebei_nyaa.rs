@@ -1,4 +1,4 @@
-use std::error::Error;
+use std::{error::Error, time::Duration};
 
 use chrono::{DateTime, Local, NaiveDateTime, TimeZone};
 use reqwest::{StatusCode, Url};
@@ -33,6 +33,7 @@ pub struct SukebeiNyaaConfig {
     pub default_filter: NyaaFilter,
     pub default_category: String,
     pub default_search: String,
+    pub timeout: Option<u64>,
     pub columns: Option<NyaaColumns>,
 }
 
@@ -44,6 +45,7 @@ impl Default for SukebeiNyaaConfig {
             default_filter: NyaaFilter::NoFilter,
             default_category: "AllCategories".to_owned(),
             default_search: Default::default(),
+            timeout: None,
             columns: None,
         }
     }
@@ -102,8 +104,11 @@ impl Source for SubekiHtmlSource {
             query, high, low, filter, page, sort, dir, user
         )));
 
-        // let client = super::request_client(ctx)?;
-        let response = client.get(url_query.to_owned()).send().await?;
+        let mut request = client.get(url_query.to_owned());
+        if let Some(timeout) = sukebei.timeout {
+            request = request.timeout(Duration::from_secs(timeout));
+        }
+        let response = request.send().await?;
         if response.status() != StatusCode::OK {
             // Throw error if response code is not OK
             let code = response.status().as_u16();

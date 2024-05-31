@@ -86,7 +86,7 @@ impl Widget for NotificationWidget {
         for (offset, height) in res.iter() {
             self.notifs.iter_mut().for_each(|n| {
                 if n.is_error() && n.offset() > *offset {
-                    n.sub_offset(*height);
+                    n.add_offset(-(*height as i32));
                 }
             })
         }
