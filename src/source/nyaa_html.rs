@@ -221,7 +221,7 @@ impl Source for NyaaHtmlSource {
         if response.status() != StatusCode::OK {
             // Throw error if response code is not OK
             let code = response.status().as_u16();
-            return Err(format!("{}\nInvalid repsponse code: {}", url_query, code).into());
+            return Err(format!("{}\nInvalid response code: {}", url_query, code).into());
         }
         let content = response.bytes().await?;
         let doc = Html::parse_document(std::str::from_utf8(&content[..])?);

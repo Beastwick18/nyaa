@@ -220,7 +220,7 @@ impl Source for TorrentGalaxyHtmlSource {
         if response.status() != StatusCode::OK {
             // Throw error if response code is not OK
             let code = response.status().as_u16();
-            return Err(format!("{}\nInvalid repsponse code: {}", url, code).into());
+            return Err(format!("{}\nInvalid response code: {}", url, code).into());
         }
         let content = response.text().await?;
         let doc = Html::parse_document(&content);
@@ -229,7 +229,7 @@ impl Source for TorrentGalaxyHtmlSource {
         if doc.select(table_sel).count() == 0 {
             return Err(format!(
                 "{}\nNo results table found:\nMost likely due to captcha or rate limit\n\nWait a bit before searching again...",
-                url
+                url,
             )
             .into());
         }
