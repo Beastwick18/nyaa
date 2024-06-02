@@ -14,16 +14,23 @@ license = "GPL-3.0-or-later"
 strip = true
 lto = true
 
+[features]
+default = []
+unstable-captcha = []
+
 [dependencies]
 reqwest = { version = "0.11.27", features = [
     "gzip",
     "rustls-tls",
     "socks",
+    "cookies",
 ], default-features = false }
 tokio = { version = "1.36.0", features = ["rt", "macros", "rt-multi-thread"] }
 tokio-util = "0.7.11"
 urlencoding = "2.1.0"
 ratatui = "0.26.3"
+ratatui-image = "1.0.1"
+image = "0.25.1"
 textwrap = "0.16.1"
 crossterm = "0.27.0"
 unicode-width = "0.1.5"

@@ -6,7 +6,7 @@ use nyaa::{
     client::{Client, ClientConfig, DownloadResult},
     config::{Config, ConfigManager},
     results::Results,
-    source::Item,
+    source::{Item, SourceResults},
     sync::EventSync,
 };
 use ratatui::{
@@ -151,7 +151,7 @@ impl EventSync for TestSync {
     async fn load_results(
         self,
         tx_res: tokio::sync::mpsc::Sender<
-            Result<nyaa::results::Results, Box<dyn std::error::Error + Send + Sync>>,
+            Result<SourceResults, Box<dyn std::error::Error + Send + Sync>>,
         >,
         _loadtype: nyaa::app::LoadType,
         _src: nyaa::source::Sources,
@@ -161,7 +161,9 @@ impl EventSync for TestSync {
         _theme: nyaa::theme::Theme,
         _date_format: Option<String>,
     ) {
-        let _ = tx_res.send(Ok(Results::default())).await;
+        let _ = tx_res
+            .send(Ok(SourceResults::Results(Results::default())))
+            .await;
     }
 
     async fn read_event_loop(self, tx_evt: tokio::sync::mpsc::Sender<crossterm::event::Event>) {

@@ -23,7 +23,7 @@ async fn test_categories() {
     assert_eq!(
         reset_buffer(&run_app(sync, 60, 22).await.unwrap()),
         Buffer::with_lines([
-            "┌Search──────────────────────────────└───────────────────┘p┐",
+            "┌Search──────────────────────────────P└───────────────────┘┐",
             "│                                                          │",
             "└──────────────────────────────────────────────────────────┘",
             "┌Results 1-0 (0 total): Page 1/0─dl: Run Command, src: Nyaa┐",
@@ -62,7 +62,7 @@ async fn test_filters() {
     assert_eq!(
         reset_buffer(&run_app(sync, 60, 22).await.unwrap()),
         Buffer::with_lines([
-            "┌Search─────────────────────────└────────────────────────┘p┐",
+            "┌Search──────────────────────────└────────────────────────┘┐",
             "│                                                          │",
             "└──────────────────────────────────────────────────────────┘",
             "┌Results 1-0 (0 total): Page 1/0─dl: Run Command, src: Nyaa┐",
@@ -101,7 +101,7 @@ async fn test_sort() {
     assert_eq!(
         reset_buffer(&run_app(sync, 60, 22).await.unwrap()),
         Buffer::with_lines([
-            "┌Search──────────────────────────────Pr└─────────────────┘p┐",
+            "┌Search──────────────────────────────Pre└─────────────────┘┐",
             "│                                                          │",
             "└──────────────────────────────────────────────────────────┘",
             "┌Results 1-0 (0 total): Page 1/0─dl: Run Command, src: Nyaa┐",
@@ -140,7 +140,7 @@ async fn test_sort_reverse() {
     assert_eq!(
         reset_buffer(&run_app(sync, 60, 22).await.unwrap()),
         Buffer::with_lines([
-            "┌Search──────────────────────────────Pr└─────────────────┘p┐",
+            "┌Search──────────────────────────────Pre└─────────────────┘┐",
             "│                                                          │",
             "└──────────────────────────────────────────────────────────┘",
             "┌Results 1-0 (0 total): Page 1/0─dl: Run Command, src: Nyaa┐",
@@ -178,7 +178,7 @@ async fn test_themes() {
     assert_eq!(
         reset_buffer(&run_app(sync, 60, 22).await.unwrap()),
         Buffer::with_lines([
-            "╭Search──────────╰───────────────────────────────────────╯p╮",
+            "╭Search───────────╰───────────────────────────────────────╯╮",
             "│                                                          │",
             "╰──────────────────────────────────────────────────────────╯",
             "╭Results 1-0 (0 total): Page 1/0─dl: Run Command, src: Nyaa╮",
@@ -217,7 +217,7 @@ async fn test_download_client() {
     assert_eq!(
         reset_buffer(&run_app(sync, 60, 22).await.unwrap()),
         Buffer::with_lines([
-            "┌Search─────────└────────────────────────────────────────┘p┐",
+            "┌Search──────────└────────────────────────────────────────┘┐",
             "│                                                          │",
             "└──────────────────────────────────────────────────────────┘",
             "┌Results 1-0 (0 total): Page 1/0─dl: Default App, src: Nyaa┐",
@@ -256,7 +256,7 @@ async fn test_source() {
     assert_eq!(
         reset_buffer(&run_app(sync, 60, 22).await.unwrap()),
         Buffer::with_lines([
-            "┌Search───────────────────────└──────────────────────────┘p┐",
+            "┌Search────────────────────────└──────────────────────────┘┐",
             "│                                                          │",
             "└──────────────────────────────────────────────────────────┘",
             "┌Results 1-0 (0 total): Page 1/dl: Run Command, src: Subeki┐",

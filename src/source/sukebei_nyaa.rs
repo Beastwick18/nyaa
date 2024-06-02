@@ -22,7 +22,7 @@ use crate::{
 use super::{
     add_protocol,
     nyaa_html::{nyaa_table, NyaaColumns, NyaaFilter, NyaaSort},
-    Item, ItemType, ResultTable, Source, SourceConfig, SourceInfo,
+    Item, ItemType, ResultTable, Source, SourceConfig, SourceInfo, SourceResponse,
 };
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -51,39 +51,39 @@ impl Default for SukebeiNyaaConfig {
     }
 }
 
-pub struct SubekiHtmlSource;
+pub struct SukebeiHtmlSource;
 
-impl Source for SubekiHtmlSource {
+impl Source for SukebeiHtmlSource {
     async fn filter(
         client: &reqwest::Client,
         search: &SearchQuery,
         config: &SourceConfig,
         date_format: Option<String>,
-    ) -> Result<ResultResponse, Box<dyn Error + Send + Sync>> {
-        SubekiHtmlSource::search(client, search, config, date_format).await
+    ) -> Result<SourceResponse, Box<dyn Error + Send + Sync>> {
+        SukebeiHtmlSource::search(client, search, config, date_format).await
     }
     async fn categorize(
         client: &reqwest::Client,
         search: &SearchQuery,
         config: &SourceConfig,
         date_format: Option<String>,
-    ) -> Result<ResultResponse, Box<dyn Error + Send + Sync>> {
-        SubekiHtmlSource::search(client, search, config, date_format).await
+    ) -> Result<SourceResponse, Box<dyn Error + Send + Sync>> {
+        SukebeiHtmlSource::search(client, search, config, date_format).await
     }
     async fn sort(
         client: &reqwest::Client,
         search: &SearchQuery,
         config: &SourceConfig,
         date_format: Option<String>,
-    ) -> Result<ResultResponse, Box<dyn Error + Send + Sync>> {
-        SubekiHtmlSource::search(client, search, config, date_format).await
+    ) -> Result<SourceResponse, Box<dyn Error + Send + Sync>> {
+        SukebeiHtmlSource::search(client, search, config, date_format).await
     }
     async fn search(
         client: &reqwest::Client,
         search: &SearchQuery,
         config: &SourceConfig,
         date_format: Option<String>,
-    ) -> Result<ResultResponse, Box<dyn Error + Send + Sync>> {
+    ) -> Result<SourceResponse, Box<dyn Error + Send + Sync>> {
         let sukebei = config.sukebei.to_owned().unwrap_or_default();
         let cat = search.category;
         let filter = search.filter;
@@ -209,11 +209,11 @@ impl Source for SubekiHtmlSource {
                 })
             })
             .collect();
-        Ok(ResultResponse {
+        Ok(SourceResponse::Results(ResultResponse {
             items,
             last_page,
             total_results,
-        })
+        }))
         // Ok(nyaa_table(
         //     items,
         //     &theme,
@@ -222,6 +222,16 @@ impl Source for SubekiHtmlSource {
         //     last_page,
         //     total_results,
         // ))
+    }
+
+    async fn solve(
+        _solution: String,
+        client: &reqwest::Client,
+        search: &SearchQuery,
+        config: &SourceConfig,
+        date_format: Option<String>,
+    ) -> Result<SourceResponse, Box<dyn Error + Send + Sync>> {
+        SukebeiHtmlSource::search(client, search, config, date_format).await
     }
 
     fn info() -> SourceInfo {

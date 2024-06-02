@@ -18,12 +18,14 @@ use crate::{
     theme::Theme,
     util::{
         conv::{shorten_number, to_bytes},
-        html::{attr, inner},
+        html::{as_type, attr, inner},
     },
     widget::{sort::SelectedSort, EnumIter as _},
 };
 
-use super::{add_protocol, nyaa_rss, Item, ItemType, Source, SourceConfig, SourceInfo};
+use super::{
+    add_protocol, nyaa_rss, Item, ItemType, Source, SourceConfig, SourceInfo, SourceResponse,
+};
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(default)]
@@ -187,7 +189,7 @@ impl Source for NyaaHtmlSource {
         search: &SearchQuery,
         config: &SourceConfig,
         date_format: Option<String>,
-    ) -> Result<ResultResponse, Box<dyn Error + Send + Sync>> {
+    ) -> Result<SourceResponse, Box<dyn Error + Send + Sync>> {
         let nyaa = config.nyaa.to_owned().unwrap_or_default();
         if nyaa.rss {
             return nyaa_rss::search_rss(client, search, config, date_format).await;
@@ -285,9 +287,9 @@ impl Source for NyaaHtmlSource {
                     date = date_time.format(&date_format).to_string();
                 }
 
-                let seeders = inner(e, seed_sel, "0").parse().unwrap_or(0);
-                let leechers = inner(e, leech_sel, "0").parse().unwrap_or(0);
-                let downloads = inner(e, dl_sel, "0").parse().unwrap_or(0);
+                let seeders = as_type(inner(e, seed_sel, "0")).unwrap_or_default();
+                let leechers = as_type(inner(e, leech_sel, "0")).unwrap_or_default();
+                let downloads = as_type(inner(e, dl_sel, "0")).unwrap_or_default();
                 let torrent_link = url
                     .join(&torrent)
                     .map(|u| u.to_string())
@@ -326,24 +328,24 @@ impl Source for NyaaHtmlSource {
             })
             .collect();
 
-        Ok(ResultResponse {
+        Ok(SourceResponse::Results(ResultResponse {
             items,
             total_results,
             last_page,
-        })
+        }))
     }
     async fn sort(
         client: &reqwest::Client,
         search: &SearchQuery,
         config: &SourceConfig,
         date_format: Option<String>,
-    ) -> Result<ResultResponse, Box<dyn Error + Send + Sync>> {
+    ) -> Result<SourceResponse, Box<dyn Error + Send + Sync>> {
         let nyaa = config.nyaa.to_owned().unwrap_or_default();
         let sort = search.sort;
         let mut res = NyaaHtmlSource::search(client, search, config, date_format).await;
 
         if nyaa.rss {
-            if let Ok(res) = &mut res {
+            if let Ok(SourceResponse::Results(res)) = &mut res {
                 nyaa_rss::sort_items(&mut res.items, sort);
             }
         }
@@ -354,7 +356,7 @@ impl Source for NyaaHtmlSource {
         search: &SearchQuery,
         config: &SourceConfig,
         date_format: Option<String>,
-    ) -> Result<ResultResponse, Box<dyn Error + Send + Sync>> {
+    ) -> Result<SourceResponse, Box<dyn Error + Send + Sync>> {
         NyaaHtmlSource::search(client, search, config, date_format).await
     }
     async fn categorize(
@@ -362,7 +364,16 @@ impl Source for NyaaHtmlSource {
         search: &SearchQuery,
         config: &SourceConfig,
         date_format: Option<String>,
-    ) -> Result<ResultResponse, Box<dyn Error + Send + Sync>> {
+    ) -> Result<SourceResponse, Box<dyn Error + Send + Sync>> {
+        NyaaHtmlSource::search(client, search, config, date_format).await
+    }
+    async fn solve(
+        _solution: String,
+        client: &reqwest::Client,
+        search: &SearchQuery,
+        config: &SourceConfig,
+        date_format: Option<String>,
+    ) -> Result<SourceResponse, Box<dyn Error + Send + Sync>> {
         NyaaHtmlSource::search(client, search, config, date_format).await
     }
 

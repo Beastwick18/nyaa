@@ -1,12 +1,13 @@
-use std::{collections::HashMap, error::Error, time::Duration};
+use std::{collections::HashMap, error::Error, sync::Arc, time::Duration};
 
-use reqwest::Proxy;
+use ratatui_image::protocol::StatefulProtocol;
+use reqwest::{cookie::Jar, Proxy};
 use serde::{Deserialize, Serialize};
 
 use crate::{
     app::{Context, LoadType, Widgets},
     popup_enum,
-    results::{ResultResponse, ResultTable},
+    results::{ResultResponse, ResultTable, Results},
     sync::SearchQuery,
     theme::Theme,
     util::conv::add_protocol,
@@ -15,7 +16,7 @@ use crate::{
 
 use self::{
     nyaa_html::{NyaaConfig, NyaaHtmlSource},
-    sukebei_nyaa::{SubekiHtmlSource, SukebeiNyaaConfig},
+    sukebei_nyaa::{SukebeiHtmlSource, SukebeiNyaaConfig},
     torrent_galaxy::{TgxConfig, TorrentGalaxyHtmlSource},
 };
 
@@ -23,6 +24,18 @@ pub mod nyaa_html;
 pub mod nyaa_rss;
 pub mod sukebei_nyaa;
 pub mod torrent_galaxy;
+
+#[derive(Clone)]
+pub enum SourceResults {
+    Results(Results),
+    Captcha(Box<dyn StatefulProtocol>),
+}
+
+#[derive(Clone)]
+pub enum SourceResponse {
+    Results(ResultResponse),
+    Captcha(Box<dyn StatefulProtocol>),
+}
 
 #[derive(Serialize, Deserialize, Clone, Default)]
 #[serde(default)]
@@ -78,9 +91,11 @@ impl SourceInfo {
     }
 }
 
-pub fn request_client(ctx: &Context) -> Result<reqwest::Client, reqwest::Error> {
+pub fn request_client(jar: &Arc<Jar>, ctx: &Context) -> Result<reqwest::Client, reqwest::Error> {
     let mut client = reqwest::Client::builder()
         .gzip(true)
+        .cookie_provider(jar.clone())
+        // .cookie_store(true)
         .timeout(Duration::from_secs(ctx.config.timeout));
     if let Some(proxy_url) = ctx.config.request_proxy.to_owned() {
         client = client.proxy(Proxy::all(add_protocol(proxy_url, false))?);
@@ -129,25 +144,32 @@ pub trait Source {
         search: &SearchQuery,
         config: &SourceConfig,
         date_format: Option<String>,
-    ) -> impl std::future::Future<Output = Result<ResultResponse, Box<dyn Error + Send + Sync>>> + Send;
+    ) -> impl std::future::Future<Output = Result<SourceResponse, Box<dyn Error + Send + Sync>>> + Send;
     fn sort(
         client: &reqwest::Client,
         search: &SearchQuery,
         config: &SourceConfig,
         date_format: Option<String>,
-    ) -> impl std::future::Future<Output = Result<ResultResponse, Box<dyn Error + Send + Sync>>> + Send;
+    ) -> impl std::future::Future<Output = Result<SourceResponse, Box<dyn Error + Send + Sync>>> + Send;
     fn filter(
         client: &reqwest::Client,
         search: &SearchQuery,
         config: &SourceConfig,
         date_format: Option<String>,
-    ) -> impl std::future::Future<Output = Result<ResultResponse, Box<dyn Error + Send + Sync>>> + Send;
+    ) -> impl std::future::Future<Output = Result<SourceResponse, Box<dyn Error + Send + Sync>>> + Send;
     fn categorize(
         client: &reqwest::Client,
         search: &SearchQuery,
         config: &SourceConfig,
         date_format: Option<String>,
-    ) -> impl std::future::Future<Output = Result<ResultResponse, Box<dyn Error + Send + Sync>>> + Send;
+    ) -> impl std::future::Future<Output = Result<SourceResponse, Box<dyn Error + Send + Sync>>> + Send;
+    fn solve(
+        solution: String,
+        client: &reqwest::Client,
+        search: &SearchQuery,
+        config: &SourceConfig,
+        date_format: Option<String>,
+    ) -> impl std::future::Future<Output = Result<SourceResponse, Box<dyn Error + Send + Sync>>> + Send;
     fn info() -> SourceInfo;
     fn load_config(config: &mut SourceConfig);
 
@@ -172,7 +194,7 @@ impl Sources {
         search: &SearchQuery,
         config: &SourceConfig,
         date_format: Option<String>,
-    ) -> Result<ResultResponse, Box<dyn Error + Send + Sync>> {
+    ) -> Result<SourceResponse, Box<dyn Error + Send + Sync>> {
         match self {
             Sources::Nyaa => match load_type {
                 LoadType::Searching | LoadType::Sourcing => {
@@ -187,20 +209,26 @@ impl Sources {
                 LoadType::Categorizing => {
                     NyaaHtmlSource::categorize(client, search, config, date_format).await
                 }
+                LoadType::SolvingCaptcha(solution) => {
+                    NyaaHtmlSource::solve(solution, client, search, config, date_format).await
+                }
                 LoadType::Downloading | LoadType::Batching => unreachable!(),
             },
             Sources::SubekiNyaa => match load_type {
                 LoadType::Searching | LoadType::Sourcing => {
-                    SubekiHtmlSource::search(client, search, config, date_format).await
+                    SukebeiHtmlSource::search(client, search, config, date_format).await
                 }
                 LoadType::Sorting => {
-                    SubekiHtmlSource::sort(client, search, config, date_format).await
+                    SukebeiHtmlSource::sort(client, search, config, date_format).await
                 }
                 LoadType::Filtering => {
-                    SubekiHtmlSource::filter(client, search, config, date_format).await
+                    SukebeiHtmlSource::filter(client, search, config, date_format).await
                 }
                 LoadType::Categorizing => {
-                    SubekiHtmlSource::categorize(client, search, config, date_format).await
+                    SukebeiHtmlSource::categorize(client, search, config, date_format).await
+                }
+                LoadType::SolvingCaptcha(solution) => {
+                    SukebeiHtmlSource::solve(solution, client, search, config, date_format).await
                 }
                 LoadType::Downloading | LoadType::Batching => unreachable!(),
             },
@@ -216,6 +244,10 @@ impl Sources {
                 }
                 LoadType::Categorizing => {
                     TorrentGalaxyHtmlSource::categorize(client, search, config, date_format).await
+                }
+                LoadType::SolvingCaptcha(solution) => {
+                    TorrentGalaxyHtmlSource::solve(solution, client, search, config, date_format)
+                        .await
                 }
                 LoadType::Downloading | LoadType::Batching => unreachable!(),
             },
@@ -246,7 +278,7 @@ impl Sources {
     pub fn info(self) -> SourceInfo {
         match self {
             Sources::Nyaa => NyaaHtmlSource::info(),
-            Sources::SubekiNyaa => SubekiHtmlSource::info(),
+            Sources::SubekiNyaa => SukebeiHtmlSource::info(),
             Sources::TorrentGalaxy => TorrentGalaxyHtmlSource::info(),
         }
     }
@@ -254,7 +286,7 @@ impl Sources {
     pub fn load_config(self, config: &mut SourceConfig) {
         match self {
             Sources::Nyaa => NyaaHtmlSource::load_config(config),
-            Sources::SubekiNyaa => SubekiHtmlSource::load_config(config),
+            Sources::SubekiNyaa => SukebeiHtmlSource::load_config(config),
             Sources::TorrentGalaxy => TorrentGalaxyHtmlSource::load_config(config),
         };
     }
@@ -262,7 +294,7 @@ impl Sources {
     pub fn default_category(self, config: &SourceConfig) -> usize {
         match self {
             Sources::Nyaa => NyaaHtmlSource::default_category(config),
-            Sources::SubekiNyaa => SubekiHtmlSource::default_category(config),
+            Sources::SubekiNyaa => SukebeiHtmlSource::default_category(config),
             Sources::TorrentGalaxy => TorrentGalaxyHtmlSource::default_category(config),
         }
     }
@@ -270,7 +302,7 @@ impl Sources {
     pub fn default_sort(self, config: &SourceConfig) -> usize {
         match self {
             Sources::Nyaa => NyaaHtmlSource::default_sort(config),
-            Sources::SubekiNyaa => SubekiHtmlSource::default_sort(config),
+            Sources::SubekiNyaa => SukebeiHtmlSource::default_sort(config),
             Sources::TorrentGalaxy => TorrentGalaxyHtmlSource::default_sort(config),
         }
     }
@@ -278,7 +310,7 @@ impl Sources {
     pub fn default_filter(self, config: &SourceConfig) -> usize {
         match self {
             Sources::Nyaa => NyaaHtmlSource::default_filter(config),
-            Sources::SubekiNyaa => SubekiHtmlSource::default_filter(config),
+            Sources::SubekiNyaa => SukebeiHtmlSource::default_filter(config),
             Sources::TorrentGalaxy => TorrentGalaxyHtmlSource::default_filter(config),
         }
     }
@@ -286,7 +318,7 @@ impl Sources {
     pub fn default_search(self, config: &SourceConfig) -> String {
         match self {
             Sources::Nyaa => NyaaHtmlSource::default_search(config),
-            Sources::SubekiNyaa => SubekiHtmlSource::default_search(config),
+            Sources::SubekiNyaa => SukebeiHtmlSource::default_search(config),
             Sources::TorrentGalaxy => TorrentGalaxyHtmlSource::default_search(config),
         }
     }
@@ -300,7 +332,7 @@ impl Sources {
     ) -> ResultTable {
         match self {
             Sources::Nyaa => NyaaHtmlSource::format_table(items, search, config, theme),
-            Sources::SubekiNyaa => SubekiHtmlSource::format_table(items, search, config, theme),
+            Sources::SubekiNyaa => SukebeiHtmlSource::format_table(items, search, config, theme),
             Sources::TorrentGalaxy => {
                 TorrentGalaxyHtmlSource::format_table(items, search, config, theme)
             }

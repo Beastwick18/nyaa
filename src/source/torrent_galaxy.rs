@@ -17,12 +17,12 @@ use crate::{
     theme::Theme,
     util::{
         conv::{shorten_number, to_bytes},
-        html::{attr, inner},
+        html::{as_type, attr, inner},
     },
     widget::EnumIter as _,
 };
 
-use super::{add_protocol, Item, ItemType, Source, SourceConfig, SourceInfo};
+use super::{add_protocol, Item, ItemType, Source, SourceConfig, SourceInfo, SourceResponse};
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(default)]
@@ -55,6 +55,7 @@ pub struct TgxColumns {
     category: Option<bool>,
     language: Option<bool>,
     title: Option<bool>,
+    imdb: Option<bool>,
     uploader: Option<bool>,
     size: Option<bool>,
     date: Option<bool>,
@@ -64,11 +65,12 @@ pub struct TgxColumns {
 }
 
 impl TgxColumns {
-    fn array(self) -> [bool; 9] {
+    fn array(self) -> [bool; 10] {
         [
             self.category.unwrap_or(true),
             self.language.unwrap_or(true),
             self.title.unwrap_or(true),
+            self.imdb.unwrap_or(true),
             self.uploader.unwrap_or(true),
             self.size.unwrap_or(true),
             self.date.unwrap_or(true),
@@ -151,7 +153,7 @@ impl Source for TorrentGalaxyHtmlSource {
         search: &SearchQuery,
         config: &SourceConfig,
         date_format: Option<String>,
-    ) -> Result<ResultResponse, Box<dyn Error + Send + Sync>> {
+    ) -> Result<SourceResponse, Box<dyn Error + Send + Sync>> {
         TorrentGalaxyHtmlSource::search(client, search, config, date_format).await
     }
     async fn categorize(
@@ -159,7 +161,7 @@ impl Source for TorrentGalaxyHtmlSource {
         search: &SearchQuery,
         config: &SourceConfig,
         date_format: Option<String>,
-    ) -> Result<ResultResponse, Box<dyn Error + Send + Sync>> {
+    ) -> Result<SourceResponse, Box<dyn Error + Send + Sync>> {
         TorrentGalaxyHtmlSource::search(client, search, config, date_format).await
     }
     async fn sort(
@@ -167,15 +169,16 @@ impl Source for TorrentGalaxyHtmlSource {
         search: &SearchQuery,
         config: &SourceConfig,
         date_format: Option<String>,
-    ) -> Result<ResultResponse, Box<dyn Error + Send + Sync>> {
+    ) -> Result<SourceResponse, Box<dyn Error + Send + Sync>> {
         TorrentGalaxyHtmlSource::search(client, search, config, date_format).await
     }
+
     async fn search(
         client: &reqwest::Client,
         search: &SearchQuery,
         config: &SourceConfig,
         _date_format: Option<String>,
-    ) -> Result<ResultResponse, Box<dyn Error + Send + Sync>> {
+    ) -> Result<SourceResponse, Box<dyn Error + Send + Sync>> {
         let tgx = config.tgx.to_owned().unwrap_or_default();
         let base_url = Url::parse(&add_protocol(tgx.base_url, true))?.join("torrents.php")?;
         let query = encode(&search.query);
@@ -223,9 +226,24 @@ impl Source for TorrentGalaxyHtmlSource {
             return Err(format!("{}\nInvalid response code: {}", url, code).into());
         }
         let content = response.text().await?;
-        let doc = Html::parse_document(&content);
 
         let table_sel = &sel!(".tgxtable")?;
+        #[cfg(feature = "unstable-captcha")]
+        if Html::parse_document(&content).select(table_sel).count() == 0 {
+            let mut request = client.get("https://torrentgalaxy.to/captcha/cpt_show.pnp?v=txlight&63fd4c746843c74b53ca60277192fb48");
+            if let Some(timeout) = tgx.timeout {
+                request = request.timeout(Duration::from_secs(timeout));
+            }
+            let response = request.send().await?;
+            let bytes = response.bytes().await?;
+            let mut picker = ratatui_image::picker::Picker::new((1, 2));
+            picker.protocol_type = ratatui_image::picker::ProtocolType::Halfblocks;
+            let dyn_image = image::load_from_memory(&bytes[..])?;
+            let image = picker.new_resize_protocol(dyn_image);
+
+            return Ok(SourceResponse::Captcha(image));
+        }
+        let doc = Html::parse_document(&content);
         if doc.select(table_sel).count() == 0 {
             return Err(format!(
                 "{}\nNo results table found:\nMost likely due to captcha or rate limit\n\nWait a bit before searching again...",
@@ -234,7 +252,8 @@ impl Source for TorrentGalaxyHtmlSource {
             .into());
         }
         let item_sel = &sel!("div.tgxtablerow")?;
-        let title_sel = &sel!("div.tgxtablecell:nth-of-type(4) > div > a.txlight")?;
+        let title_sel = &sel!("div.tgxtablecell:nth-of-type(4) > div > a.txlight:first-of-type")?;
+        let imdb_sel = &sel!("div.tgxtablecell:nth-of-type(4) > div > a:last-of-type")?;
         let cat_sel = &sel!("div.tgxtablecell:nth-of-type(1) > a")?;
         let date_sel = &sel!("div.tgxtablecell:nth-of-type(12)")?;
         let seed_sel = &sel!("div.tgxtablecell:nth-of-type(11) > span > font:first-of-type > b")?;
@@ -264,24 +283,9 @@ impl Source for TorrentGalaxyHtmlSource {
                     .nth(0)
                     .map(|e| e.text().collect())
                     .unwrap_or_default();
-                let seeders = inner(e, seed_sel, "0")
-                    .chars()
-                    .filter(char::is_ascii_digit)
-                    .collect::<String>()
-                    .parse::<u32>()
-                    .unwrap_or_default();
-                let leechers = inner(e, leech_sel, "0")
-                    .chars()
-                    .filter(char::is_ascii_digit)
-                    .collect::<String>()
-                    .parse::<u32>()
-                    .unwrap_or_default();
-                let views = inner(e, views_sel, "0")
-                    .chars()
-                    .filter(char::is_ascii_digit)
-                    .collect::<String>()
-                    .parse::<u32>()
-                    .unwrap_or_default();
+                let seeders = as_type(inner(e, seed_sel, "0")).unwrap_or_default();
+                let leechers = as_type(inner(e, leech_sel, "0")).unwrap_or_default();
+                let views = as_type(inner(e, views_sel, "0")).unwrap_or_default();
                 let mut size = inner(e, size_sel, "0 MB");
 
                 // Convert numbers like 1,015 KB => 1.01 MB
@@ -328,10 +332,17 @@ impl Source for TorrentGalaxyHtmlSource {
                 let hash = torrent_link.split('/').nth(4).unwrap_or("unknown");
                 let file_name = format!("{}.torrent", hash);
 
+                let imdb = attr(e, imdb_sel, "href");
+                let imdb = match imdb.rsplit_once('=').map(|r| r.1).unwrap_or("") {
+                    "tt2000000" => "", // For some reason, most XXX titles use this ID
+                    i => i,
+                };
+
                 let extra: HashMap<String, String> = collection![
                     "uploader".to_owned() => inner(e, uploader_sel, "???"),
                     "uploader_status".to_owned() => attr(e, uploader_status_sel, "title"),
                     "lang".to_owned() => attr(e, lang_sel, "title"),
+                    "imdb".to_owned() => imdb.to_owned(),
                 ];
 
                 Some(Item {
@@ -372,11 +383,83 @@ impl Source for TorrentGalaxyHtmlSource {
             }
         }
 
-        Ok(ResultResponse {
+        Ok(SourceResponse::Results(ResultResponse {
             items,
             total_results,
             last_page,
-        })
+        }))
+    }
+
+    async fn solve(
+        solution: String,
+        client: &reqwest::Client,
+        search: &SearchQuery,
+        config: &SourceConfig,
+        date_format: Option<String>,
+    ) -> Result<SourceResponse, Box<dyn Error + Send + Sync>> {
+        let tgx = config.tgx.to_owned().unwrap_or_default();
+        // let jar = Jar::default();
+        // jar.add_cookie_str(cookie, url)
+        // let client = ClientBuilder::new()
+        //     .cookie_provider(true)
+        //     .timeout(Duration::from_secs(60))
+        //     .build()?;
+        //
+        // let mut headers = HeaderMap::new();
+        // headers.insert(
+        //     "Cookie",
+        //     HeaderValue::from_str(&format!("PHPSESSID={}", ses_id))?,
+        // );
+
+        let base_url = Url::parse(&add_protocol(tgx.base_url, true))?.join("torrents.php")?;
+        let query = encode(&search.query);
+
+        let sort = match TgxSort::try_from(search.sort.sort) {
+            Ok(TgxSort::Date) => "&sort=id",
+            Ok(TgxSort::Seeders) => "&sort=seeders",
+            Ok(TgxSort::Leechers) => "&sort=leechers",
+            Ok(TgxSort::Size) => "&sort=size",
+            Ok(TgxSort::Name) => "&sort=name",
+            _ => "",
+        };
+        let ord = format!("&order={}", search.sort.dir.to_url());
+        let filter = match TgxFilter::try_from(search.filter) {
+            Ok(TgxFilter::OnlineStreams) => "&filterstream=1",
+            Ok(TgxFilter::ExcludeXXX) => "&nox=2&nox=1",
+            Ok(TgxFilter::NoWildcard) => "&nowildcard=1",
+            _ => "",
+        };
+        let cat = match search.category {
+            0 => "".to_owned(),
+            x => format!("&c{}=1", x),
+        };
+
+        let q = format!(
+            "search={}&page={}{}{}{}{}",
+            query,
+            search.page - 1,
+            filter,
+            cat,
+            sort,
+            ord
+        );
+        let mut url = base_url.clone();
+        url.set_query(Some(&q));
+
+        let mut request = client.post(format!(
+            "https://torrentgalaxy.to/galaxyfence.php?captcha={}&dropoff={}",
+            solution,
+            encode(&format!(
+                "{}?{}",
+                url.path(),
+                url.query().unwrap_or_default()
+            )),
+        ));
+        if let Some(timeout) = tgx.timeout {
+            request = request.timeout(Duration::from_secs(timeout));
+        }
+        request.send().await?.text().await?;
+        TorrentGalaxyHtmlSource::search(client, search, config, date_format).await
     }
 
     fn info() -> SourceInfo {
@@ -500,11 +583,18 @@ impl Source for TorrentGalaxyHtmlSource {
             .max()
             .unwrap_or_default() as u16;
         let uploader_width = max(raw_uploader_width, 8);
+        let raw_imdb_width = items
+            .iter()
+            .map(|i| i.extra.get("imdb").map(|u| u.len()).unwrap_or(0))
+            .max()
+            .unwrap_or_default() as u16;
+        let imdb_width = max(raw_imdb_width, 4);
 
         let header = ResultHeader::new([
             ResultColumn::Normal("Cat".to_owned(), Constraint::Length(3)),
             ResultColumn::Normal("".to_owned(), Constraint::Length(2)),
             ResultColumn::Normal("Name".to_owned(), Constraint::Min(3)),
+            ResultColumn::Normal("imdb".to_owned(), Constraint::Length(imdb_width)),
             ResultColumn::Normal("Uploader".to_owned(), Constraint::Length(uploader_width)),
             ResultColumn::Sorted("Size".to_owned(), 9, TgxSort::Size as u32),
             ResultColumn::Sorted("Date".to_owned(), date_width, TgxSort::Date as u32),
@@ -514,6 +604,7 @@ impl Source for TorrentGalaxyHtmlSource {
         ]);
         let mut binding = header.get_binding();
         let align = [
+            Alignment::Left,
             Alignment::Left,
             Alignment::Left,
             Alignment::Left,
@@ -540,9 +631,14 @@ impl Source for TorrentGalaxyHtmlSource {
                         ItemType::None => theme.fg,
                     }),
                     item.extra
+                        .get("imdb")
+                        .cloned()
+                        .unwrap_or_default()
+                        .fg(theme.fg),
+                    item.extra
                         .get("uploader")
-                        .unwrap_or(&"???".to_owned())
-                        .to_owned()
+                        .cloned()
+                        .unwrap_or("???".to_owned())
                         .fg(item
                             .extra
                             .get("uploader_status")

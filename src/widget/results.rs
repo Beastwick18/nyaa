@@ -67,7 +67,7 @@ impl super::Widget for ResultsWidget {
         let header = header.fg(focus_color).underlined();
 
         Clear.render(area, buf);
-        let items: Vec<Row> = match ctx.load_type {
+        let items: Vec<Row> = match &ctx.load_type {
             Some(loadtype) => {
                 let message = format!("{}…", loadtype);
                 let load_area = centered_rect(message.len() as u16, 1, area);

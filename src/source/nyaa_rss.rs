@@ -15,7 +15,7 @@ use crate::{
 use super::{
     add_protocol,
     nyaa_html::{NyaaHtmlSource, NyaaSort},
-    Item, ItemType, Source, SourceConfig,
+    Item, ItemType, Source, SourceConfig, SourceResponse,
 };
 
 type ExtensionMap = BTreeMap<String, Vec<Extension>>;
@@ -60,7 +60,7 @@ pub async fn search_rss(
     search: &SearchQuery,
     config: &SourceConfig,
     date_format: Option<String>,
-) -> Result<ResultResponse, Box<dyn Error + Send + Sync>> {
+) -> Result<SourceResponse, Box<dyn Error + Send + Sync>> {
     let nyaa = config.nyaa.to_owned().unwrap_or_default();
     let query = search.query.to_owned();
     let cat = search.category;
@@ -152,11 +152,11 @@ pub async fn search_rss(
         .collect();
     let total_results = items.len();
     sort_items(&mut items, search.sort);
-    Ok(ResultResponse {
+    Ok(SourceResponse::Results(ResultResponse {
         items,
         last_page,
         total_results,
-    })
+    }))
     // Ok(items)
     // Ok(nyaa_table(
     //     items,

@@ -36,25 +36,21 @@ impl NotifyPosition {
         start_offset: u16,
         stop_offset: u16,
     ) -> ((i32, i32), (i32, i32), (i32, i32)) {
-        let stop_x = if self.is_left() {
-            area.left() as i32 - width as i32
-        } else {
-            area.right() as i32 + 1
+        let stop_x = match self.is_left() {
+            true => area.left() as i32 - width as i32,
+            false => area.right() as i32 + 1,
         };
-        let start_x = if self.is_left() {
-            area.left() as i32 + 2
-        } else {
-            area.right() as i32 - width as i32 - 2
+        let start_x = match self.is_left() {
+            true => area.left() as i32 + 2,
+            false => area.right() as i32 - width as i32 - 1,
         };
-        let start_y = if self.is_top() {
-            area.top() as i32 - height as i32 + start_offset as i32 + 1
-        } else {
-            area.bottom() as i32 - start_offset as i32 - 1
+        let start_y = match self.is_top() {
+            true => area.top() as i32 - height as i32 + start_offset as i32 + 1,
+            false => area.bottom() as i32 - start_offset as i32 - 1,
         };
-        let stop_y = if self.is_top() {
-            area.top() as i32 + stop_offset as i32 + 1
-        } else {
-            area.bottom() as i32 - stop_offset as i32 - height as i32 - 1
+        let stop_y = match self.is_top() {
+            true => area.top() as i32 + stop_offset as i32 + 1,
+            false => area.bottom() as i32 - stop_offset as i32 - height as i32 - 1,
         };
         ((start_x, start_y), (start_x, stop_y), (stop_x, stop_y))
     }
@@ -220,13 +216,6 @@ impl NotifyBox {
         self.start_offset = self.stop_offset + self.height;
         self.stop_offset = (self.stop_offset as i32 + Into::<i32>::into(offset)).max(0) as u16;
     }
-
-    // pub fn sub_offset(&mut self, offset: u16) {
-    //     self.start_offset = self.stop_offset + self.height;
-    //     self.stop_offset = (self.stop_offset as i32 - offset as i32).max(0) as u16;
-    //
-    //     self.enter_state.reset();
-    // }
 
     pub fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
         let max_width = match self.error {

@@ -1,4 +1,4 @@
-use std::{error::Error, fmt::Display, time::Instant};
+use std::{error::Error, fmt::Display, sync::Arc, time::Instant};
 
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use indexmap::IndexMap;
@@ -7,6 +7,8 @@ use ratatui::{
     layout::{Constraint, Direction, Layout},
     Frame, Terminal,
 };
+use reqwest::cookie::Jar;
+use reqwest::{cookie::CookieStore, Url};
 use tokio::{sync::mpsc, task::AbortHandle};
 
 use crate::{
@@ -14,12 +16,15 @@ use crate::{
     clip,
     config::{Config, ConfigManager},
     results::Results,
-    source::{nyaa_html::NyaaHtmlSource, request_client, Item, Source, SourceInfo, Sources},
+    source::{
+        nyaa_html::NyaaHtmlSource, request_client, Item, Source, SourceInfo, SourceResults, Sources,
+    },
     sync::{EventSync, SearchQuery},
     theme::{self, Theme},
     util::conv::key_to_string,
     widget::{
         batch::BatchWidget,
+        captcha::CaptchaPopup,
         category::CategoryPopup,
         clients::ClientsPopup,
         filter::FilterPopup,
@@ -46,10 +51,11 @@ use crate::util::term;
 
 pub static APP_NAME: &str = "nyaa";
 
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq, Clone)]
 pub enum LoadType {
     Sourcing,
     Searching,
+    SolvingCaptcha(String),
     Sorting,
     Filtering,
     Categorizing,
@@ -62,6 +68,7 @@ impl Display for LoadType {
         let s = match self {
             LoadType::Sourcing => "Sourcing",
             LoadType::Searching => "Searching",
+            LoadType::SolvingCaptcha(_) => "Solving",
             LoadType::Sorting => "Sorting",
             LoadType::Filtering => "Filtering",
             LoadType::Categorizing => "Categorizing",
@@ -88,6 +95,7 @@ pub enum Mode {
     Page,
     User,
     Help,
+    Captcha,
 }
 
 impl Display for Mode {
@@ -106,6 +114,7 @@ impl Display for Mode {
             Mode::Page => "Page",
             Mode::User => "User",
             Mode::Help => "Help",
+            Mode::Captcha => "Captcha",
         }
         .to_owned();
         write!(f, "{}", s)
@@ -206,6 +215,7 @@ pub struct Widgets {
     pub page: PagePopup,
     pub user: UserPopup,
     pub help: HelpPopup,
+    pub captcha: CaptchaPopup,
 }
 
 impl App {
@@ -217,7 +227,7 @@ impl App {
         let ctx = &mut Context::default();
 
         let (tx_res, mut rx_res) =
-            mpsc::channel::<Result<Results, Box<dyn Error + Send + Sync>>>(32);
+            mpsc::channel::<Result<SourceResults, Box<dyn Error + Send + Sync>>>(32);
         let (tx_evt, mut rx_evt) = mpsc::channel::<Event>(100);
         let (tx_dl, mut rx_dl) = mpsc::channel::<DownloadResult>(100);
 
@@ -240,9 +250,17 @@ impl App {
             }
         }
 
-        let client = request_client(ctx)?;
+        let jar = Arc::new(Jar::default());
+        let client = request_client(&jar, ctx)?;
         let mut last_load_abort: Option<AbortHandle> = None;
         let mut last_time: Option<Instant> = None;
+
+        // let bytes = client.get("https://torrentgalaxy.to/captcha/cpt_show.pnp?v=txlight&62fd4c746843c74b53ca60277192fb48").send().await?.bytes().await?;
+        // let mut picker = Picker::new((1, 2));
+        // picker.protocol_type = ProtocolType::Halfblocks;
+        // let dyn_image = image::load_from_memory(&bytes[..])?;
+        // let image = picker.new_resize_protocol(dyn_image);
+        // self.widgets.captcha.image = Some(image);
 
         while !ctx.should_quit {
             if ctx.should_save_config {
@@ -274,7 +292,7 @@ impl App {
 
             self.get_help(ctx);
             terminal.draw(|f| self.draw(ctx, f))?;
-            if let Mode::Loading(load_type) = ctx.mode {
+            if let Mode::Loading(load_type) = ctx.mode.clone() {
                 ctx.mode = Mode::Normal;
                 match load_type {
                     LoadType::Downloading => {
@@ -320,7 +338,7 @@ impl App {
                     _ => {}
                 }
 
-                ctx.load_type = Some(load_type);
+                ctx.load_type = Some(load_type.clone());
 
                 if let Some(handle) = last_load_abort.as_ref() {
                     handle.abort();
@@ -337,7 +355,7 @@ impl App {
 
                 let task = tokio::spawn(sync.clone().load_results(
                     tx_res.clone(),
-                    load_type,
+                    load_type.clone(),
                     ctx.src,
                     client.clone(),
                     search,
@@ -363,7 +381,17 @@ impl App {
                     },
                     Some(rt) = rx_res.recv() => {
                         match rt {
-                            Ok(rt) => ctx.results = rt,
+                            Ok(SourceResults::Results(rt)) => ctx.results = rt,
+                            Ok(SourceResults::Captcha(c)) => {
+                                ctx.mode = Mode::Captcha;
+                                // self.widgets.captcha.ses_id = Some(ses_id);
+                                self.widgets.captcha.image = Some(c);
+                                let cookies = jar.cookies(&Url::parse("https://torrentgalaxy.to/")?);
+                                let x = cookies.map(|c| c.to_str().unwrap_or("").to_owned()).unwrap_or_default();
+                                ctx.notify(format!("Cookies:\n{}", x));
+                                // jar.add_cookie_str("", &Url::parse("https://torrentgalaxy.to/")?)
+                                // jar.add_cookies_str(ses_id, Url::parse(""));
+                            }
                             Err(e) => {
                                 // Clear results on error
                                 ctx.results = Results::default();
@@ -447,6 +475,7 @@ impl App {
             Mode::User => self.widgets.user.draw(f, ctx, f.size()),
             Mode::Sources => self.widgets.sources.draw(f, ctx, f.size()),
             Mode::Clients => self.widgets.clients.draw(f, ctx, f.size()),
+            Mode::Captcha => self.widgets.captcha.draw(f, ctx, f.size()),
             Mode::KeyCombo(_) | Mode::Normal | Mode::Search | Mode::Loading(_) | Mode::Batch => {}
         }
         self.widgets.notification.draw(f, ctx, f.size());
@@ -458,10 +487,8 @@ impl App {
         ctx: &mut Context,
         #[cfg(unix)] terminal: &mut Terminal<B>,
     ) {
-        if TEST {
-            if let Event::FocusLost = evt {
-                ctx.quit();
-            }
+        if TEST && Event::FocusLost == *evt {
+            ctx.quit();
         }
 
         if let Event::Key(KeyEvent {
@@ -502,6 +529,7 @@ impl App {
             Mode::Help => self.widgets.help.handle_event(ctx, evt),
             Mode::Sources => self.widgets.sources.handle_event(ctx, evt),
             Mode::Clients => self.widgets.clients.handle_event(ctx, evt),
+            Mode::Captcha => self.widgets.captcha.handle_event(ctx, evt),
             Mode::KeyCombo(keys) => self.on_combo(ctx, keys, evt),
             Mode::Loading(_) => {}
         }
@@ -542,6 +570,7 @@ impl App {
             Mode::User => UserPopup::get_help(),
             Mode::Sources => SourcesPopup::get_help(),
             Mode::Clients => ClientsPopup::get_help(),
+            Mode::Captcha => CaptchaPopup::get_help(),
             Mode::Help => None,
             Mode::KeyCombo(_) => None,
             Mode::Loading(_) => None,

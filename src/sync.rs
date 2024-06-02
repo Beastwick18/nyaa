@@ -7,7 +7,7 @@ use crate::{
     app::LoadType,
     client::{Client, ClientConfig, DownloadResult},
     results::Results,
-    source::{Item, SourceConfig, Sources},
+    source::{Item, SourceConfig, SourceResponse, SourceResults, Sources},
     theme::Theme,
     widget::sort::SelectedSort,
 };
@@ -16,7 +16,7 @@ pub trait EventSync {
     #[allow(clippy::too_many_arguments)]
     fn load_results(
         self,
-        tx_res: mpsc::Sender<Result<Results, Box<dyn Error + Send + Sync>>>,
+        tx_res: mpsc::Sender<Result<SourceResults, Box<dyn Error + Send + Sync>>>,
         load_type: LoadType,
         src: Sources,
         client: reqwest::Client,
@@ -56,7 +56,7 @@ pub struct SearchQuery {
 impl EventSync for AppSync {
     async fn load_results(
         self,
-        tx_res: mpsc::Sender<Result<Results, Box<dyn Error + Send + Sync>>>,
+        tx_res: mpsc::Sender<Result<SourceResults, Box<dyn Error + Send + Sync>>>,
         load_type: LoadType,
         src: Sources,
         client: reqwest::Client,
@@ -68,13 +68,15 @@ impl EventSync for AppSync {
         let res = src
             .load(load_type, &client, &search, &config, date_format)
             .await;
-        let fmt = res.map(|res| {
-            Results::new(
+        let fmt = match res {
+            Ok(SourceResponse::Results(res)) => Ok(SourceResults::Results(Results::new(
                 search.clone(),
                 res.clone(),
                 src.format_table(&res.items, &search, &config, &theme),
-            )
-        });
+            ))),
+            Ok(SourceResponse::Captcha(c)) => Ok(SourceResults::Captcha(c)),
+            Err(e) => Err(e),
+        };
         let _ = tx_res.send(fmt).await;
     }
 
