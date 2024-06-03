@@ -1,4 +1,75 @@
 #[macro_export]
+macro_rules! widgets {
+    (
+        $name:ident;
+        $(
+            $widget:ident:
+            $(
+                [$mode:pat_param]
+                =>
+            )?
+            $struc:ident,
+        )+
+        [popups]: {
+            $(
+                $pwidget:ident:
+                $(
+                    [$pmode:pat_param]
+                    =>
+                )?
+                $pstruc:ident,
+            )+
+        }
+    ) => {
+        #[derive(Default)]
+        pub struct $name {
+        $(
+            pub $widget: $struc,
+        )+
+        $(
+            pub $pwidget: $pstruc,
+        )+
+        }
+
+        impl $name {
+            fn draw_popups(&mut self, ctx: &$crate::app::Context, f: &mut ratatui::Frame) {
+                match ctx.mode {
+                    $(
+                        $($pmode => self.$pwidget.draw(f, ctx, f.size()),)?
+                    )+
+                    _ => {}
+                }
+
+            }
+
+            fn get_help(&self, mode: &$crate::app::Mode) -> Option<Vec<(&'static str, &'static str)>> {
+                match mode {
+                    $(
+                        $($mode => $struc::get_help(),)?
+                    )+
+                    $(
+                        $($pmode => $pstruc::get_help(),)?
+                    )+
+                    _ => None,
+                }
+            }
+
+            fn handle_event(&mut self, ctx: &mut $crate::app::Context, evt: &crossterm::event::Event) {
+                match ctx.mode {
+                    $(
+                        $($mode => self.$widget.handle_event(ctx, evt),)?
+                    )+
+                    $(
+                        $($pmode => self.$pwidget.handle_event(ctx, evt),)?
+                    )+
+                    _ => {}
+                };
+            }
+        }
+    }
+}
+
+#[macro_export]
 macro_rules! cats {
     (
         $(

@@ -74,6 +74,26 @@ impl TitlePosition {
     }
 }
 
+pub fn dim_buffer(area: Rect, buf: &mut Buffer, amt: f32) {
+    for r in area.top()..area.bottom() {
+        for c in area.left()..area.right() {
+            let cell = buf.get_mut(c, r);
+            if let Color::Rgb(r, g, b) = cell.fg {
+                let r = (r as f32 * amt) as u8;
+                let g = (g as f32 * amt) as u8;
+                let b = (b as f32 * amt) as u8;
+                cell.fg = Color::Rgb(r, g, b);
+            }
+            if let Color::Rgb(r, g, b) = cell.bg {
+                let r = (r as f32 * amt) as u8;
+                let g = (g as f32 * amt) as u8;
+                let b = (b as f32 * amt) as u8;
+                cell.bg = Color::Rgb(r, g, b);
+            }
+        }
+    }
+}
+
 pub fn centered_rect(mut x_len: u16, mut y_len: u16, r: Rect) -> Rect {
     x_len = min(x_len, r.width);
     y_len = min(y_len, r.height);

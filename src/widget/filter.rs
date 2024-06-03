@@ -38,6 +38,7 @@ impl Widget for FilterPopup {
                     true => Row::new(vec![format!("  {}", item.to_owned())]),
                     false => Row::new(vec![format!("   {}", item.to_owned())]),
                 });
+        // super::dim_buffer(area, f.buffer_mut(), 0.5);
         super::clear(center, f.buffer_mut(), ctx.theme.bg);
         Table::new(items, [Constraint::Percentage(100)])
             .block(border_block(&ctx.theme, true).title(title!("Filter")))

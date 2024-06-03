@@ -38,6 +38,7 @@ use crate::{
         user::UserPopup,
         Widget,
     },
+    widgets,
 };
 
 #[cfg(unix)]
@@ -62,22 +63,6 @@ pub enum LoadType {
     Downloading,
 }
 
-impl Display for LoadType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let s = match self {
-            LoadType::Sourcing => "Sourcing",
-            LoadType::Searching => "Searching",
-            LoadType::SolvingCaptcha(_) => "Solving",
-            LoadType::Sorting => "Sorting",
-            LoadType::Filtering => "Filtering",
-            LoadType::Categorizing => "Categorizing",
-            LoadType::Batching => "Downloading Batch",
-            LoadType::Downloading => "Downloading",
-        };
-        write!(f, "{}", s)
-    }
-}
-
 #[derive(PartialEq, Clone)]
 pub enum Mode {
     Normal,
@@ -95,6 +80,42 @@ pub enum Mode {
     User,
     Help,
     Captcha,
+}
+
+widgets! {
+    Widgets;
+    batch: [Mode::Batch] => BatchWidget,
+    search: [Mode::Search] => SearchWidget,
+    results: [Mode::Normal] => ResultsWidget,
+    notification: NotificationWidget,
+    [popups]: {
+        category: [Mode::Category]  => CategoryPopup,
+        sort: [Mode::Sort(_)]  => SortPopup,
+        filter: [Mode::Filter]  => FilterPopup,
+        theme: [Mode::Theme]  => ThemePopup,
+        sources: [Mode::Sources]  => SourcesPopup,
+        clients: [Mode::Clients]  => ClientsPopup,
+        page: [Mode::Page]  => PagePopup,
+        user: [Mode::User] => UserPopup,
+        help: [Mode::Help] => HelpPopup,
+        captcha: [Mode::Captcha] => CaptchaPopup,
+    }
+}
+
+impl Display for LoadType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            LoadType::Sourcing => "Sourcing",
+            LoadType::Searching => "Searching",
+            LoadType::SolvingCaptcha(_) => "Solving",
+            LoadType::Sorting => "Sorting",
+            LoadType::Filtering => "Filtering",
+            LoadType::Categorizing => "Categorizing",
+            LoadType::Batching => "Downloading Batch",
+            LoadType::Downloading => "Downloading",
+        };
+        write!(f, "{}", s)
+    }
 }
 
 impl Display for Mode {
@@ -199,24 +220,6 @@ impl Default for Context {
     }
 }
 
-#[derive(Default)]
-pub struct Widgets {
-    pub notification: NotificationWidget,
-    pub batch: BatchWidget,
-    pub category: CategoryPopup,
-    pub sort: SortPopup,
-    pub filter: FilterPopup,
-    pub theme: ThemePopup,
-    pub sources: SourcesPopup,
-    pub clients: ClientsPopup,
-    pub search: SearchWidget,
-    pub results: ResultsWidget,
-    pub page: PagePopup,
-    pub user: UserPopup,
-    pub help: HelpPopup,
-    pub captcha: CaptchaPopup,
-}
-
 impl App {
     pub async fn run_app<B: Backend, S: EventSync + Clone, C: ConfigManager, const TEST: bool>(
         &mut self,
@@ -253,13 +256,6 @@ impl App {
         let client = request_client(&jar, ctx)?;
         let mut last_load_abort: Option<AbortHandle> = None;
         let mut last_time: Option<Instant> = None;
-
-        // let bytes = client.get("https://torrentgalaxy.to/captcha/cpt_show.pnp?v=txlight&62fd4c746843c74b53ca60277192fb48").send().await?.bytes().await?;
-        // let mut picker = Picker::new((1, 2));
-        // picker.protocol_type = ProtocolType::Halfblocks;
-        // let dyn_image = image::load_from_memory(&bytes[..])?;
-        // let image = picker.new_resize_protocol(dyn_image);
-        // self.widgets.captcha.image = Some(image);
 
         while !ctx.should_quit {
             if ctx.should_save_config {
@@ -450,7 +446,9 @@ impl App {
                 let layout_horizontal = Layout::new(
                     Direction::Horizontal,
                     match ctx.mode {
-                        Mode::Batch => [Constraint::Ratio(1, 2), Constraint::Ratio(1, 2)],
+                        Mode::Batch | Mode::Help => {
+                            [Constraint::Ratio(1, 2), Constraint::Ratio(1, 2)]
+                        }
                         _ => [Constraint::Ratio(3, 4), Constraint::Ratio(1, 4)],
                     },
                 )
@@ -459,19 +457,7 @@ impl App {
                 self.widgets.batch.draw(f, ctx, layout_horizontal[1]);
             }
         }
-        match ctx.mode {
-            Mode::Category => self.widgets.category.draw(f, ctx, f.size()),
-            Mode::Sort(_) => self.widgets.sort.draw(f, ctx, f.size()),
-            Mode::Filter => self.widgets.filter.draw(f, ctx, f.size()),
-            Mode::Theme => self.widgets.theme.draw(f, ctx, f.size()),
-            Mode::Help => self.widgets.help.draw(f, ctx, f.size()),
-            Mode::Page => self.widgets.page.draw(f, ctx, f.size()),
-            Mode::User => self.widgets.user.draw(f, ctx, f.size()),
-            Mode::Sources => self.widgets.sources.draw(f, ctx, f.size()),
-            Mode::Clients => self.widgets.clients.draw(f, ctx, f.size()),
-            Mode::Captcha => self.widgets.captcha.draw(f, ctx, f.size()),
-            Mode::KeyCombo(_) | Mode::Normal | Mode::Search | Mode::Loading(_) | Mode::Batch => {}
-        }
+        self.widgets.draw_popups(ctx, f);
         self.widgets.notification.draw(f, ctx, f.size());
     }
 
@@ -511,21 +497,9 @@ impl App {
             };
         }
         match ctx.mode.to_owned() {
-            Mode::Category => self.widgets.category.handle_event(ctx, evt),
-            Mode::Sort(_) => self.widgets.sort.handle_event(ctx, evt),
-            Mode::Normal => self.widgets.results.handle_event(ctx, evt),
-            Mode::Batch => self.widgets.batch.handle_event(ctx, evt),
-            Mode::Search => self.widgets.search.handle_event(ctx, evt),
-            Mode::Filter => self.widgets.filter.handle_event(ctx, evt),
-            Mode::Theme => self.widgets.theme.handle_event(ctx, evt),
-            Mode::Page => self.widgets.page.handle_event(ctx, evt),
-            Mode::User => self.widgets.user.handle_event(ctx, evt),
-            Mode::Help => self.widgets.help.handle_event(ctx, evt),
-            Mode::Sources => self.widgets.sources.handle_event(ctx, evt),
-            Mode::Clients => self.widgets.clients.handle_event(ctx, evt),
-            Mode::Captcha => self.widgets.captcha.handle_event(ctx, evt),
             Mode::KeyCombo(keys) => self.on_combo(ctx, keys, evt),
             Mode::Loading(_) => {}
+            _ => self.widgets.handle_event(ctx, evt),
         }
         if ctx.mode != Mode::Help {
             self.on_help(evt, ctx);
@@ -552,23 +526,7 @@ impl App {
     }
 
     fn get_help(&mut self, ctx: &Context) {
-        let help = match ctx.mode {
-            Mode::Category => CategoryPopup::get_help(),
-            Mode::Sort(_) => SortPopup::get_help(),
-            Mode::Normal => ResultsWidget::get_help(),
-            Mode::Batch => BatchWidget::get_help(),
-            Mode::Search => SearchWidget::get_help(),
-            Mode::Filter => FilterPopup::get_help(),
-            Mode::Theme => ThemePopup::get_help(),
-            Mode::Page => PagePopup::get_help(),
-            Mode::User => UserPopup::get_help(),
-            Mode::Sources => SourcesPopup::get_help(),
-            Mode::Clients => ClientsPopup::get_help(),
-            Mode::Captcha => CaptchaPopup::get_help(),
-            Mode::Help => None,
-            Mode::KeyCombo(_) => None,
-            Mode::Loading(_) => None,
-        };
+        let help = self.widgets.get_help(&ctx.mode);
         if let Some(msg) = help {
             self.widgets.help.with_items(msg, ctx.mode.clone());
             self.widgets.help.table.select(0);
