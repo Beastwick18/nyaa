@@ -8,7 +8,6 @@ use ratatui::{
     Frame, Terminal,
 };
 use reqwest::cookie::Jar;
-use reqwest::{cookie::CookieStore, Url};
 use tokio::{sync::mpsc, task::AbortHandle};
 
 use crate::{
@@ -384,13 +383,8 @@ impl App {
                             Ok(SourceResults::Results(rt)) => ctx.results = rt,
                             Ok(SourceResults::Captcha(c)) => {
                                 ctx.mode = Mode::Captcha;
-                                // self.widgets.captcha.ses_id = Some(ses_id);
                                 self.widgets.captcha.image = Some(c);
-                                let cookies = jar.cookies(&Url::parse("https://torrentgalaxy.to/")?);
-                                let x = cookies.map(|c| c.to_str().unwrap_or("").to_owned()).unwrap_or_default();
-                                ctx.notify(format!("Cookies:\n{}", x));
-                                // jar.add_cookie_str("", &Url::parse("https://torrentgalaxy.to/")?)
-                                // jar.add_cookies_str(ses_id, Url::parse(""));
+                                self.widgets.captcha.input.clear();
                             }
                             Err(e) => {
                                 // Clear results on error

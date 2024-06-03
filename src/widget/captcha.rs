@@ -12,7 +12,6 @@ use super::{input::InputWidget, Widget};
 
 pub struct CaptchaPopup {
     pub image: Option<Box<dyn StatefulProtocol>>,
-    pub ses_id: Option<String>,
     pub input: InputWidget,
 }
 
@@ -20,9 +19,15 @@ impl Default for CaptchaPopup {
     fn default() -> Self {
         Self {
             image: Default::default(),
-            ses_id: Default::default(),
-            input: InputWidget::new(5, None),
+            input: InputWidget::new(32, None),
         }
+    }
+}
+
+impl InputWidget {
+    pub fn clear(&mut self) {
+        self.input.clear();
+        self.cursor = 0;
     }
 }
 
@@ -39,9 +44,8 @@ impl Widget for CaptchaPopup {
         )
         .split(center);
         if let Some(img) = self.image.as_mut() {
-            let sess_id = self.ses_id.clone().unwrap_or_default();
             f.render_widget(
-                super::border_block(&ctx.theme, true).title(sess_id),
+                super::border_block(&ctx.theme, true).title("Captcha"),
                 layout[0],
             );
             StatefulImage::new(None).render(
@@ -53,7 +57,10 @@ impl Widget for CaptchaPopup {
                 img,
             );
         }
-        f.render_widget(super::border_block(&ctx.theme, true), layout[1]);
+        f.render_widget(
+            super::border_block(&ctx.theme, true).title("Enter Captcha solution"),
+            layout[1],
+        );
 
         let input_area = layout[1].inner(&Margin {
             horizontal: 1,

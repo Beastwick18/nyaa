@@ -14,11 +14,11 @@ pub struct InputWidget {
     pub input: String,
     pub cursor: usize,
     pub max_len: usize,
-    pub validator: Option<fn(char) -> bool>,
+    pub validator: Option<fn(&char) -> bool>,
 }
 
 impl InputWidget {
-    pub fn new(max_len: usize, validator: Option<fn(char) -> bool>) -> Self {
+    pub fn new(max_len: usize, validator: Option<fn(&char) -> bool>) -> Self {
         InputWidget {
             input: "".to_owned(),
             cursor: 0,
@@ -65,7 +65,7 @@ impl super::Widget for InputWidget {
             match (code, modifiers) {
                 (Char(c), &KeyModifiers::NONE | &KeyModifiers::SHIFT) => {
                     if let Some(validator) = &self.validator {
-                        if !validator(*c) {
+                        if !validator(c) {
                             return; // If character is invalid, ignore it
                         }
                     }
@@ -142,7 +142,7 @@ impl super::Widget for InputWidget {
         if let Event::Paste(mut p) = evt.to_owned() {
             if let Some(validator) = self.validator {
                 // Remove invalid chars
-                p = p.chars().filter(|c| validator(*c)).collect();
+                p = p.chars().filter(validator).collect();
             }
             self.input = format!(
                 "{}{}{}",

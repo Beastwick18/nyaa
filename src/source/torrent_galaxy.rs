@@ -1,11 +1,16 @@
-use std::{cmp::max, collections::HashMap, error::Error, time::Duration};
+use std::{
+    cmp::max,
+    collections::HashMap,
+    error::Error,
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
 
 use ratatui::{
     layout::{Alignment, Constraint},
     style::{Color, Stylize},
 };
 use reqwest::{StatusCode, Url};
-use scraper::{Html, Selector};
+use scraper::{selectable::Selectable, Html, Selector};
 use serde::{Deserialize, Serialize};
 use urlencoding::encode;
 
@@ -101,6 +106,72 @@ popup_enum! {
 
 pub struct TorrentGalaxyHtmlSource;
 
+fn get_url(
+    base_url: String,
+    search: &SearchQuery,
+) -> Result<(Url, Url), Box<dyn Error + Send + Sync>> {
+    let base_url = Url::parse(&add_protocol(base_url, true))?.join("torrents.php")?;
+
+    let query = encode(&search.query);
+
+    let sort = match TgxSort::try_from(search.sort.sort) {
+        Ok(TgxSort::Date) => "&sort=id",
+        Ok(TgxSort::Seeders) => "&sort=seeders",
+        Ok(TgxSort::Leechers) => "&sort=leechers",
+        Ok(TgxSort::Size) => "&sort=size",
+        Ok(TgxSort::Name) => "&sort=name",
+        _ => "",
+    };
+    let ord = format!("&order={}", search.sort.dir.to_url());
+    let filter = match TgxFilter::try_from(search.filter) {
+        Ok(TgxFilter::OnlineStreams) => "&filterstream=1",
+        Ok(TgxFilter::ExcludeXXX) => "&nox=2&nox=1",
+        Ok(TgxFilter::NoWildcard) => "&nowildcard=1",
+        _ => "",
+    };
+    let cat = match search.category {
+        0 => "".to_owned(),
+        x => format!("&c{}=1", x),
+    };
+
+    let q = format!(
+        "search={}&page={}{}{}{}{}",
+        query,
+        search.page - 1,
+        filter,
+        cat,
+        sort,
+        ord
+    );
+    let mut url = base_url.clone();
+    url.set_query(Some(&q));
+    Ok((base_url, url))
+}
+
+async fn try_get_content(
+    client: &reqwest::Client,
+    timeout: Option<u64>,
+    url: &Url,
+) -> Result<String, Box<dyn Error + Send + Sync>> {
+    let mut request = client.get(url.to_owned());
+    if let Some(timeout) = timeout {
+        request = request.timeout(Duration::from_secs(timeout));
+    }
+    let response = request
+        .header(
+            "User-Agent",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:126.0) Gecko/20100101 Firefox/126.0",
+        )
+        .send()
+        .await?;
+    if response.status() != StatusCode::OK {
+        // Throw error if response code is not OK
+        let code = response.status().as_u16();
+        return Err(format!("{}\nInvalid response code: {}", url, code).into());
+    }
+    Ok(response.text().await?)
+}
+
 fn get_lang(full_name: String) -> String {
     match full_name.as_str() {
         "English" => "en",
@@ -180,61 +251,21 @@ impl Source for TorrentGalaxyHtmlSource {
         _date_format: Option<String>,
     ) -> Result<SourceResponse, Box<dyn Error + Send + Sync>> {
         let tgx = config.tgx.to_owned().unwrap_or_default();
-        let base_url = Url::parse(&add_protocol(tgx.base_url, true))?.join("torrents.php")?;
-        let query = encode(&search.query);
-
-        let sort = match TgxSort::try_from(search.sort.sort) {
-            Ok(TgxSort::Date) => "&sort=id",
-            Ok(TgxSort::Seeders) => "&sort=seeders",
-            Ok(TgxSort::Leechers) => "&sort=leechers",
-            Ok(TgxSort::Size) => "&sort=size",
-            Ok(TgxSort::Name) => "&sort=name",
-            _ => "",
-        };
-        let ord = format!("&order={}", search.sort.dir.to_url());
-        let filter = match TgxFilter::try_from(search.filter) {
-            Ok(TgxFilter::OnlineStreams) => "&filterstream=1",
-            Ok(TgxFilter::ExcludeXXX) => "&nox=2&nox=1",
-            Ok(TgxFilter::NoWildcard) => "&nowildcard=1",
-            _ => "",
-        };
-        let cat = match search.category {
-            0 => "".to_owned(),
-            x => format!("&c{}=1", x),
-        };
-
-        let q = format!(
-            "search={}&page={}{}{}{}{}",
-            query,
-            search.page - 1,
-            filter,
-            cat,
-            sort,
-            ord
-        );
-        let mut url = base_url.clone();
-        url.set_query(Some(&q));
-
-        let mut request = client.get(url.to_owned());
-        if let Some(timeout) = tgx.timeout {
-            request = request.timeout(Duration::from_secs(timeout));
-        }
-        let response = request.send().await?;
-        if response.status() != StatusCode::OK {
-            // Throw error if response code is not OK
-            let code = response.status().as_u16();
-            return Err(format!("{}\nInvalid response code: {}", url, code).into());
-        }
-        let content = response.text().await?;
+        let (base_url, url) = get_url(tgx.base_url, search)?;
 
         let table_sel = &sel!(".tgxtable")?;
-        #[cfg(feature = "unstable-captcha")]
+
+        // If that doesn't work, try making the user solve a captcha
+        let content = try_get_content(client, tgx.timeout, &url).await?;
         if Html::parse_document(&content).select(table_sel).count() == 0 {
             let mut request = client.get("https://torrentgalaxy.to/captcha/cpt_show.pnp?v=txlight&63fd4c746843c74b53ca60277192fb48");
             if let Some(timeout) = tgx.timeout {
                 request = request.timeout(Duration::from_secs(timeout));
             }
-            let response = request.send().await?;
+            let response = request
+                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:126.0) Gecko/20100101 Firefox/126.0")
+                .send()
+                .await?;
             let bytes = response.bytes().await?;
             let mut picker = ratatui_image::picker::Picker::new((1, 2));
             picker.protocol_type = ratatui_image::picker::ProtocolType::Halfblocks;
@@ -243,14 +274,10 @@ impl Source for TorrentGalaxyHtmlSource {
 
             return Ok(SourceResponse::Captcha(image));
         }
+
+        // Results table found, can start parsing
         let doc = Html::parse_document(&content);
-        if doc.select(table_sel).count() == 0 {
-            return Err(format!(
-                "{}\nNo results table found:\nMost likely due to captcha or rate limit\n\nWait a bit before searching again...",
-                url,
-            )
-            .into());
-        }
+
         let item_sel = &sel!("div.tgxtablerow")?;
         let title_sel = &sel!("div.tgxtablecell:nth-of-type(4) > div > a.txlight:first-of-type")?;
         let imdb_sel = &sel!("div.tgxtablecell:nth-of-type(4) > div > a:last-of-type")?;
@@ -398,67 +425,56 @@ impl Source for TorrentGalaxyHtmlSource {
         date_format: Option<String>,
     ) -> Result<SourceResponse, Box<dyn Error + Send + Sync>> {
         let tgx = config.tgx.to_owned().unwrap_or_default();
-        // let jar = Jar::default();
-        // jar.add_cookie_str(cookie, url)
-        // let client = ClientBuilder::new()
-        //     .cookie_provider(true)
-        //     .timeout(Duration::from_secs(60))
-        //     .build()?;
-        //
-        // let mut headers = HeaderMap::new();
-        // headers.insert(
-        //     "Cookie",
-        //     HeaderValue::from_str(&format!("PHPSESSID={}", ses_id))?,
-        // );
+        let time = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis();
 
-        let base_url = Url::parse(&add_protocol(tgx.base_url, true))?.join("torrents.php")?;
-        let query = encode(&search.query);
+        let hash = "4578678889c4b42ae37b543434c81d85";
+        // let hash = "ff9df5a6db0ebe6bd636296da767a587";
+        let base_url = Url::parse(&tgx.base_url)?;
+        let mut hash_url = base_url.clone().join("hub.php")?;
+        hash_url.set_query(Some(&format!("a=vlad&u={}", time)));
+        // let hash_url = format!("https://torrentgalaxy.to/hub.php?a=vlad&u={}", time);
+        client
+            .post(hash_url.clone())
+            .body(format!("fash={}", hash))
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .header(
+                "User-Agent",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:126.0) Gecko/20100101 Firefox/126.0",
+            )
+            .send()
+            .await?;
 
-        let sort = match TgxSort::try_from(search.sort.sort) {
-            Ok(TgxSort::Date) => "&sort=id",
-            Ok(TgxSort::Seeders) => "&sort=seeders",
-            Ok(TgxSort::Leechers) => "&sort=leechers",
-            Ok(TgxSort::Size) => "&sort=size",
-            Ok(TgxSort::Name) => "&sort=name",
-            _ => "",
-        };
-        let ord = format!("&order={}", search.sort.dir.to_url());
-        let filter = match TgxFilter::try_from(search.filter) {
-            Ok(TgxFilter::OnlineStreams) => "&filterstream=1",
-            Ok(TgxFilter::ExcludeXXX) => "&nox=2&nox=1",
-            Ok(TgxFilter::NoWildcard) => "&nowildcard=1",
-            _ => "",
-        };
-        let cat = match search.category {
-            0 => "".to_owned(),
-            x => format!("&c{}=1", x),
-        };
-
-        let q = format!(
-            "search={}&page={}{}{}{}{}",
-            query,
-            search.page - 1,
-            filter,
-            cat,
-            sort,
-            ord
-        );
-        let mut url = base_url.clone();
-        url.set_query(Some(&q));
-
-        let mut request = client.post(format!(
-            "https://torrentgalaxy.to/galaxyfence.php?captcha={}&dropoff={}",
+        let (_base_url, url) = get_url(tgx.base_url, search)?;
+        let mut full_url = base_url.clone().join("galaxyfence.php")?;
+        full_url.set_query(Some(&format!(
+            "captcha={}&dropoff={}",
             solution,
             encode(&format!(
                 "{}?{}",
                 url.path(),
                 url.query().unwrap_or_default()
-            )),
-        ));
+            ))
+        )));
+        let mut request = client.post(full_url.clone());
         if let Some(timeout) = tgx.timeout {
             request = request.timeout(Duration::from_secs(timeout));
         }
-        request.send().await?.text().await?;
+        request = request.header(
+            "Accept",
+            "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        )
+            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:126.0) Gecko/20100101 Firefox/126.0")
+            .header("Content-Type", "application/x-www-form-urlencoded");
+
+        let response = request.send().await?;
+        if response.status() != StatusCode::OK {
+            return Err(format!(
+                "Captcha solution returned HTTP status {}",
+                response.status()
+            )
+            .into());
+        }
+
         TorrentGalaxyHtmlSource::search(client, search, config, date_format).await
     }
 

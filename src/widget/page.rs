@@ -24,7 +24,7 @@ pub struct PagePopup {
 impl Default for PagePopup {
     fn default() -> Self {
         PagePopup {
-            input: InputWidget::new(3, Some(|e| e.is_numeric())),
+            input: InputWidget::new(3, Some(char::is_ascii_digit)),
         }
     }
 }
