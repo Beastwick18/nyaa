@@ -113,14 +113,22 @@ impl Widget for CategoryPopup {
                     e.name.to_owned().into(),
                 ])])
             });
-            self.table.scrollbar_state = self
-                .table
-                .scrollbar_state
-                .content_length(cat.entries.len() + ctx.src_info.cats.len());
+            let num_items = cat.entries.len() + ctx.src_info.cats.len();
+            self.table.scrollbar_state = self.table.scrollbar_state.content_length(num_items);
 
             tbl.splice(self.major + 1..self.major + 1, cat_rows);
 
             let center = super::centered_rect(33, 14, area);
+
+            super::scroll_padding(
+                self.table.selected().unwrap_or(0),
+                center.height as usize,
+                2,
+                num_items,
+                1,
+                self.table.state.offset_mut(),
+            );
+
             super::clear(center, f.buffer_mut(), ctx.theme.bg);
             let table = Table::new(tbl, [Constraint::Percentage(100)])
                 .block(border_block(&ctx.theme, true).title(title!("Category")))

@@ -268,9 +268,9 @@ impl NotifyBox {
                 .border_type(ctx.theme.border),
             true => {
                 let block = Block::new()
-                    .border_style(style!(fg:ctx.theme.remake))
+                    .border_style(style!(fg:ctx.theme.error))
                     .bg(ctx.theme.bg)
-                    .fg(ctx.theme.remake)
+                    .fg(ctx.theme.error)
                     .borders(border)
                     .border_type(ctx.theme.border);
                 match border.contains(Borders::TOP) {

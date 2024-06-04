@@ -1,8 +1,8 @@
 use ratatui::{
     layout::{Alignment, Constraint},
     style::{Style, Stylize},
-    text::Span,
-    widgets::{Cell, Row},
+    text::{Span, Text},
+    widgets::Row,
 };
 
 use crate::{source::Item, sync::SearchQuery, widget::sort::SortDir};
@@ -99,14 +99,6 @@ impl<S: PartialEq + Copy> ResultColumn<S> {
             Self::Normal(name, _) => name.to_owned(),
         }
     }
-
-    // pub fn is_sort(&self) -> bool {
-    //     matches!(self, Self::Sorted(_, _))
-    // }
-    //
-    // pub fn is_normal(&self) -> bool {
-    //     matches!(self, Self::Normal(_, _))
-    // }
 }
 
 #[derive(Default, Clone)]
@@ -120,6 +112,7 @@ pub struct ResultTable {
 pub struct ResultCell {
     pub content: String,
     pub style: Style,
+    pub alignment: Alignment,
 }
 
 impl<'a> From<ResultRow> for Row<'a> {
@@ -128,9 +121,11 @@ impl<'a> From<ResultRow> for Row<'a> {
     }
 }
 
-impl<'a> From<ResultCell> for Cell<'a> {
+impl<'a> From<ResultCell> for Text<'a> {
     fn from(val: ResultCell) -> Self {
-        Cell::default().content(val.content).style(val.style)
+        Text::raw(val.content)
+            .style(val.style)
+            .alignment(val.alignment)
     }
 }
 
@@ -139,6 +134,7 @@ impl<'a> From<Span<'a>> for ResultCell {
         Self {
             content: value.content.to_string(),
             style: value.style,
+            alignment: Alignment::Left,
         }
     }
 }
@@ -148,15 +144,7 @@ impl From<String> for ResultCell {
         Self {
             content: value,
             style: Style::default(),
-        }
-    }
-}
-
-impl From<&mut String> for ResultCell {
-    fn from(value: &mut String) -> Self {
-        Self {
-            content: value.to_owned(),
-            style: Style::default(),
+            alignment: Alignment::Left,
         }
     }
 }
@@ -211,36 +199,15 @@ impl ResultRow {
         }
     }
 
-    pub fn aligned<A, B>(&mut self, align: A, binding: B) -> Self
+    pub fn aligned<A>(&mut self, align: A) -> Self
     where
         A: IntoIterator,
         A::Item: Into<Alignment>,
-        B: IntoIterator,
-        B::Item: Into<Constraint>,
     {
-        let align = align
-            .into_iter()
-            .map(Into::into)
-            .collect::<Vec<Alignment>>();
-        let binding = binding
-            .into_iter()
-            .map(Into::into)
-            .collect::<Vec<Constraint>>();
         self.cells
             .iter_mut()
-            .zip(align.iter())
-            .zip(binding.iter())
-            .for_each(|((c, a), b)| {
-                c.content = match (a, b) {
-                    (Alignment::Right, Constraint::Length(l)) => {
-                        format!("{:>width$}", &c.content, width = *l as usize)
-                    }
-                    (Alignment::Center, Constraint::Length(l)) => {
-                        format!("{:^width$}", &c.content, width = *l as usize)
-                    }
-                    _ => c.content.to_owned(),
-                };
-            });
+            .zip(align)
+            .for_each(|(c, a)| c.alignment = a.into());
         self.to_owned()
     }
 }

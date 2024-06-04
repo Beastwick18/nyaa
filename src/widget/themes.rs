@@ -42,6 +42,17 @@ impl Widget for ThemePopup {
                 item.to_owned(),
             ])
         });
+
+        let num_items = items.len();
+        super::scroll_padding(
+            self.table.selected().unwrap_or(0),
+            center.height as usize,
+            2,
+            num_items,
+            1,
+            self.table.state.offset_mut(),
+        );
+
         let table = Table::new(items, [Constraint::Percentage(100)])
             .block(border_block(&ctx.theme, true).title(title!("Theme")))
             .highlight_style(style!(bg:ctx.theme.hl_bg));
@@ -55,7 +66,11 @@ impl Widget for ThemePopup {
                 vertical: 1,
                 horizontal: 0,
             });
-            sb.render(sb_area, buf, &mut self.table.scrollbar_state);
+            sb.render(
+                sb_area,
+                buf,
+                &mut self.table.scrollbar_state.content_length(num_items),
+            );
         }
     }
 

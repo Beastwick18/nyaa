@@ -32,10 +32,10 @@ pub struct Theme {
     pub solid_bg: Color,
     #[serde(with = "color_to_tui")]
     pub solid_fg: Color,
-    #[serde(with = "color_to_tui")]
-    pub trusted: Color,
-    #[serde(with = "color_to_tui")]
-    pub remake: Color,
+    #[serde(with = "color_to_tui", alias = "trusted")]
+    pub success: Color,
+    #[serde(with = "color_to_tui", alias = "remake")]
+    pub error: Color,
 }
 
 pub fn load_user_themes(ctx: &mut Context, config_path: PathBuf) -> Result<(), String> {
@@ -130,8 +130,8 @@ impl Default for Theme {
             hl_bg: Color::DarkGray,
             solid_bg: Color::White,
             solid_fg: Color::Black,
-            trusted: Color::Green,
-            remake: Color::Red,
+            success: Color::Green,
+            error: Color::Red,
         }
     }
 }
@@ -155,8 +155,8 @@ pub fn default_themes() -> IndexMap<String, Theme> {
             hl_bg: Color::Rgb(98, 114, 164),
             solid_fg: Color::Rgb(40, 42, 54),
             solid_bg: Color::Rgb(139, 233, 253),
-            trusted: Color::Rgb(80, 250, 123),
-            remake: Color::Rgb(255, 85, 85),
+            success: Color::Rgb(80, 250, 123),
+            error: Color::Rgb(255, 85, 85),
         },
         "Gruvbox".to_owned() => Theme {
             name: "Gruvbox".to_owned(),
@@ -168,8 +168,8 @@ pub fn default_themes() -> IndexMap<String, Theme> {
             hl_bg: Color::Rgb(80, 73, 69),
             solid_bg: Color::Rgb(69, 133, 136),
             solid_fg: Color::Rgb(235, 219, 178),
-            trusted: Color::Rgb(152, 151, 26),
-            remake: Color::Rgb(204, 36, 29),
+            success: Color::Rgb(152, 151, 26),
+            error: Color::Rgb(204, 36, 29),
         },
         "Catppuccin Macchiato".to_owned() => Theme {
             name: "Catppuccin Macchiato".to_owned(),
@@ -181,8 +181,8 @@ pub fn default_themes() -> IndexMap<String, Theme> {
             hl_bg: Color::Rgb(110, 115, 141),
             solid_bg: Color::Rgb(166, 218, 149),
             solid_fg: Color::Rgb(24, 25, 38),
-            trusted: Color::Rgb(166, 218, 149),
-            remake: Color::Rgb(237, 135, 150),
+            success: Color::Rgb(166, 218, 149),
+            error: Color::Rgb(237, 135, 150),
         },
     ]
 }

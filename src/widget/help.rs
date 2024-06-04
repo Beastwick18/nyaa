@@ -40,22 +40,21 @@ impl HelpPopup {
 impl Widget for HelpPopup {
     fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
         let buf = f.buffer_mut();
-        let iter = self.table.items.iter();
         let max_size = 35;
 
-        // Get max len of Key
-        let key_min = iter.clone().fold(15, |acc, e| max(acc, e.0.len())) as u16;
-        // Get max len of action
-        let map_min = iter.fold(15, |acc, e| max(acc, e.1.len())) as u16;
+        // Get max len of Key and Action
+        let (key_max, map_max) = self.table.items.iter().fold((15, 15), |acc, e| {
+            (max(acc.0, e.0.len() as u16), max(acc.1, e.1.len() as u16))
+        });
         // Cap height between the number of entries + 3 for padding, and 20
         let height = min(max_size, self.table.items.len() + 3) as u16;
 
-        let center = super::centered_rect(key_min + map_min + 6, height, area);
+        let center = super::centered_rect(key_max + map_max + 6, height, area);
         let items = self.table.items.iter().map(|(key, map)| {
             Row::new([
-                Line::from(key.to_string()).alignment(Alignment::Right),
+                Line::from(*key).alignment(Alignment::Right),
                 Line::from("⇒"),
-                Line::from(map.to_string()),
+                Line::from(*map),
             ])
         });
         let header = Row::new([
@@ -66,13 +65,24 @@ impl Widget for HelpPopup {
         .style(style!(bold, underlined, fg:ctx.theme.border_focused_color))
         .height(1)
         .bottom_margin(0);
+
+        let num_items = items.len();
+        super::scroll_padding(
+            self.table.state.selected().unwrap_or(0),
+            center.height as usize,
+            3,
+            num_items,
+            1,
+            self.table.state.offset_mut(),
+        );
+
         let table = Table::new(items, [Constraint::Percentage(100)])
             .block(
                 border_block(&ctx.theme, true)
                     .title(title!("Help: {}", self.prev_mode.to_string())),
             )
             .header(header)
-            .widths(Constraint::from_lengths([key_min, 1, map_min]))
+            .widths(Constraint::from_lengths([key_max, 1, map_max]))
             .highlight_style(style!(bg:ctx.theme.hl_bg));
 
         super::clear(center, buf, ctx.theme.bg);

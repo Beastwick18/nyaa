@@ -22,7 +22,7 @@ use crate::{
 use super::{
     add_protocol,
     nyaa_html::{nyaa_table, NyaaColumns, NyaaFilter, NyaaSort},
-    Item, ItemType, ResultTable, Source, SourceConfig, SourceInfo, SourceResponse,
+    nyaa_rss, Item, ItemType, ResultTable, Source, SourceConfig, SourceInfo, SourceResponse,
 };
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -33,6 +33,7 @@ pub struct SukebeiNyaaConfig {
     pub default_filter: NyaaFilter,
     pub default_category: String,
     pub default_search: String,
+    pub rss: bool,
     pub timeout: Option<u64>,
     pub columns: Option<NyaaColumns>,
 }
@@ -45,6 +46,7 @@ impl Default for SukebeiNyaaConfig {
             default_filter: NyaaFilter::NoFilter,
             default_category: "AllCategories".to_owned(),
             default_search: Default::default(),
+            rss: false,
             timeout: None,
             columns: None,
         }
@@ -76,8 +78,18 @@ impl Source for SukebeiHtmlSource {
         config: &SourceConfig,
         date_format: Option<String>,
     ) -> Result<SourceResponse, Box<dyn Error + Send + Sync>> {
-        SukebeiHtmlSource::search(client, search, config, date_format).await
+        let sukebei = config.sukebei.to_owned().unwrap_or_default();
+        let sort = search.sort;
+        let mut res = SukebeiHtmlSource::search(client, search, config, date_format).await;
+
+        if sukebei.rss {
+            if let Ok(SourceResponse::Results(res)) = &mut res {
+                nyaa_rss::sort_items(&mut res.items, sort);
+            }
+        }
+        res
     }
+
     async fn search(
         client: &reqwest::Client,
         search: &SearchQuery,
@@ -85,6 +97,16 @@ impl Source for SukebeiHtmlSource {
         date_format: Option<String>,
     ) -> Result<SourceResponse, Box<dyn Error + Send + Sync>> {
         let sukebei = config.sukebei.to_owned().unwrap_or_default();
+        if sukebei.rss {
+            return nyaa_rss::search_rss::<Self>(
+                sukebei.base_url,
+                sukebei.timeout,
+                client,
+                search,
+                date_format,
+            )
+            .await;
+        }
         let cat = search.category;
         let filter = search.filter;
         let page = search.page;

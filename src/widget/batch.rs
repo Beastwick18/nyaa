@@ -42,8 +42,8 @@ impl super::Widget for BatchWidget {
                 Row::new([
                     i.icon.label.fg(i.icon.color),
                     i.title.to_owned().fg(match i.item_type {
-                        ItemType::Trusted => ctx.theme.trusted,
-                        ItemType::Remake => ctx.theme.remake,
+                        ItemType::Trusted => ctx.theme.success,
+                        ItemType::Remake => ctx.theme.error,
                         ItemType::None => ctx.theme.fg,
                     }),
                     format!("{:>9}", i.size).fg(ctx.theme.fg),
@@ -54,7 +54,6 @@ impl super::Widget for BatchWidget {
         let header = ["Cat", "Name", "  Size"];
         let header = Row::new(header)
             .fg(focus_color)
-            .bold()
             .underlined()
             .height(1)
             .bottom_margin(0);
@@ -70,6 +69,17 @@ impl super::Widget for BatchWidget {
         .header(header)
         .highlight_style(Style::default().bg(ctx.theme.hl_bg));
         Clear.render(area, buf);
+
+        let num_items = rows.len();
+        super::scroll_padding(
+            self.table.selected().unwrap_or(0),
+            area.height as usize,
+            3,
+            num_items,
+            1,
+            self.table.state.offset_mut(),
+        );
+
         StatefulWidget::render(table, area, buf, &mut self.table.state);
         if ctx.batch.len() + 2 > area.height as usize {
             let sb = super::scrollbar(ctx, ScrollbarOrientation::VerticalRight);

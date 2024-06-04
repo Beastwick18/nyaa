@@ -146,17 +146,17 @@ pub fn nyaa_table(
             ResultRow::new([
                 item.icon.label.fg(item.icon.color),
                 item.title.to_owned().fg(match item.item_type {
-                    ItemType::Trusted => theme.trusted,
-                    ItemType::Remake => theme.remake,
+                    ItemType::Trusted => theme.success,
+                    ItemType::Remake => theme.error,
                     ItemType::None => theme.fg,
                 }),
                 item.size.clone().fg(theme.fg),
                 item.date.clone().fg(theme.fg),
-                item.seeders.to_string().fg(theme.trusted),
-                item.leechers.to_string().fg(theme.remake),
+                item.seeders.to_string().fg(theme.success),
+                item.leechers.to_string().fg(theme.error),
                 shorten_number(item.downloads).fg(theme.fg),
             ])
-            .aligned(align, binding.to_owned())
+            .aligned(align)
             .fg(theme.fg)
         })
         .collect();
@@ -192,7 +192,14 @@ impl Source for NyaaHtmlSource {
     ) -> Result<SourceResponse, Box<dyn Error + Send + Sync>> {
         let nyaa = config.nyaa.to_owned().unwrap_or_default();
         if nyaa.rss {
-            return nyaa_rss::search_rss(client, search, config, date_format).await;
+            return nyaa_rss::search_rss::<Self>(
+                nyaa.base_url,
+                nyaa.timeout,
+                client,
+                search,
+                date_format,
+            )
+            .await;
         }
         let cat = search.category;
         let filter = search.filter;

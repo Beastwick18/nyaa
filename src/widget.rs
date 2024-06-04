@@ -74,6 +74,24 @@ impl TitlePosition {
     }
 }
 
+pub fn scroll_padding(
+    selected: usize,
+    height: usize,
+    header_height: usize,
+    num_items: usize,
+    amt: usize,
+    offset: &mut usize,
+) {
+    let first_row = *offset;
+    let last_row = *offset + height;
+    if selected + 1 == first_row + amt && selected >= amt {
+        *offset -= 1;
+    }
+    if selected + amt + header_height == last_row && selected + amt != num_items {
+        *offset += 1;
+    }
+}
+
 pub fn dim_buffer(area: Rect, buf: &mut Buffer, amt: f32) {
     for r in area.top()..area.bottom() {
         for c in area.left()..area.right() {

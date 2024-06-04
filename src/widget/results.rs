@@ -104,8 +104,23 @@ impl super::Widget for ResultsWidget {
                 ctx.results.response.last_page,
             )))
             .highlight_style(Style::default().bg(ctx.theme.hl_bg));
+
+        super::scroll_padding(
+            self.table.selected().unwrap_or(0),
+            area.height as usize,
+            3,
+            num_items,
+            3,
+            self.table.state.offset_mut(),
+        );
+
         StatefulWidget::render(table, area, buf, &mut self.table.state);
-        StatefulWidget::render(sb, sb_area, buf, &mut self.table.scrollbar_state);
+        StatefulWidget::render(
+            sb,
+            sb_area,
+            buf,
+            &mut self.table.scrollbar_state.content_length(num_items),
+        );
 
         if ctx.load_type.is_none() && num_items == 0 {
             let center = centered_rect(10, 1, area);

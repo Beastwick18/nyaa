@@ -12,11 +12,7 @@ use crate::{
     widget::sort::{SelectedSort, SortDir},
 };
 
-use super::{
-    add_protocol,
-    nyaa_html::{NyaaHtmlSource, NyaaSort},
-    Item, ItemType, Source, SourceConfig, SourceResponse,
-};
+use super::{add_protocol, nyaa_html::NyaaSort, Item, ItemType, Source, SourceResponse};
 
 type ExtensionMap = BTreeMap<String, Vec<Extension>>;
 
@@ -43,25 +39,14 @@ pub fn sort_items(items: &mut [Item], sort: SelectedSort) {
     }
 }
 
-// async fn sort_rss(
-//     client: &reqwest::Client,
-//     search: SearchQuery,
-//     config: SourceConfig,
-//     theme: Theme,
-// ) -> Result<ResultTable, Box<dyn Error>> {
-//     let mut items = ctx.results.items.clone();
-//     sort_items(&mut items, w.sort.selected);
-//     // Ok(items)
-//     Ok()
-// }
-
-pub async fn search_rss(
+pub async fn search_rss<S: Source>(
+    base_url: String,
+    timeout: Option<u64>,
     client: &reqwest::Client,
     search: &SearchQuery,
-    config: &SourceConfig,
     date_format: Option<String>,
 ) -> Result<SourceResponse, Box<dyn Error + Send + Sync>> {
-    let nyaa = config.nyaa.to_owned().unwrap_or_default();
+    // let nyaa = config.nyaa.to_owned().unwrap_or_default();
     let query = search.query.to_owned();
     let cat = search.category;
     let filter = search.filter;
@@ -69,7 +54,7 @@ pub async fn search_rss(
     let last_page = 1;
     let (high, low) = (cat / 10, cat % 10);
     let query = encode(&query);
-    let base_url = add_protocol(nyaa.base_url, true);
+    let base_url = add_protocol(base_url, true);
     let base_url = Url::parse(&base_url)?;
 
     let mut url = base_url.clone();
@@ -82,7 +67,7 @@ pub async fn search_rss(
     // let client = super::request_client(ctx)?;
 
     let mut request = client.get(url.to_owned());
-    if let Some(timeout) = nyaa.timeout {
+    if let Some(timeout) = timeout {
         request = request.timeout(Duration::from_secs(timeout));
     }
     let response = request.send().await?;
@@ -106,7 +91,7 @@ pub async fn search_rss(
                                                                         // `https://nyaa.si/view/{id}`
             let id_usize = id.parse::<usize>().ok()?;
             let category_str = get_ext_value::<String>(ext, "categoryId");
-            let cat = NyaaHtmlSource::info().entry_from_str(&category_str);
+            let cat = S::info().entry_from_str(&category_str);
             let category = cat.id;
             let icon = cat.icon.clone();
             let size = get_ext_value::<String>(ext, "size")

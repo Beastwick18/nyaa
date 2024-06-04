@@ -18,7 +18,7 @@ pub struct CaptchaPopup {
 impl Default for CaptchaPopup {
     fn default() -> Self {
         Self {
-            image: Default::default(),
+            image: None,
             input: InputWidget::new(32, None),
         }
     }

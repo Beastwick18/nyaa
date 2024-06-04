@@ -642,8 +642,8 @@ impl Source for TorrentGalaxyHtmlSource {
                         .unwrap_or("??".to_owned())
                         .fg(theme.fg),
                     item.title.to_owned().fg(match item.item_type {
-                        ItemType::Trusted => theme.trusted,
-                        ItemType::Remake => theme.remake,
+                        ItemType::Trusted => theme.success,
+                        ItemType::Remake => theme.error,
                         ItemType::None => theme.fg,
                     }),
                     item.extra
@@ -662,11 +662,11 @@ impl Source for TorrentGalaxyHtmlSource {
                             .unwrap_or(theme.fg)),
                     item.size.clone().fg(theme.fg),
                     item.date.clone().fg(theme.fg),
-                    item.seeders.to_string().fg(theme.trusted),
-                    item.leechers.to_string().fg(theme.remake),
+                    item.seeders.to_string().fg(theme.success),
+                    item.leechers.to_string().fg(theme.error),
                     shorten_number(item.downloads).fg(theme.fg),
                 ])
-                .aligned(align, &binding)
+                .aligned(align)
                 .fg(theme.fg)
             })
             .collect();
