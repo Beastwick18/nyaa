@@ -1,3 +1,33 @@
+# v0.8.1
+## Adds:
+- Suspend to background with <kbd>Ctrl</kbd>+<kbd>z</kbd> on Unix-like systems
+- Show total size of batch
+- Always show key presses for all keys in bottom right
+- Increases the size of the batch panel while focused
+- Adds support for bracketed pasting
+  - Pasting no longer inserts character by character, but as one single event
+  - Not supported by all terminals
+- Add config options for clipboard, including:
+  - `x11_selection`: which x11 clipboard selection to copy to
+    - Can be either `Primary` or `Clipboard`
+  - `cmd`: command to run for copying
+    - `{content}` is used for substitution of copied content to the command
+    - Useful for tmux or other non-X clipboard solutions
+    - In WSL, this allows for copying without error to windows by using the config:
+      ```toml
+      cmd = "echo {content} | clip.exe"
+      ```
+  - `shell_cmd`: Shell to run `cmd` under (like `bash -c` or `powershell.exe -Command`)
+  - For more information, check the [wiki](https://github.com/Beastwick18/nyaa/wiki/Clipboard-Configuration)
+- Add support for socks5 proxies
+- Show additional columns and corresponding headers in batch panel
+## Fixes:
+- Fix issue [#15](https://github.com/Beastwick18/nyaa/issues/15) by forcing `ratatui` to version 0.26.1
+- Allow explicit `http` in url-like config options
+- Hide help message on right of search bar if terminal too small
+- Center "Loading" messages relative to results panel instead of entire area
+
+
 # v0.8.0
 ## Adds:
 - User-defined custom themes (see [wiki](https://github.com/Beastwick18/nyaa/wiki/User%E2%80%90defined-Themes))
