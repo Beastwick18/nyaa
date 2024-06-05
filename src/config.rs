@@ -89,13 +89,6 @@ impl Config {
         ctx.src = ctx.config.source;
         ctx.src_info = ctx.src.info();
 
-        // Load user-defined themes
-        if let Some((i, _, theme)) = ctx.themes.get_full(&self.theme) {
-            w.theme.selected = i;
-            w.theme.table.select(i);
-            ctx.theme = theme.clone();
-        }
-
         ctx.src.load_config(&mut ctx.config.sources);
         ctx.src.apply(ctx, w);
         if let Some(conf) = ctx.config.notifications {
@@ -104,7 +97,14 @@ impl Config {
 
         ctx.client.load_config(ctx);
         let path = C::path().map_err(|e| e.to_string())?;
+        // Load user-defined themes
         theme::load_user_themes(ctx, path)?;
+        // Set selected theme
+        if let Some((i, _, theme)) = ctx.themes.get_full(&self.theme) {
+            w.theme.selected = i;
+            w.theme.table.select(i);
+            ctx.theme = theme.clone();
+        }
 
         // Load defaults for default source
         Ok(())
