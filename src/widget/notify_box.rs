@@ -41,15 +41,15 @@ impl NotifyPosition {
             false => area.right() as i32 + 1,
         };
         let start_x = match self.is_left() {
-            true => area.left() as i32 + 2,
+            true => area.left() as i32 + 1,
             false => area.right() as i32 - width as i32 - 1,
         };
         let start_y = match self.is_top() {
-            true => area.top() as i32 - height as i32 + start_offset as i32 + 1,
+            true => area.top() as i32 - height as i32 + start_offset as i32 + 2,
             false => area.bottom() as i32 - start_offset as i32 - 1,
         };
         let stop_y = match self.is_top() {
-            true => area.top() as i32 + stop_offset as i32 + 1,
+            true => area.top() as i32 + stop_offset as i32 + 2,
             false => area.bottom() as i32 - stop_offset as i32 - height as i32 - 1,
         };
         ((start_x, start_y), (start_x, stop_y), (stop_x, stop_y))
@@ -69,24 +69,6 @@ impl AnimateState {
             done: false,
         }
     }
-
-    // fn linear(
-    //     &mut self,
-    //     start_pos: (i32, i32),
-    //     stop_pos: (i32, i32),
-    //     rate: f64,
-    //     deltatime: f64,
-    // ) -> (i32, i32) {
-    //     if self.time >= 1.0 {
-    //         self.done = true;
-    //     }
-    //     let pos = (
-    //         ((self.time * (stop_pos.0 - start_pos.0) as f64) + start_pos.0 as f64).round() as i32,
-    //         ((self.time * (stop_pos.1 - start_pos.1) as f64) + start_pos.1 as f64).round() as i32,
-    //     );
-    //     self.time = 1.0_f64.min(self.time + rate * deltatime);
-    //     pos
-    // }
 
     pub fn ease_out(
         &mut self,
@@ -148,7 +130,6 @@ impl AnimateState {
 
 pub struct NotifyBox {
     raw_content: String,
-    content: String,
     pub time: f64,
     pub duration: f64,
     position: NotifyPosition,
@@ -167,13 +148,11 @@ impl NotifyBox {
         let raw_content = content.clone();
         let lines = textwrap::wrap(&content, MAX_WIDTH as usize);
         let actual_width = lines.iter().fold(0, |acc, x| acc.max(x.len())) as u16 + 2;
-        let content = lines.join("\n");
         let height = lines.len() as u16 + 2;
         NotifyBox {
             width: actual_width,
             height,
             raw_content,
-            content,
             position,
             start_offset: 0,
             stop_offset: 0,
@@ -225,7 +204,7 @@ impl NotifyBox {
         let lines = textwrap::wrap(&self.raw_content, max_width);
         self.width = lines.iter().fold(0, |acc, x| acc.max(x.len())) as u16 + 2;
         self.height = lines.len() as u16 + 2;
-        self.content = lines.join("\n");
+        let content = lines.join("\n");
 
         let pos = self.pos.unwrap_or(self.next_pos(ctx.deltatime, area));
         let offset = Offset {
@@ -267,21 +246,24 @@ impl NotifyBox {
                 .borders(border)
                 .border_type(ctx.theme.border),
             true => {
-                let block = Block::new()
+                let mut block = Block::new()
                     .border_style(style!(fg:ctx.theme.error))
                     .bg(ctx.theme.bg)
                     .fg(ctx.theme.error)
                     .borders(border)
                     .border_type(ctx.theme.border);
-                match border.contains(Borders::TOP) {
-                    true => block.title("Error: Press ESC to dismiss..."),
-                    false => block,
+                if border.contains(Borders::TOP) {
+                    let title = "Error: Press ESC to dismiss...";
+                    if let Some(sub) = title.get((scroll_x as usize)..) {
+                        block = block.title(sub);
+                    }
                 }
+                block
             }
         };
 
         super::clear(rect, f.buffer_mut(), ctx.theme.bg);
-        Paragraph::new(self.content.clone())
+        Paragraph::new(content)
             .block(block)
             .scroll((scroll_y, scroll_x))
             .render(rect, f.buffer_mut());

@@ -9,7 +9,9 @@ use ratatui::{
 
 use crate::{
     app::{Context, LoadType, Mode},
-    style, title,
+    style,
+    theme::Theme,
+    title,
 };
 
 use super::{border_block, VirtualStatefulTable, Widget};
@@ -25,20 +27,26 @@ pub struct CatEntry {
 #[derive(Clone)]
 pub struct CatIcon {
     pub label: &'static str,
-    pub color: Color,
+    pub color: fn(&Theme) -> Color,
 }
 
 impl Default for CatIcon {
     fn default() -> Self {
         CatIcon {
             label: "???",
-            color: Color::Gray,
+            color: |t: &Theme| t.fg,
         }
     }
 }
 
 impl CatEntry {
-    pub fn new(name: &str, cfg: &str, id: usize, label: &'static str, color: Color) -> Self {
+    pub fn new(
+        name: &str,
+        cfg: &str,
+        id: usize,
+        label: &'static str,
+        color: fn(&Theme) -> Color,
+    ) -> Self {
         CatEntry {
             name: name.to_string(),
             cfg: cfg.to_string(),
@@ -108,7 +116,7 @@ impl Widget for CategoryPopup {
                         false => "   ",
                     }
                     .into(),
-                    e.icon.label.fg(e.icon.color),
+                    e.icon.label.fg((e.icon.color)(&ctx.theme)),
                     " ".into(),
                     e.name.to_owned().into(),
                 ])])

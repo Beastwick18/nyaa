@@ -29,6 +29,130 @@ use crate::{
 
 use super::{add_protocol, Item, ItemType, Source, SourceConfig, SourceInfo, SourceResponse};
 
+#[derive(Serialize, Deserialize, Clone, Copy)]
+#[serde(default)]
+pub struct TgxTheme {
+    #[serde(with = "color_to_tui")]
+    pub all_categories: Color,
+    #[serde(with = "color_to_tui")]
+    pub movies_4k: Color,
+    #[serde(with = "color_to_tui")]
+    pub movies_bollywood: Color,
+    #[serde(with = "color_to_tui")]
+    pub movies_cam: Color,
+    #[serde(with = "color_to_tui")]
+    pub movies_hd: Color,
+    #[serde(with = "color_to_tui")]
+    pub movies_pack: Color,
+    #[serde(with = "color_to_tui")]
+    pub movies_sd: Color,
+    #[serde(with = "color_to_tui")]
+    pub tv_hd: Color,
+    #[serde(with = "color_to_tui")]
+    pub tv_sd: Color,
+    #[serde(with = "color_to_tui")]
+    pub tv_4k: Color,
+    #[serde(with = "color_to_tui")]
+    pub tv_pack: Color,
+    #[serde(with = "color_to_tui")]
+    pub tv_sports: Color,
+    #[serde(with = "color_to_tui")]
+    pub anime: Color,
+    #[serde(with = "color_to_tui")]
+    pub apps_mobile: Color,
+    #[serde(with = "color_to_tui")]
+    pub apps_other: Color,
+    #[serde(with = "color_to_tui")]
+    pub apps_windows: Color,
+    #[serde(with = "color_to_tui")]
+    pub audiobooks: Color,
+    #[serde(with = "color_to_tui")]
+    pub comics: Color,
+    #[serde(with = "color_to_tui")]
+    pub ebooks: Color,
+    #[serde(with = "color_to_tui")]
+    pub educational: Color,
+    #[serde(with = "color_to_tui")]
+    pub magazines: Color,
+    #[serde(with = "color_to_tui")]
+    pub documentaries: Color,
+    #[serde(with = "color_to_tui")]
+    pub games_windows: Color,
+    #[serde(with = "color_to_tui")]
+    pub games_other: Color,
+    #[serde(with = "color_to_tui")]
+    pub music_albums: Color,
+    #[serde(with = "color_to_tui")]
+    pub music_discography: Color,
+    #[serde(with = "color_to_tui")]
+    pub music_lossless: Color,
+    #[serde(with = "color_to_tui")]
+    pub music_video: Color,
+    #[serde(with = "color_to_tui")]
+    pub music_singles: Color,
+    #[serde(with = "color_to_tui")]
+    pub audio_other: Color,
+    #[serde(with = "color_to_tui")]
+    pub pictures_other: Color,
+    #[serde(with = "color_to_tui")]
+    pub training_other: Color,
+    #[serde(with = "color_to_tui")]
+    pub other: Color,
+    #[serde(with = "color_to_tui")]
+    pub xxx_4k: Color,
+    #[serde(with = "color_to_tui")]
+    pub xxx_hd: Color,
+    #[serde(with = "color_to_tui")]
+    pub xxx_misc: Color,
+    #[serde(with = "color_to_tui")]
+    pub xxx_sd: Color,
+}
+
+impl Default for TgxTheme {
+    fn default() -> Self {
+        use Color::*;
+        Self {
+            all_categories: White,
+            movies_4k: LightMagenta,
+            movies_bollywood: Green,
+            movies_cam: LightCyan,
+            movies_hd: LightBlue,
+            movies_pack: Magenta,
+            movies_sd: Yellow,
+            tv_hd: Green,
+            tv_sd: LightCyan,
+            tv_4k: LightMagenta,
+            tv_pack: Blue,
+            tv_sports: LightGreen,
+            anime: LightMagenta,
+            apps_mobile: LightGreen,
+            apps_other: Magenta,
+            apps_windows: LightCyan,
+            audiobooks: Yellow,
+            comics: LightGreen,
+            ebooks: Green,
+            educational: Yellow,
+            magazines: Green,
+            documentaries: LightYellow,
+            games_windows: LightCyan,
+            games_other: Yellow,
+            music_albums: Cyan,
+            music_discography: Magenta,
+            music_lossless: LightBlue,
+            music_video: Green,
+            music_singles: LightYellow,
+            audio_other: LightGreen,
+            pictures_other: Green,
+            training_other: LightBlue,
+            other: Yellow,
+            xxx_4k: Red,
+            xxx_hd: Red,
+            xxx_misc: Red,
+            xxx_sd: Red,
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(default)]
 pub struct TgxConfig {
@@ -125,7 +249,7 @@ fn get_url(
     let ord = format!("&order={}", search.sort.dir.to_url());
     let filter = match TgxFilter::try_from(search.filter) {
         Ok(TgxFilter::OnlineStreams) => "&filterstream=1",
-        Ok(TgxFilter::ExcludeXXX) => "&nox=2&nox=1",
+        Ok(TgxFilter::ExcludeXXX) => "&nox=1",
         Ok(TgxFilter::NoWildcard) => "&nowildcard=1",
         _ => "",
     };
@@ -279,7 +403,7 @@ impl Source for TorrentGalaxyHtmlSource {
         let doc = Html::parse_document(&content);
 
         let item_sel = &sel!("div.tgxtablerow")?;
-        let title_sel = &sel!("div.tgxtablecell:nth-of-type(4) > div > a.txlight:first-of-type")?;
+        let title_sel = &sel!("div.tgxtablecell:nth-of-type(4) > div > a.txlight")?;
         let imdb_sel = &sel!("div.tgxtablecell:nth-of-type(4) > div > a:last-of-type")?;
         let cat_sel = &sel!("div.tgxtablecell:nth-of-type(1) > a")?;
         let date_sel = &sel!("div.tgxtablecell:nth-of-type(12)")?;
@@ -480,65 +604,43 @@ impl Source for TorrentGalaxyHtmlSource {
 
     fn info() -> SourceInfo {
         let cats = cats! {
-            "All Categories" => {
-                0 => ("---", "All Categories", "AllCategories", White);
-            }
-            "Movies" => {
-                3 => ("4kM", "4K UHD Movies", "4kMovies", LightMagenta);
-                46 => ("Bly", "Bollywood", "Bollywood Movies", Green);
-                45 => ("Cam", "Cam/TS", "CamMovies", LightCyan);
-                42 => ("HdM", "HD Movies", "HdMovies", LightBlue);
-                4 => ("PkM", "Movie Packs", "PackMovies", Magenta);
-                1 => ("SdM", "SD Movies", "SdMovies", Yellow);
-            }
-            "TV" => {
-                41 => ("HdT", "TV HD", "HdTV", Green);
-                5 => ("SdT", "TV SD", "SdTV", LightCyan);
-                11 => ("4kT", "TV 4k", "4kTV", LightMagenta);
-                6 => ("PkT", "TV Packs", "PacksTV", Blue);
-                7 => ("Spo", "Sports", "SportsTV", LightGreen);
-            }
-            "Anime" => {
-                28 => ("Ani", "All Anime", "Anime", LightMagenta);
-            }
-            "Apps" => {
-                20 => ("Mob", "Mobile Apps", "AppsMobile", LightGreen);
-                21 => ("App", "Other Apps", "AppsOther", Magenta);
-                18 => ("Win", "Windows Apps", "AppsWindows", LightCyan);
-            }
-            "Books" => {
-                13 => ("Abk", "Audiobooks", "Audiobooks", Yellow);
-                19 => ("Com", "Comics", "Comics", LightGreen);
-                12 => ("Ebk", "Ebooks", "Ebooks", Green);
-                14 => ("Edu", "Educational", "Educational", Yellow);
-                15 => ("Mag", "Magazines", "Magazines", Green);
-            }
-            "Documentaries" => {
-                9 => ("Doc", "All Documentaries", "Documentaries", LightYellow);
-            }
-            "Games" => {
-                10 => ("Wgm", "Windows Games", "WindowsGames", LightCyan);
-                43 => ("Ogm", "Other Games", "OtherGames", Yellow);
-            }
-            "Music" => {
-                22 => ("Alb", "Music Albums", "AlbumsMusic", Cyan);
-                26 => ("Dis", "Music Discography", "DiscographyMusic", Magenta);
-                23 => ("Los", "Music Lossless", "LosslessMusic", LightBlue);
-                25 => ("MV ", "Music Video", "MusicVideo", Green);
-                24 => ("Sin", "Music Singles", "SinglesMusic", LightYellow);
-            }
-            "Other" => {
-                17 => ("Aud", "Other Audio", "AudioOther", LightGreen);
-                40 => ("Pic", "Other Pictures", "PicturesOther", Green);
-                37 => ("Tra", "Other Training", "TrainingOther", LightBlue);
-                33 => ("Oth", "Other", "Other", Yellow);
-            }
-            "XXX" => {
-                48 => ("4kX", "XXX 4k", "4kXXX", Red);
-                35 => ("HdX", "XXX HD", "HdXXX", Red);
-                47 => ("MsX", "XXX Misc", "MiscXXX", Red);
-                34 => ("SdX", "XXX SD", "SdXXX", Red);
-            }
+            "All Categories" => { 0 => ("---", "All Categories", "AllCategories", tgx.all_categories); }
+            "Movies" => {3 => ("4kM", "4K UHD Movies", "4kMovies", tgx.movies_4k);
+                46 => ("Bly", "Bollywood", "Bollywood Movies", tgx.movies_bollywood);
+                45 => ("Cam", "Cam/TS", "CamMovies", tgx.movies_cam);
+                42 => ("HdM", "HD Movies", "HdMovies", tgx.movies_hd);
+                4 => ("PkM", "Movie Packs", "PackMovies", tgx.movies_pack);
+                1 => ("SdM", "SD Movies", "SdMovies", tgx.movies_sd);}
+            "TV" => {41 => ("HdT", "TV HD", "HdTV", tgx.tv_hd);
+                5 => ("SdT", "TV SD", "SdTV", tgx.tv_sd);
+                11 => ("4kT", "TV 4k", "4kTV", tgx.tv_4k);
+                6 => ("PkT", "TV Packs", "PacksTV", tgx.tv_pack);
+                7 => ("Spo", "Sports", "SportsTV", tgx.tv_sports);}
+            "Anime" => {28 => ("Ani", "All Anime", "Anime", tgx.anime);}
+            "Apps" => {20 => ("Mob", "Mobile Apps", "AppsMobile", tgx.apps_mobile);
+                21 => ("App", "Other Apps", "AppsOther", tgx.apps_other);
+                18 => ("Win", "Windows Apps", "AppsWindows", tgx.apps_windows);}
+            "Books" => {13 => ("Abk", "Audiobooks", "Audiobooks", tgx.audiobooks);
+                19 => ("Com", "Comics", "Comics", tgx.comics);
+                12 => ("Ebk", "Ebooks", "Ebooks", tgx.ebooks);
+                14 => ("Edu", "Educational", "Educational", tgx.educational);
+                15 => ("Mag", "Magazines", "Magazines", tgx.magazines);}
+            "Documentaries" => {9 => ("Doc", "All Documentaries", "Documentaries", tgx.documentaries);}
+            "Games" => {10 => ("Wgm", "Windows Games", "WindowsGames", tgx.games_windows);
+                43 => ("Ogm", "Other Games", "OtherGames", tgx.games_other);}
+            "Music" => {22 => ("Alb", "Music Albums", "AlbumsMusic", tgx.music_albums);
+                26 => ("Dis", "Music Discography", "DiscographyMusic", tgx.music_discography);
+                23 => ("Los", "Music Lossless", "LosslessMusic", tgx.music_lossless);
+                25 => ("MV ", "Music Video", "MusicVideo", tgx.music_video);
+                24 => ("Sin", "Music Singles", "SinglesMusic", tgx.music_singles);}
+            "Other" => {17 => ("Aud", "Other Audio", "AudioOther", tgx.audio_other);
+                40 => ("Pic", "Other Pictures", "PicturesOther", tgx.pictures_other);
+                37 => ("Tra", "Other Training", "TrainingOther", tgx.training_other);
+                33 => ("Oth", "Other", "Other", tgx.other);}
+            "XXX" => {48 => ("4kX", "XXX 4k", "4kXXX", tgx.xxx_4k);
+                35 => ("HdX", "XXX HD", "HdXXX", tgx.xxx_hd);
+                47 => ("MsX", "XXX Misc", "MiscXXX", tgx.xxx_misc);
+                34 => ("SdX", "XXX SD", "SdXXX", tgx.xxx_sd);}
         };
         SourceInfo {
             cats,
@@ -635,7 +737,7 @@ impl Source for TorrentGalaxyHtmlSource {
             .iter()
             .map(|item| {
                 ResultRow::new([
-                    item.icon.label.fg(item.icon.color),
+                    item.icon.label.fg((item.icon.color)(theme)),
                     item.extra
                         .get("lang")
                         .map(|l| get_lang(l.to_owned()))

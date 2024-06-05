@@ -376,8 +376,12 @@ impl App {
                     },
                     Some(rt) = rx_res.recv() => {
                         match rt {
-                            Ok(SourceResults::Results(rt)) => ctx.results = rt,
+                            Ok(SourceResults::Results(rt)) => {
+                                self.widgets.results.reset();
+                                ctx.results = rt;
+                            }
                             Ok(SourceResults::Captcha(c)) => {
+                                ctx.results = Results::default();
                                 ctx.mode = Mode::Captcha;
                                 self.widgets.captcha.image = Some(c);
                                 self.widgets.captcha.input.clear();
@@ -440,22 +444,19 @@ impl App {
 
         self.widgets.search.draw(f, ctx, layout_vertical[0]);
         // Dont draw batch pane if empty
-        match ctx.batch.is_empty() {
-            true => self.widgets.results.draw(f, ctx, layout_vertical[1]),
-            false => {
-                let layout_horizontal = Layout::new(
-                    Direction::Horizontal,
-                    match ctx.mode {
-                        Mode::Batch | Mode::Help => {
-                            [Constraint::Ratio(1, 2), Constraint::Ratio(1, 2)]
-                        }
-                        _ => [Constraint::Ratio(3, 4), Constraint::Ratio(1, 4)],
-                    },
-                )
-                .split(layout_vertical[1]);
-                self.widgets.results.draw(f, ctx, layout_horizontal[0]);
-                self.widgets.batch.draw(f, ctx, layout_horizontal[1]);
-            }
+        if ctx.batch.is_empty() {
+            self.widgets.results.draw(f, ctx, layout_vertical[1]);
+        } else {
+            let layout_horizontal = Layout::new(
+                Direction::Horizontal,
+                match ctx.mode {
+                    Mode::Batch | Mode::Help => [Constraint::Ratio(1, 2), Constraint::Ratio(1, 2)],
+                    _ => [Constraint::Ratio(3, 4), Constraint::Ratio(1, 4)],
+                },
+            )
+            .split(layout_vertical[1]);
+            self.widgets.results.draw(f, ctx, layout_horizontal[0]);
+            self.widgets.batch.draw(f, ctx, layout_horizontal[1]);
         }
         self.widgets.draw_popups(ctx, f);
         self.widgets.notification.draw(f, ctx, f.size());
@@ -555,12 +556,16 @@ impl App {
         match keys.chars().collect::<Vec<char>>()[..] {
             ['y', c] => {
                 let s = self.widgets.results.table.state.selected().unwrap_or(0);
-                match ctx.results.response.items.get(s) {
+                match ctx.results.response.items.get(s).cloned() {
                     Some(item) => {
                         let link = match c {
-                            't' => item.torrent_link.to_owned(),
-                            'm' => item.magnet_link.to_owned(),
-                            'p' => item.post_link.to_owned(),
+                            't' => item.torrent_link,
+                            'm' => item.magnet_link,
+                            'p' => item.post_link,
+                            'i' => match item.extra.get("imdb").cloned() {
+                                Some(imdb) => imdb,
+                                None => return,
+                            },
                             _ => return,
                         };
                         match clip::copy_to_clipboard(link.to_owned(), ctx.config.clipboard.clone())
@@ -569,7 +574,7 @@ impl App {
                             Err(e) => ctx.show_error(e),
                         }
                     }
-                    None if ['t', 'm', 'p'].contains(&c) => {
+                    None if ['t', 'm', 'p', 'i'].contains(&c) => {
                         ctx.show_error("Failed to copy:\nFailed to get item")
                     }
                     None => {}

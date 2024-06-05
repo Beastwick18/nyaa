@@ -73,7 +73,7 @@ macro_rules! widgets {
 macro_rules! cats {
     (
         $(
-            $cats:expr => {$($idx:expr => ($icon:expr, $disp:expr, $conf:expr, $col:ident);)+}
+            $cats:expr => {$($idx:expr => ($icon:expr, $disp:expr, $conf:expr, $col:tt$(.$colext:tt)*);)+}
         )+
     ) => {{
         let v = vec![
@@ -85,16 +85,12 @@ macro_rules! cats {
                         $conf,
                         $idx,
                         $icon,
-                        ratatui::style::Color::$col,
+                        |theme: &$crate::theme::Theme| {theme.$col$(.$colext)*},
                     ),
                 )+],
         },)+
         ];
         v
-
-        // pub static $name: &[&CatStruct] = &[
-        //     $(&$cat,)+
-        // ];
     }}
 }
 

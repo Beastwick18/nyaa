@@ -1,6 +1,7 @@
 use std::{error::Error, time::Duration};
 
 use chrono::{DateTime, Local, NaiveDateTime, TimeZone};
+use ratatui::style::Color;
 use reqwest::{StatusCode, Url};
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
@@ -24,6 +25,40 @@ use super::{
     nyaa_html::{nyaa_table, NyaaColumns, NyaaFilter, NyaaSort},
     nyaa_rss, Item, ItemType, ResultTable, Source, SourceConfig, SourceInfo, SourceResponse,
 };
+
+#[derive(Serialize, Deserialize, Clone, Copy)]
+#[serde(default)]
+pub struct SukebeiTheme {
+    #[serde(with = "color_to_tui")]
+    pub art_anime: Color,
+    #[serde(with = "color_to_tui")]
+    pub art_doujinshi: Color,
+    #[serde(with = "color_to_tui")]
+    pub art_games: Color,
+    #[serde(with = "color_to_tui")]
+    pub art_manga: Color,
+    #[serde(with = "color_to_tui")]
+    pub art_pictures: Color,
+    #[serde(with = "color_to_tui")]
+    pub real_photos: Color,
+    #[serde(with = "color_to_tui")]
+    pub real_videos: Color,
+}
+
+impl Default for SukebeiTheme {
+    fn default() -> Self {
+        use Color::*;
+        Self {
+            art_anime: Magenta,
+            art_doujinshi: LightMagenta,
+            art_games: Green,
+            art_manga: LightGreen,
+            art_pictures: Gray,
+            real_photos: Red,
+            real_videos: Yellow,
+        }
+    }
+}
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(default)]
@@ -259,20 +294,20 @@ impl Source for SukebeiHtmlSource {
     fn info() -> SourceInfo {
         let cats = cats! {
             "All Categories" => {
-                0 => ("---", "All Categories", "AllCategories", White);
+                0 => ("---", "All Categories", "AllCategories", fg);
             }
             "Art" => {
-                10 => ("Art", "All Art", "AllArt", Gray);
-                11 => ("Ani", "Anime", "ArtAnime", Magenta);
-                12 => ("Dou", "Doujinshi", "ArtDoujinshi", LightMagenta);
-                13 => ("Gam", "Games", "ArtGames", LightMagenta);
-                14 => ("Man", "Manga", "ArtManga", LightGreen);
-                15 => ("Pic", "Pictures", "ArtPictures", Gray);
+                10 => ("Art", "All Art", "AllArt", fg);
+                11 => ("Ani", "Anime", "ArtAnime", sukebei.art_anime);
+                12 => ("Dou", "Doujinshi", "ArtDoujinshi", sukebei.art_doujinshi);
+                13 => ("Gam", "Games", "ArtGames", sukebei.art_games);
+                14 => ("Man", "Manga", "ArtManga", sukebei.art_manga);
+                15 => ("Pic", "Pictures", "ArtPictures", sukebei.art_pictures);
             }
             "Real Life" => {
-                20 => ("Rea", "All Real Life", "AllReal", Gray);
-                21 => ("Pho", "Photobooks and Pictures", "RealPhotos", Red);
-                22 => ("Vid", "Videos", "RealVideos", Yellow);
+                20 => ("Rea", "All Real Life", "AllReal", fg);
+                21 => ("Pho", "Photobooks and Pictures", "RealPhotos", sukebei.real_photos);
+                22 => ("Vid", "Videos", "RealVideos", sukebei.real_videos);
             }
         };
         SourceInfo {
@@ -325,6 +360,6 @@ impl Source for SukebeiHtmlSource {
         theme: &Theme,
     ) -> ResultTable {
         let sukebei = config.sukebei.to_owned().unwrap_or_default();
-        nyaa_table(items, theme, &search.sort, &sukebei.columns)
+        nyaa_table(items.into(), theme, &search.sort, &sukebei.columns)
     }
 }

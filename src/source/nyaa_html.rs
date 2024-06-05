@@ -3,7 +3,7 @@ use std::{cmp::max, error::Error, time::Duration};
 use chrono::{DateTime, Local, NaiveDateTime, TimeZone};
 use ratatui::{
     layout::{Alignment, Constraint},
-    style::Stylize as _,
+    style::{Color, Stylize as _},
 };
 use reqwest::{StatusCode, Url};
 use scraper::{Html, Selector};
@@ -26,6 +26,70 @@ use crate::{
 use super::{
     add_protocol, nyaa_rss, Item, ItemType, Source, SourceConfig, SourceInfo, SourceResponse,
 };
+
+#[derive(Serialize, Deserialize, Clone, Copy)]
+#[serde(default)]
+pub struct NyaaTheme {
+    #[serde(with = "color_to_tui")]
+    pub anime_english_translated: Color,
+    #[serde(with = "color_to_tui")]
+    pub anime_non_english_translated: Color,
+    #[serde(with = "color_to_tui")]
+    pub anime_raw: Color,
+    #[serde(with = "color_to_tui")]
+    pub anime_music_video: Color,
+    #[serde(with = "color_to_tui")]
+    pub audio_lossless: Color,
+    #[serde(with = "color_to_tui")]
+    pub audio_lossy: Color,
+    #[serde(with = "color_to_tui")]
+    pub literature_english_translated: Color,
+    #[serde(with = "color_to_tui")]
+    pub literature_non_english_translated: Color,
+    #[serde(with = "color_to_tui")]
+    pub literature_raw: Color,
+    #[serde(with = "color_to_tui")]
+    pub live_english_translated: Color,
+    #[serde(with = "color_to_tui")]
+    pub live_non_english_translated: Color,
+    #[serde(with = "color_to_tui")]
+    pub live_idol_promo_video: Color,
+    #[serde(with = "color_to_tui")]
+    pub live_raw: Color,
+    #[serde(with = "color_to_tui")]
+    pub picture_graphics: Color,
+    #[serde(with = "color_to_tui")]
+    pub picture_photos: Color,
+    #[serde(with = "color_to_tui")]
+    pub software_applications: Color,
+    #[serde(with = "color_to_tui")]
+    pub software_games: Color,
+}
+
+impl Default for NyaaTheme {
+    fn default() -> Self {
+        use Color::*;
+        Self {
+            anime_english_translated: LightMagenta,
+            anime_non_english_translated: LightGreen,
+            anime_raw: Gray,
+            anime_music_video: Magenta,
+            audio_lossless: Red,
+            audio_lossy: Yellow,
+            literature_english_translated: LightGreen,
+            literature_non_english_translated: Yellow,
+            literature_raw: Gray,
+            live_english_translated: Yellow,
+            live_non_english_translated: LightCyan,
+            live_idol_promo_video: LightYellow,
+            live_raw: Gray,
+            picture_graphics: LightMagenta,
+            picture_photos: Magenta,
+            software_applications: Blue,
+            software_games: LightBlue,
+        }
+    }
+}
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(default)]
@@ -113,7 +177,7 @@ popup_enum! {
 pub struct NyaaHtmlSource;
 
 pub fn nyaa_table(
-    items: &[Item],
+    items: Vec<Item>,
     theme: &Theme,
     sel_sort: &SelectedSort,
     columns: &Option<NyaaColumns>,
@@ -141,17 +205,17 @@ pub fn nyaa_table(
         Alignment::Left,
     ];
     let mut rows: Vec<ResultRow> = items
-        .iter()
+        .into_iter()
         .map(|item| {
             ResultRow::new([
-                item.icon.label.fg(item.icon.color),
-                item.title.to_owned().fg(match item.item_type {
+                item.icon.label.fg((item.icon.color)(theme)),
+                item.title.fg(match item.item_type {
                     ItemType::Trusted => theme.success,
                     ItemType::Remake => theme.error,
                     ItemType::None => theme.fg,
                 }),
-                item.size.clone().fg(theme.fg),
-                item.date.clone().fg(theme.fg),
+                item.size.fg(theme.fg),
+                item.date.fg(theme.fg),
                 item.seeders.to_string().fg(theme.success),
                 item.leechers.to_string().fg(theme.error),
                 shorten_number(item.downloads).fg(theme.fg),
@@ -387,42 +451,42 @@ impl Source for NyaaHtmlSource {
     fn info() -> SourceInfo {
         let cats = cats! {
             "All Categories" => {
-                0 => ("---", "All Categories", "AllCategories", White);
+                0 => ("---", "All Categories", "AllCategories", fg);
             }
             "Anime" => {
-                10 => ("Ani", "All Anime", "AllAnime", Gray);
-                12 => ("Sub", "English Translated", "AnimeEnglishTranslated", LightMagenta);
-                13 => ("Sub", "Non-English Translated", "AnimeNonEnglishTranslated", LightGreen);
-                14 => ("Raw", "Raw", "AnimeRaw", Gray);
-                11 => ("AMV", "Anime Music Video", "AnimeMusicVideo", Magenta);
+                10 => ("Ani", "All Anime", "AllAnime", fg);
+                12 => ("Sub", "English Translated", "AnimeEnglishTranslated", nyaa.anime_english_translated);
+                13 => ("Sub", "Non-English Translated", "AnimeNonEnglishTranslated", nyaa.anime_non_english_translated);
+                14 => ("Raw", "Raw", "AnimeRaw", nyaa.anime_raw);
+                11 => ("AMV", "Anime Music Video", "AnimeMusicVideo", nyaa.anime_music_video);
             }
             "Audio" => {
-                20 => ("Aud", "All Audio", "AllAudio", Gray);
-                21 => ("Aud", "Lossless", "AudioLossless", Red);
-                22 => ("Aud", "Lossy", "AudioLossy", Yellow);
+                20 => ("Aud", "All Audio", "AllAudio", fg);
+                21 => ("Aud", "Lossless", "AudioLossless", nyaa.audio_lossless);
+                22 => ("Aud", "Lossy", "AudioLossy", nyaa.audio_lossy);
             }
             "Literature" => {
-                30 => ("Lit", "All Literature", "AllLiterature", Gray);
-                31 => ("Lit", "English Translated", "LitEnglishTranslated", LightGreen);
-                32 => ("Lit", "Non-English Translated", "LitNonEnglishTranslated", Yellow);
-                33 => ("Lit", "Raw", "LitRaw", Gray);
+                30 => ("Lit", "All Literature", "AllLiterature", fg);
+                31 => ("Lit", "English Translated", "LitEnglishTranslated", nyaa.literature_english_translated);
+                32 => ("Lit", "Non-English Translated", "LitNonEnglishTranslated", nyaa.literature_non_english_translated);
+                33 => ("Lit", "Raw", "LitRaw", nyaa.literature_raw);
             }
             "Live Action" => {
-                40 => ("Liv", "All Live Action", "AllLiveAction", Gray);
-                41 => ("Liv", "English Translated", "LiveEnglishTranslated", Yellow);
-                43 => ("Liv", "Non-English Translated", "LiveNonEnglishTranslated", LightCyan);
-                42 => ("Liv", "Idol/Promo Video", "LiveIdolPromoVideo", LightYellow);
-                44 => ("Liv", "Raw", "LiveRaw", Gray);
+                40 => ("Liv", "All Live Action", "AllLiveAction", fg);
+                41 => ("Liv", "English Translated", "LiveEnglishTranslated", nyaa.live_english_translated);
+                43 => ("Liv", "Non-English Translated", "LiveNonEnglishTranslated", nyaa.live_non_english_translated);
+                42 => ("Liv", "Idol/Promo Video", "LiveIdolPromoVideo", nyaa.live_idol_promo_video);
+                44 => ("Liv", "Raw", "LiveRaw", nyaa.live_raw);
             }
             "Pictures" => {
-                50 => ("Pic", "All Pictures", "AllPictures", Gray);
-                51 => ("Pic", "Graphics", "PicGraphics", LightMagenta);
-                52 => ("Pic", "Photos", "PicPhotos", Magenta);
+                50 => ("Pic", "All Pictures", "AllPictures", fg);
+                51 => ("Pic", "Graphics", "PicGraphics", nyaa.picture_graphics);
+                52 => ("Pic", "Photos", "PicPhotos", nyaa.picture_photos);
             }
             "Software" => {
-                60 => ("Sof", "All Software", "AllSoftware", Gray);
-                61 => ("Sof", "Applications", "SoftApplications", Blue);
-                62 => ("Sof", "Games", "SoftGames", LightBlue);
+                60 => ("Sof", "All Software", "AllSoftware", fg);
+                61 => ("Sof", "Applications", "SoftApplications", nyaa.software_applications);
+                62 => ("Sof", "Games", "SoftGames", nyaa.software_games);
             }
         };
         SourceInfo {
@@ -475,6 +539,6 @@ impl Source for NyaaHtmlSource {
         theme: &Theme,
     ) -> ResultTable {
         let nyaa = config.nyaa.to_owned().unwrap_or_default();
-        nyaa_table(items, theme, &search.sort, &nyaa.columns)
+        nyaa_table(items.into(), theme, &search.sort, &nyaa.columns)
     }
 }

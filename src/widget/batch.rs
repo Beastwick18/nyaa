@@ -40,7 +40,7 @@ impl super::Widget for BatchWidget {
             .iter()
             .map(|i| {
                 Row::new([
-                    i.icon.label.fg(i.icon.color),
+                    i.icon.label.fg((i.icon.color)(&ctx.theme)),
                     i.title.to_owned().fg(match i.item_type {
                         ItemType::Trusted => ctx.theme.success,
                         ItemType::Remake => ctx.theme.error,

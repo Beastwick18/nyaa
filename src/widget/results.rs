@@ -24,6 +24,11 @@ pub struct ResultsWidget {
 }
 
 impl ResultsWidget {
+    pub fn reset(&mut self) {
+        self.table.select(0);
+        *self.table.state.offset_mut() = 0;
+    }
+
     fn try_select_toggle(&self, ctx: &mut Context) {
         if let Some(sel) = self.table.state.selected() {
             if let Some(item) = ctx.results.response.items.get(sel) {
@@ -351,7 +356,7 @@ impl super::Widget for ResultsWidget {
             ("P, H", "First Page"),
             ("r", "Reload"),
             ("o", "Open in browser"),
-            ("yt, ym, yp", "Copy torrent/magnet/post link"),
+            ("yt, ym, yp, yi", "Copy torrent/magnet/post/imdb id"),
             ("Space", "Toggle item for batch download"),
             ("Ctrl-Space", "Multi-line select torrents"),
             ("Tab/Shift-Tab", "Switch to Batches"),
