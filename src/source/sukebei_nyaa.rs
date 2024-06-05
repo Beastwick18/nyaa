@@ -26,9 +26,16 @@ use super::{
     nyaa_rss, Item, ItemType, ResultTable, Source, SourceConfig, SourceInfo, SourceResponse,
 };
 
-#[derive(Serialize, Deserialize, Clone, Copy)]
+#[derive(Serialize, Deserialize, Clone, Copy, Default)]
 #[serde(default)]
 pub struct SukebeiTheme {
+    #[serde(rename = "categories")]
+    pub cat: SukebeiCategoryTheme,
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy)]
+#[serde(default)]
+pub struct SukebeiCategoryTheme {
     #[serde(with = "color_to_tui")]
     pub art_anime: Color,
     #[serde(with = "color_to_tui")]
@@ -45,7 +52,7 @@ pub struct SukebeiTheme {
     pub real_videos: Color,
 }
 
-impl Default for SukebeiTheme {
+impl Default for SukebeiCategoryTheme {
     fn default() -> Self {
         use Color::*;
         Self {
@@ -298,16 +305,16 @@ impl Source for SukebeiHtmlSource {
             }
             "Art" => {
                 10 => ("Art", "All Art", "AllArt", fg);
-                11 => ("Ani", "Anime", "ArtAnime", sukebei.art_anime);
-                12 => ("Dou", "Doujinshi", "ArtDoujinshi", sukebei.art_doujinshi);
-                13 => ("Gam", "Games", "ArtGames", sukebei.art_games);
-                14 => ("Man", "Manga", "ArtManga", sukebei.art_manga);
-                15 => ("Pic", "Pictures", "ArtPictures", sukebei.art_pictures);
+                11 => ("Ani", "Anime", "ArtAnime", sukebei.cat.art_anime);
+                12 => ("Dou", "Doujinshi", "ArtDoujinshi", sukebei.cat.art_doujinshi);
+                13 => ("Gam", "Games", "ArtGames", sukebei.cat.art_games);
+                14 => ("Man", "Manga", "ArtManga", sukebei.cat.art_manga);
+                15 => ("Pic", "Pictures", "ArtPictures", sukebei.cat.art_pictures);
             }
             "Real Life" => {
                 20 => ("Rea", "All Real Life", "AllReal", fg);
-                21 => ("Pho", "Photobooks and Pictures", "RealPhotos", sukebei.real_photos);
-                22 => ("Vid", "Videos", "RealVideos", sukebei.real_videos);
+                21 => ("Pho", "Photobooks and Pictures", "RealPhotos", sukebei.cat.real_photos);
+                22 => ("Vid", "Videos", "RealVideos", sukebei.cat.real_videos);
             }
         };
         SourceInfo {

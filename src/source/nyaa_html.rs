@@ -27,9 +27,16 @@ use super::{
     add_protocol, nyaa_rss, Item, ItemType, Source, SourceConfig, SourceInfo, SourceResponse,
 };
 
-#[derive(Serialize, Deserialize, Clone, Copy)]
+#[derive(Serialize, Deserialize, Clone, Copy, Default)]
 #[serde(default)]
 pub struct NyaaTheme {
+    #[serde(rename = "categories")]
+    cat: NyaaCategoryTheme,
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy)]
+#[serde(default)]
+pub struct NyaaCategoryTheme {
     #[serde(with = "color_to_tui")]
     pub anime_english_translated: Color,
     #[serde(with = "color_to_tui")]
@@ -66,7 +73,7 @@ pub struct NyaaTheme {
     pub software_games: Color,
 }
 
-impl Default for NyaaTheme {
+impl Default for NyaaCategoryTheme {
     fn default() -> Self {
         use Color::*;
         Self {
@@ -455,38 +462,38 @@ impl Source for NyaaHtmlSource {
             }
             "Anime" => {
                 10 => ("Ani", "All Anime", "AllAnime", fg);
-                12 => ("Sub", "English Translated", "AnimeEnglishTranslated", nyaa.anime_english_translated);
-                13 => ("Sub", "Non-English Translated", "AnimeNonEnglishTranslated", nyaa.anime_non_english_translated);
-                14 => ("Raw", "Raw", "AnimeRaw", nyaa.anime_raw);
-                11 => ("AMV", "Anime Music Video", "AnimeMusicVideo", nyaa.anime_music_video);
+                12 => ("Sub", "English Translated", "AnimeEnglishTranslated", nyaa.cat.anime_english_translated);
+                13 => ("Sub", "Non-English Translated", "AnimeNonEnglishTranslated", nyaa.cat.anime_non_english_translated);
+                14 => ("Raw", "Raw", "AnimeRaw", nyaa.cat.anime_raw);
+                11 => ("AMV", "Anime Music Video", "AnimeMusicVideo", nyaa.cat.anime_music_video);
             }
             "Audio" => {
                 20 => ("Aud", "All Audio", "AllAudio", fg);
-                21 => ("Aud", "Lossless", "AudioLossless", nyaa.audio_lossless);
-                22 => ("Aud", "Lossy", "AudioLossy", nyaa.audio_lossy);
+                21 => ("Aud", "Lossless", "AudioLossless", nyaa.cat.audio_lossless);
+                22 => ("Aud", "Lossy", "AudioLossy", nyaa.cat.audio_lossy);
             }
             "Literature" => {
                 30 => ("Lit", "All Literature", "AllLiterature", fg);
-                31 => ("Lit", "English Translated", "LitEnglishTranslated", nyaa.literature_english_translated);
-                32 => ("Lit", "Non-English Translated", "LitNonEnglishTranslated", nyaa.literature_non_english_translated);
-                33 => ("Lit", "Raw", "LitRaw", nyaa.literature_raw);
+                31 => ("Lit", "English Translated", "LitEnglishTranslated", nyaa.cat.literature_english_translated);
+                32 => ("Lit", "Non-English Translated", "LitNonEnglishTranslated", nyaa.cat.literature_non_english_translated);
+                33 => ("Lit", "Raw", "LitRaw", nyaa.cat.literature_raw);
             }
             "Live Action" => {
                 40 => ("Liv", "All Live Action", "AllLiveAction", fg);
-                41 => ("Liv", "English Translated", "LiveEnglishTranslated", nyaa.live_english_translated);
-                43 => ("Liv", "Non-English Translated", "LiveNonEnglishTranslated", nyaa.live_non_english_translated);
-                42 => ("Liv", "Idol/Promo Video", "LiveIdolPromoVideo", nyaa.live_idol_promo_video);
-                44 => ("Liv", "Raw", "LiveRaw", nyaa.live_raw);
+                41 => ("Liv", "English Translated", "LiveEnglishTranslated", nyaa.cat.live_english_translated);
+                43 => ("Liv", "Non-English Translated", "LiveNonEnglishTranslated", nyaa.cat.live_non_english_translated);
+                42 => ("Liv", "Idol/Promo Video", "LiveIdolPromoVideo", nyaa.cat.live_idol_promo_video);
+                44 => ("Liv", "Raw", "LiveRaw", nyaa.cat.live_raw);
             }
             "Pictures" => {
                 50 => ("Pic", "All Pictures", "AllPictures", fg);
-                51 => ("Pic", "Graphics", "PicGraphics", nyaa.picture_graphics);
-                52 => ("Pic", "Photos", "PicPhotos", nyaa.picture_photos);
+                51 => ("Pic", "Graphics", "PicGraphics", nyaa.cat.picture_graphics);
+                52 => ("Pic", "Photos", "PicPhotos", nyaa.cat.picture_photos);
             }
             "Software" => {
                 60 => ("Sof", "All Software", "AllSoftware", fg);
-                61 => ("Sof", "Applications", "SoftApplications", nyaa.software_applications);
-                62 => ("Sof", "Games", "SoftGames", nyaa.software_games);
+                61 => ("Sof", "Applications", "SoftApplications", nyaa.cat.software_applications);
+                62 => ("Sof", "Games", "SoftGames", nyaa.cat.software_games);
             }
         };
         SourceInfo {
