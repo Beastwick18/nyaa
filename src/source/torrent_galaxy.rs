@@ -465,9 +465,8 @@ impl Source for TorrentGalaxyHtmlSource {
                     false => ItemType::Remake,
                 };
 
-                let torrent_link = attr(e, torrent_sel, "href");
                 let torrent_link = base_url
-                    .join(&torrent_link)
+                    .join(&attr(e, torrent_sel, "href"))
                     .map(|u| u.to_string())
                     .unwrap_or_default();
                 let magnet_link = attr(e, magnet_sel, "href");

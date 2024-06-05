@@ -556,6 +556,7 @@ impl App {
         match keys.chars().collect::<Vec<char>>()[..] {
             ['y', c] => {
                 let s = self.widgets.results.table.state.selected().unwrap_or(0);
+                ctx.mode = Mode::Normal;
                 match ctx.results.response.items.get(s).cloned() {
                     Some(item) => {
                         let link = match c {
@@ -564,7 +565,7 @@ impl App {
                             'p' => item.post_link,
                             'i' => match item.extra.get("imdb").cloned() {
                                 Some(imdb) => imdb,
-                                None => return,
+                                None => return ctx.show_error("No imdb ID found for this item."),
                             },
                             _ => return,
                         };
@@ -579,7 +580,6 @@ impl App {
                     }
                     None => {}
                 }
-                ctx.mode = Mode::Normal;
             }
             _ => ctx.mode = Mode::KeyCombo(keys),
         }
