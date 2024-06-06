@@ -392,19 +392,18 @@ impl Source for TorrentGalaxyHtmlSource {
             let time = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis();
 
             let hash = "4578678889c4b42ae37b543434c81d85";
-            let base_url = Url::parse(&tgx.base_url)?;
             let mut hash_url = base_url.clone().join("hub.php")?;
             hash_url.set_query(Some(&format!("a=vlad&u={}", time)));
             client
-            .post(hash_url.clone())
-            .body(format!("fash={}", hash))
-            .header("Content-Type", "application/x-www-form-urlencoded")
-            .header(
-                "User-Agent",
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:126.0) Gecko/20100101 Firefox/126.0",
-            )
-            .send()
-            .await?;
+                .post(hash_url.clone())
+                .body(format!("fash={}", hash))
+                .header("Content-Type", "application/x-www-form-urlencoded")
+                .header(
+                    "User-Agent",
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:126.0) Gecko/20100101 Firefox/126.0",
+                )
+                .send()
+                .await?;
         }
 
         // If that doesn't work, try making the user solve a captcha
@@ -416,7 +415,9 @@ impl Source for TorrentGalaxyHtmlSource {
             }
             #[cfg(feature = "captcha")]
             {
-                let mut request = client.get("https://torrentgalaxy.to/captcha/cpt_show.pnp?v=txlight&63fd4c746843c74b53ca60277192fb48");
+                let mut captcha_url = base_url.clone().join("captcha/cpt_show.pnp")?;
+                captcha_url.set_query(Some("v=txlight&63fd4c746843c74b53ca60277192fb48"));
+                let mut request = client.get(captcha_url);
                 if let Some(timeout) = tgx.timeout {
                     request = request.timeout(Duration::from_secs(timeout));
                 }
