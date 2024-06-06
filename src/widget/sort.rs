@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     layout::{Constraint, Rect},
@@ -40,6 +42,19 @@ impl SortDir {
             SortDir::Asc => "asc",
         }
         .to_owned()
+    }
+}
+
+impl Display for SortDir {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                SortDir::Asc => "Ascending",
+                SortDir::Desc => "Descending",
+            }
+        )
     }
 }
 
@@ -111,7 +126,7 @@ impl Widget for SortPopup {
                         };
                         ctx.mode = Mode::Loading(LoadType::Sorting);
                         if let Some(s) = ctx.src_info.sorts.get(i) {
-                            ctx.notify(format!("Sort by \"{}\"", s));
+                            ctx.notify(format!("Sort by \"{}\" {}", s, self.selected.dir));
                         }
                     }
                 }

@@ -6,7 +6,7 @@ use crate::app::Context;
 
 use super::{notify_box::NotifyBox, Corner, Widget};
 
-static MAX_NOTIFS: usize = 12;
+static MAX_NOTIFS: usize = 100;
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct NotificationConfig {
@@ -94,11 +94,12 @@ impl NotificationWidget {
     }
 
     pub fn update(&mut self, deltatime: f64, area: Rect) -> bool {
-        self.notifs.retain(|n| !n.is_done());
-        self.notifs.iter_mut().fold(false, |acc, x| {
+        let res = self.notifs.iter_mut().fold(false, |acc, x| {
             let res = x.update(deltatime, area);
             res || acc
-        })
+        });
+        self.notifs.retain(|n| !n.is_done());
+        res
     }
 }
 

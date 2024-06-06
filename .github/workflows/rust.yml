@@ -10,19 +10,19 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  clippy:
 
     runs-on: ubuntu-latest
+    timeout-minutes: 5
 
     steps:
     - uses: actions/checkout@v4
-    - name: Build
-      run: cargo build --verbose
     - name: Clippy
       run: cargo clippy --verbose
   test:
 
     runs-on: ubuntu-latest
+    timeout-minutes: 5
 
     steps:
     - uses: actions/checkout@v4
