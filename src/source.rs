@@ -1,6 +1,5 @@
 use std::{collections::HashMap, error::Error, sync::Arc, time::Duration};
 
-use ratatui_image::protocol::StatefulProtocol;
 use reqwest::{cookie::Jar, Proxy};
 use serde::{Deserialize, Serialize};
 
@@ -28,13 +27,13 @@ pub mod torrent_galaxy;
 #[derive(Clone)]
 pub enum SourceResults {
     Results(Results),
-    Captcha(Box<dyn StatefulProtocol>),
+    // Captcha(Box<dyn StatefulProtocol>),
 }
 
 #[derive(Clone)]
 pub enum SourceResponse {
     Results(ResultResponse),
-    Captcha(Box<dyn StatefulProtocol>),
+    // Captcha(Box<dyn StatefulProtocol>),
 }
 
 #[derive(Serialize, Deserialize, Clone, Default)]

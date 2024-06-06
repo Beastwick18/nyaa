@@ -28,7 +28,6 @@ use crate::{
     util::conv::key_to_string,
     widget::{
         batch::BatchWidget,
-        captcha::CaptchaPopup,
         category::CategoryPopup,
         clients::ClientsPopup,
         filter::FilterPopup,
@@ -106,7 +105,7 @@ widgets! {
         page: [Mode::Page]  => PagePopup,
         user: [Mode::User] => UserPopup,
         help: [Mode::Help] => HelpPopup,
-        captcha: [Mode::Captcha] => CaptchaPopup,
+        // captcha: [Mode::Captcha] => CaptchaPopup,
     }
 }
 
@@ -404,12 +403,12 @@ impl App {
                                 self.widgets.results.reset();
                                 ctx.results = rt;
                             }
-                            Ok(SourceResults::Captcha(c)) => {
-                                ctx.results = Results::default();
-                                ctx.mode = Mode::Captcha;
-                                self.widgets.captcha.image = Some(c);
-                                self.widgets.captcha.input.clear();
-                            }
+                            // Ok(SourceResults::Captcha(c)) => {
+                            //     ctx.results = Results::default();
+                            //     ctx.mode = Mode::Captcha;
+                            //     self.widgets.captcha.image = Some(c);
+                            //     self.widgets.captcha.input.clear();
+                            // }
                             Err(e) => {
                                 // Clear results on error
                                 ctx.results = Results::default();

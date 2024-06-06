@@ -382,28 +382,52 @@ impl Source for TorrentGalaxyHtmlSource {
         _date_format: Option<String>,
     ) -> Result<SourceResponse, Box<dyn Error + Send + Sync>> {
         let tgx = config.tgx.to_owned().unwrap_or_default();
-        let (base_url, url) = get_url(tgx.base_url, search)?;
+        let (base_url, url) = get_url(tgx.base_url.clone(), search)?;
 
         let table_sel = &sel!(".tgxtable")?;
+
+        // First try checkpoint
+        let content = try_get_content(client, tgx.timeout, &url).await?;
+        if Html::parse_document(&content).select(table_sel).count() == 0 {
+            let time = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis();
+
+            let hash = "4578678889c4b42ae37b543434c81d85";
+            // let hash = "ff9df5a6db0ebe6bd636296da767a587";
+            let base_url = Url::parse(&tgx.base_url)?;
+            let mut hash_url = base_url.clone().join("hub.php")?;
+            hash_url.set_query(Some(&format!("a=vlad&u={}", time)));
+            // let hash_url = format!("https://torrentgalaxy.to/hub.php?a=vlad&u={}", time);
+            client
+            .post(hash_url.clone())
+            .body(format!("fash={}", hash))
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .header(
+                "User-Agent",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:126.0) Gecko/20100101 Firefox/126.0",
+            )
+            .send()
+            .await?;
+        }
 
         // If that doesn't work, try making the user solve a captcha
         let content = try_get_content(client, tgx.timeout, &url).await?;
         if Html::parse_document(&content).select(table_sel).count() == 0 {
-            let mut request = client.get("https://torrentgalaxy.to/captcha/cpt_show.pnp?v=txlight&63fd4c746843c74b53ca60277192fb48");
-            if let Some(timeout) = tgx.timeout {
-                request = request.timeout(Duration::from_secs(timeout));
-            }
-            let response = request
-                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:126.0) Gecko/20100101 Firefox/126.0")
-                .send()
-                .await?;
-            let bytes = response.bytes().await?;
-            let mut picker = ratatui_image::picker::Picker::new((1, 2));
-            picker.protocol_type = ratatui_image::picker::ProtocolType::Halfblocks;
-            let dyn_image = image::load_from_memory(&bytes[..])?;
-            let image = picker.new_resize_protocol(dyn_image);
-
-            return Ok(SourceResponse::Captcha(image));
+            return Err("Unable to get response, most likely due to rate limit.\nWait a bit before retrying...".into());
+            // let mut request = client.get("https://torrentgalaxy.to/captcha/cpt_show.pnp?v=txlight&63fd4c746843c74b53ca60277192fb48");
+            // if let Some(timeout) = tgx.timeout {
+            //     request = request.timeout(Duration::from_secs(timeout));
+            // }
+            // let response = request
+            //     .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:126.0) Gecko/20100101 Firefox/126.0")
+            //     .send()
+            //     .await?;
+            // let bytes = response.bytes().await?;
+            // let mut picker = ratatui_image::picker::Picker::new((1, 2));
+            // picker.protocol_type = ratatui_image::picker::ProtocolType::Halfblocks;
+            // let dyn_image = image::load_from_memory(&bytes[..])?;
+            // let image = picker.new_resize_protocol(dyn_image);
+            //
+            // return Ok(SourceResponse::Captcha(image));
         }
 
         // Results table found, can start parsing
