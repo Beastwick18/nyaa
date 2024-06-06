@@ -1,7 +1,7 @@
 use std::{env, io::stdout};
 
 use app::App;
-use config::Config;
+use config::AppConfig;
 use ratatui::{backend::CrosstermBackend, Terminal};
 use sync::AppSync;
 
@@ -42,7 +42,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut app = App::default();
     let sync = AppSync {};
 
-    app.run_app::<_, _, Config, false>(&mut terminal, sync)
+    app.run_app::<_, _, AppConfig, false>(&mut terminal, sync)
         .await?;
 
     util::term::reset_terminal()?;

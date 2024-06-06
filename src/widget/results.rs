@@ -16,7 +16,7 @@ use crate::{
     widget::sort::SortDir,
 };
 
-use super::{border_block, centered_rect, TitlePosition, VirtualStatefulTable};
+use super::{border_block, centered_rect, Corner, VirtualStatefulTable};
 
 pub struct ResultsWidget {
     pub table: VirtualStatefulTable,
@@ -115,7 +115,7 @@ impl super::Widget for ResultsWidget {
             area.height as usize,
             3,
             num_items,
-            3,
+            ctx.config.scroll_padding,
             self.table.state.offset_mut(),
         );
 
@@ -161,13 +161,13 @@ impl super::Widget for ResultsWidget {
             ctx.client.to_string(),
             ctx.src.to_string()
         );
-        if let Some((tr, area)) = TitlePosition::TopRight.try_widget(dl_src, area, true) {
+        if let Some((tr, area)) = Corner::TopRight.try_title(dl_src, area, true) {
             f.render_widget(tr, area);
         }
 
         if !ctx.last_key.is_empty() {
             let key_str = title!(ctx.last_key);
-            if let Some((br, area)) = TitlePosition::BottomRight.try_widget(key_str, area, true) {
+            if let Some((br, area)) = Corner::BottomRight.try_title(key_str, area, true) {
                 f.render_widget(br, area);
             }
         }

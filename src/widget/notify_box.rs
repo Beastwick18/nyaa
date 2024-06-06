@@ -4,31 +4,21 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph, Widget as _},
     Frame,
 };
-use serde::{Deserialize, Serialize};
 
 use crate::{app::Context, style};
 
-const ANIM_SPEED: f64 = 8.0;
-const MAX_WIDTH: u16 = 75;
+use super::Corner;
 
-#[derive(Clone, Copy, Deserialize, Serialize)]
-pub enum NotifyPosition {
-    TopLeft,
-    TopRight,
-    BottomLeft,
-    BottomRight,
-}
-
-impl NotifyPosition {
-    pub fn is_top(self) -> bool {
+impl Corner {
+    fn is_top(&self) -> bool {
         matches!(self, Self::TopLeft | Self::TopRight)
     }
 
-    pub fn is_left(self) -> bool {
+    fn is_left(&self) -> bool {
         matches!(self, Self::TopLeft | Self::BottomLeft)
     }
 
-    pub fn get_start_stop(
+    fn get_start_stop(
         self,
         area: Rect,
         width: u16,
@@ -132,7 +122,9 @@ pub struct NotifyBox {
     raw_content: String,
     pub time: f64,
     pub duration: f64,
-    position: NotifyPosition,
+    animation_speed: f64,
+    max_width: u16,
+    position: Corner,
     width: u16,
     height: u16,
     start_offset: u16,
@@ -144,9 +136,16 @@ pub struct NotifyBox {
 }
 
 impl NotifyBox {
-    pub fn new(content: String, duration: f64, position: NotifyPosition, error: bool) -> Self {
+    pub fn new(
+        content: String,
+        duration: f64,
+        position: Corner,
+        animation_speed: f64,
+        max_width: u16,
+        error: bool,
+    ) -> Self {
         let raw_content = content.clone();
-        let lines = textwrap::wrap(&content, MAX_WIDTH as usize);
+        let lines = textwrap::wrap(&content, max_width as usize);
         let actual_width = lines.iter().fold(0, |acc, x| acc.max(x.len())) as u16 + 2;
         let height = lines.len() as u16 + 2;
         NotifyBox {
@@ -154,6 +153,8 @@ impl NotifyBox {
             height,
             raw_content,
             position,
+            animation_speed,
+            max_width,
             start_offset: 0,
             stop_offset: 0,
             time: 0.0,
@@ -198,8 +199,8 @@ impl NotifyBox {
 
     pub fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
         let max_width = match self.error {
-            true => (area.width / 3).max(MAX_WIDTH),
-            false => area.width.min(MAX_WIDTH),
+            true => (area.width / 3).max(self.max_width),
+            false => area.width.min(self.max_width),
         } as usize;
         let lines = textwrap::wrap(&self.raw_content, max_width);
         self.width = lines.iter().fold(0, |acc, x| acc.max(x.len())) as u16 + 2;
@@ -277,13 +278,12 @@ impl NotifyBox {
             self.start_offset,
             self.stop_offset,
         );
-        match self.time >= 1.0 {
-            false => self
-                .enter_state
-                .ease_out(start_pos, stop_pos, ANIM_SPEED, deltatime),
-            true => self
-                .leave_state
-                .ease_in(stop_pos, leave_pos, ANIM_SPEED / 2.0, deltatime),
+        if self.time < 1.0 {
+            self.enter_state
+                .ease_out(start_pos, stop_pos, self.animation_speed, deltatime)
+        } else {
+            self.leave_state
+                .ease_in(stop_pos, leave_pos, self.animation_speed / 2.0, deltatime)
         }
     }
 

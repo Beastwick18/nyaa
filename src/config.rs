@@ -22,6 +22,8 @@ pub trait ConfigManager {
     fn path() -> Result<PathBuf, Box<dyn Error>>;
 }
 
+pub struct AppConfig;
+
 pub static CONFIG_FILE: &str = "config";
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -34,7 +36,8 @@ pub struct Config {
     pub download_client: Client,
     pub date_format: Option<String>,
     pub request_proxy: Option<String>,
-    pub timeout: u64, // TODO: treat as "global" timeout, can overwrite per-source
+    pub timeout: u64,
+    pub scroll_padding: usize,
 
     #[serde(rename = "notifications")]
     pub notifications: Option<NotificationConfig>,
@@ -55,6 +58,7 @@ impl Default for Config {
             date_format: None,
             request_proxy: None,
             timeout: 30,
+            scroll_padding: 3,
             notifications: None,
             clipboard: None,
             client: ClientConfig::default(),
@@ -63,7 +67,7 @@ impl Default for Config {
     }
 }
 
-impl ConfigManager for Config {
+impl ConfigManager for AppConfig {
     fn load() -> Result<Config, Box<dyn Error>> {
         get_configuration_file_path(APP_NAME, CONFIG_FILE).and_then(load_path)
     }

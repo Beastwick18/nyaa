@@ -4,21 +4,24 @@ use serde::{Deserialize, Serialize};
 
 use crate::app::Context;
 
-use super::{
-    notify_box::{NotifyBox, NotifyPosition},
-    Widget,
-};
+use super::{notify_box::NotifyBox, Corner, Widget};
+
+static MAX_NOTIFS: usize = 12;
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct NotificationConfig {
-    pub position: Option<NotifyPosition>,
+    pub position: Option<Corner>,
     pub duration: Option<f64>,
+    pub max_width: Option<u16>,
+    pub animation_speed: Option<f64>,
 }
 
 pub struct NotificationWidget {
     notifs: Vec<NotifyBox>,
     duration: f64,
-    position: NotifyPosition,
+    position: Corner,
+    max_width: u16,
+    animation_speed: f64,
 }
 
 impl Default for NotificationWidget {
@@ -26,7 +29,9 @@ impl Default for NotificationWidget {
         Self {
             notifs: vec![],
             duration: 3.0,
-            position: NotifyPosition::TopRight,
+            position: Corner::TopRight,
+            max_width: 75,
+            animation_speed: 8.,
         }
     }
 }
@@ -35,6 +40,8 @@ impl NotificationWidget {
     pub fn load_config(&mut self, conf: &NotificationConfig) {
         self.position = conf.position.unwrap_or(self.position);
         self.duration = conf.duration.unwrap_or(self.duration).max(0.01);
+        self.max_width = conf.max_width.unwrap_or(self.max_width);
+        self.animation_speed = conf.animation_speed.unwrap_or(self.animation_speed);
     }
 
     pub fn is_animating(&self) -> bool {
@@ -42,27 +49,48 @@ impl NotificationWidget {
     }
 
     pub fn add_notification(&mut self, notif: String) {
-        let new_notif = NotifyBox::new(notif, self.duration, self.position, false);
-
-        self.notifs
-            .iter_mut()
-            .for_each(|n| n.add_offset(new_notif.height()));
-
-        self.notifs.push(new_notif);
+        let new_notif = NotifyBox::new(
+            notif,
+            self.duration,
+            self.position,
+            self.animation_speed,
+            self.max_width,
+            false,
+        );
+        self.add(new_notif);
     }
 
     pub fn add_error(&mut self, error: String) {
-        let new_notif = NotifyBox::new(error, 0.0, self.position, true);
+        let new_notif = NotifyBox::new(
+            error,
+            0.0,
+            self.position,
+            self.animation_speed,
+            self.max_width,
+            true,
+        );
+        self.add(new_notif);
+    }
 
+    fn add(&mut self, notif: NotifyBox) {
         self.notifs
             .iter_mut()
-            .for_each(|n| n.add_offset(new_notif.height()));
+            .for_each(|n| n.add_offset(notif.height()));
 
-        self.notifs.push(new_notif);
+        self.dismiss_oldest();
+
+        self.notifs.push(notif);
     }
 
     pub fn dismiss_all(&mut self) {
         self.notifs.iter_mut().for_each(|n| n.time = 1.0);
+    }
+
+    fn dismiss_oldest(&mut self) {
+        if self.notifs.len() >= MAX_NOTIFS {
+            self.notifs
+                .drain(..=self.notifs.len().saturating_sub(MAX_NOTIFS));
+        }
     }
 
     pub fn update(&mut self, deltatime: f64, area: Rect) -> bool {

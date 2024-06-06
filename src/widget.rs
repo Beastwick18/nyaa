@@ -12,6 +12,7 @@ use ratatui::{
     },
     Frame,
 };
+use serde::{Deserialize, Serialize};
 use unicode_width::UnicodeWidthStr as _;
 
 use crate::{app::Context, style, theme::Theme};
@@ -43,15 +44,16 @@ pub trait EnumIter<T> {
     fn iter() -> Iter<'static, T>;
 }
 
-pub enum TitlePosition {
+#[derive(Serialize, Deserialize, Clone, Copy)]
+pub enum Corner {
+    TopLeft,
     TopRight,
     BottomLeft,
     BottomRight,
-    // TopLeft, // Top Left is default for ratatui, no extra logic needed
 }
 
-impl TitlePosition {
-    pub fn try_widget<'a, L: Into<Line<'a>>>(
+impl Corner {
+    pub fn try_title<'a, L: Into<Line<'a>>>(
         self,
         text: L,
         area: Rect,
@@ -64,10 +66,10 @@ impl TitlePosition {
             return None;
         }
         let (left, y) = match self {
-            // TitlePosition::TopLeft => (area.left() + 1, area.top()),
-            TitlePosition::TopRight => (area.right() - 1 - line_width, area.top()),
-            TitlePosition::BottomLeft => (area.left() + 1, area.bottom() - 1),
-            TitlePosition::BottomRight => (area.right() - 1 - line_width, area.bottom() - 1),
+            Corner::TopLeft => (area.left() + 1, area.top()),
+            Corner::TopRight => (area.right() - 1 - line_width, area.top()),
+            Corner::BottomLeft => (area.left() + 1, area.bottom() - 1),
+            Corner::BottomRight => (area.right() - 1 - line_width, area.bottom() - 1),
         };
         let right = Rect::new(left, y, line_width, 1);
         Some((line, right))

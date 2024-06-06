@@ -13,7 +13,7 @@ use crate::{
     title,
 };
 
-use super::{border_block, TitlePosition, VirtualStatefulTable};
+use super::{border_block, Corner, VirtualStatefulTable};
 
 pub struct BatchWidget {
     table: VirtualStatefulTable,
@@ -97,7 +97,7 @@ impl super::Widget for BatchWidget {
 
         let size = human_bytes(ctx.batch.iter().fold(0, |acc, i| acc + i.bytes) as f64);
         let right_str = title!("Size({}): {}", ctx.batch.len(), size);
-        if let Some((tr, area)) = TitlePosition::TopRight.try_widget(right_str, area, true) {
+        if let Some((tr, area)) = Corner::TopRight.try_title(right_str, area, true) {
             tr.render(area, buf);
         }
     }

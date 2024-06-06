@@ -14,7 +14,7 @@ use crate::{
 use super::{
     border_block,
     input::{self, InputWidget},
-    TitlePosition,
+    Corner,
 };
 
 pub struct SearchWidget {
@@ -47,7 +47,7 @@ impl super::Widget for SearchWidget {
             "?".bold();
             " for help".into();
         );
-        if let Some((tr, area)) = TitlePosition::TopRight.try_widget(help_title, area, true) {
+        if let Some((tr, area)) = Corner::TopRight.try_title(help_title, area, true) {
             tr.render(area, buf);
         }
 

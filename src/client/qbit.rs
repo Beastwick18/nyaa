@@ -15,7 +15,7 @@ use super::{ClientConfig, DownloadClient, DownloadError, DownloadResult};
 pub struct QbitConfig {
     pub base_url: String,
     pub username: String,
-    pub password: String,
+    pub password: String, // TODO: introduce password_env and password_cmd for retreiving
     pub use_magnet: Option<bool>,
     pub savepath: Option<String>,
     pub category: Option<String>,  // Single category
