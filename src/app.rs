@@ -376,8 +376,7 @@ impl App {
             loop {
                 tokio::select! {
                     biased;
-                    Some(Event::Key(key)) = rx_evt.recv() => {
-                        let evt = Event::Key(key);
+                    Some(evt) = rx_evt.recv() => {
                         #[cfg(unix)]
                         self.on::<B, TEST>(&evt, ctx, terminal);
                         #[cfg(not(unix))]
