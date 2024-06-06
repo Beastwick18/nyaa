@@ -19,6 +19,9 @@ use self::{
     torrent_galaxy::{TgxConfig, TorrentGalaxyHtmlSource},
 };
 
+#[cfg(feature = "captcha")]
+use ratatui_image::protocol::StatefulProtocol;
+
 pub mod nyaa_html;
 pub mod nyaa_rss;
 pub mod sukebei_nyaa;
@@ -27,13 +30,15 @@ pub mod torrent_galaxy;
 #[derive(Clone)]
 pub enum SourceResults {
     Results(Results),
-    // Captcha(Box<dyn StatefulProtocol>),
+    #[cfg(feature = "captcha")]
+    Captcha(Box<dyn StatefulProtocol>),
 }
 
 #[derive(Clone)]
 pub enum SourceResponse {
     Results(ResultResponse),
-    // Captcha(Box<dyn StatefulProtocol>),
+    #[cfg(feature = "captcha")]
+    Captcha(Box<dyn StatefulProtocol>),
 }
 
 #[derive(Serialize, Deserialize, Clone, Default)]

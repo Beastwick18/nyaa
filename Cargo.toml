@@ -44,10 +44,15 @@ shellexpand = "3.1.0"
 indexmap = "2.2.6"
 color-to-tui = "0.3.0"
 human_bytes = "0.4.3"
+ratatui-image = { version = "1.0.1", optional = true }
+image = { version = "0.25.1", optional = true }
 
 [lib]
 name = "nyaa"
 path = "src/lib.rs"
+
+[features]
+captcha = ["dep:ratatui-image", "dep:image"]
 
 [target.'cfg(unix)'.dependencies]
 nix = { version = "0.29.0", features = ["signal"] }

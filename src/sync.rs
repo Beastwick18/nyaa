@@ -74,7 +74,8 @@ impl EventSync for AppSync {
                 res.clone(),
                 src.format_table(&res.items, &search, &config, &theme),
             ))),
-            // Ok(SourceResponse::Captcha(c)) => Ok(SourceResults::Captcha(c)),
+            #[cfg(feature = "captcha")]
+            Ok(SourceResponse::Captcha(c)) => Ok(SourceResults::Captcha(c)),
             Err(e) => Err(e),
         };
         let _ = tx_res.send(fmt).await;

@@ -12,6 +12,7 @@ macro_rules! widgets {
         )+
         [popups]: {
             $(
+                $(#[$docs:meta])*
                 $pwidget:ident:
                 $(
                     [$pmode:pat_param]
@@ -27,6 +28,7 @@ macro_rules! widgets {
             pub $widget: $struc,
         )+
         $(
+            $(#[$docs])*
             pub $pwidget: $pstruc,
         )+
         }
@@ -35,6 +37,7 @@ macro_rules! widgets {
             fn draw_popups(&mut self, ctx: &$crate::app::Context, f: &mut ratatui::Frame) {
                 match ctx.mode {
                     $(
+                        $(#[$docs])*
                         $($pmode => self.$pwidget.draw(f, ctx, f.size()),)?
                     )+
                     _ => {}
@@ -48,6 +51,7 @@ macro_rules! widgets {
                         $($mode => $struc::get_help(),)?
                     )+
                     $(
+                        $(#[$docs])*
                         $($pmode => $pstruc::get_help(),)?
                     )+
                     _ => None,
@@ -60,6 +64,7 @@ macro_rules! widgets {
                         $($mode => self.$widget.handle_event(ctx, evt),)?
                     )+
                     $(
+                        $(#[$docs])*
                         $($pmode => self.$pwidget.handle_event(ctx, evt),)?
                     )+
                     _ => {}

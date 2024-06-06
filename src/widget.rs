@@ -18,7 +18,8 @@ use unicode_width::UnicodeWidthStr as _;
 use crate::{app::Context, style, theme::Theme};
 
 pub mod batch;
-// pub mod captcha;
+#[cfg(feature = "captcha")]
+pub mod captcha;
 pub mod category;
 pub mod clients;
 pub mod filter;
