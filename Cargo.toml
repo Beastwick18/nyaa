@@ -15,7 +15,7 @@ strip = true
 lto = true
 
 [dependencies]
-reqwest = { version = "0.11.27", features = [
+reqwest = { version = "0.12.4", features = [
     "gzip",
     "rustls-tls",
     "socks",
@@ -36,7 +36,7 @@ scraper = "0.19.0"
 regex = "1.10.3"
 rss = "2.0.1"
 chrono = "0.4.34"
-transmission-rpc = "0.4.2"
+transmission-rpc = { git = "https://github.com/Beastwick18/transmission-rpc", branch = "stable" }
 open = "5.1.2"
 cli-clipboard = "0.4.0"
 dirs = "5.0.1"
@@ -44,15 +44,13 @@ shellexpand = "3.1.0"
 indexmap = "2.2.6"
 color-to-tui = "0.3.0"
 human_bytes = "0.4.3"
-# ratatui-image = "1.0.1"
-# image = "0.25.1"
 
 [lib]
 name = "nyaa"
 path = "src/lib.rs"
 
 [target.'cfg(unix)'.dependencies]
-nix = { version = "0.28.0", features = ["signal"] }
+nix = { version = "0.29.0", features = ["signal"] }
 
 [package.metadata.deb]
 maintainer = "Steven Culwell <bradculwell@pm.me>"

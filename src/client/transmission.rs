@@ -1,7 +1,7 @@
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use transmission_rpc::{
-    types::{BasicAuth, TorrentAddArgs},
+    types::{BasicAuth, Priority, TorrentAddArgs},
     TransClient,
 };
 
@@ -20,7 +20,7 @@ pub struct TransmissionConfig {
     pub paused: Option<bool>,
     pub peer_limit: Option<i64>,
     pub download_dir: Option<String>,
-    pub bandwidth_priority: Option<i64>,
+    pub bandwidth_priority: Option<Priority>,
 }
 
 pub struct TransmissionClient;
