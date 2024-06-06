@@ -21,6 +21,7 @@ use super::{border_block, centered_rect, Corner, VirtualStatefulTable};
 pub struct ResultsWidget {
     pub table: VirtualStatefulTable,
     control_space: bool,
+    draw_count: u64,
 }
 
 impl ResultsWidget {
@@ -57,6 +58,7 @@ impl Default for ResultsWidget {
         ResultsWidget {
             table: VirtualStatefulTable::new(),
             control_space: false,
+            draw_count: 0,
         }
     }
 }
@@ -172,12 +174,12 @@ impl super::Widget for ResultsWidget {
             }
         }
 
-        // if let Some((bl, area)) =
-        //     TitlePosition::BottomLeft.try_widget(format!("{} draws", self.draw_count), area, false)
-        // {
-        //     f.render_widget(bl, area);
-        //     self.draw_count += 1;
-        // }
+        if let Some((bl, area)) =
+            Corner::BottomLeft.try_title(format!("{} draws", self.draw_count), area, false)
+        {
+            f.render_widget(bl, area);
+            self.draw_count += 1;
+        }
     }
 
     fn handle_event(&mut self, ctx: &mut Context, e: &Event) {

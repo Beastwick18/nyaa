@@ -76,7 +76,7 @@ impl super::Widget for BatchWidget {
             area.height as usize,
             3,
             num_items,
-            1,
+            ctx.config.scroll_padding,
             self.table.state.offset_mut(),
         );
 

@@ -1,4 +1,9 @@
-use std::{error::Error, fmt::Display, sync::Arc, time::Instant};
+use std::{
+    error::Error,
+    fmt::Display,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use indexmap::IndexMap;
@@ -50,6 +55,9 @@ use crossterm::event::KeyModifiers;
 use crate::util::term;
 
 pub static APP_NAME: &str = "nyaa";
+
+// To ensure that other events will get a chance to be received
+static ANIMATE_SLEEP_MILLIS: u64 = 5;
 
 #[derive(PartialEq, Clone)]
 pub enum LoadType {
@@ -228,6 +236,9 @@ impl App {
     ) -> Result<(), Box<dyn Error>> {
         let ctx = &mut Context::default();
 
+        let timer = tokio::time::sleep(Duration::from_millis(ANIMATE_SLEEP_MILLIS));
+        tokio::pin!(timer);
+
         let (tx_res, mut rx_res) =
             mpsc::channel::<Result<SourceResults, Box<dyn Error + Send + Sync>>>(32);
         let (tx_evt, mut rx_evt) = mpsc::channel::<Event>(100);
@@ -365,14 +376,28 @@ impl App {
             loop {
                 tokio::select! {
                     biased;
-                    Some(evt) = rx_evt.recv() => {
+                    Some(Event::Key(key)) = rx_evt.recv() => {
+                        let evt = Event::Key(key);
                         #[cfg(unix)]
                         self.on::<B, TEST>(&evt, ctx, terminal);
                         #[cfg(not(unix))]
                         self.on::<B, TEST>(&evt, ctx);
 
-                        last_time = None;
                         break;
+                    },
+                    () = &mut timer, if self.widgets.notification.is_animating() => {
+                        timer.as_mut().reset(tokio::time::Instant::now() + Duration::from_millis(ANIMATE_SLEEP_MILLIS));
+                        if let Ok(size) = terminal.size() {
+                            let now = Instant::now();
+                            ctx.deltatime = last_time.map(|l| (now - l).as_secs_f64()).unwrap_or(0.0);
+                            last_time = Some(now);
+
+                            if self.widgets.notification.update(ctx.deltatime, size) {
+                                break;
+                            }
+                        } else {
+                            break;
+                        }
                     },
                     Some(rt) = rx_res.recv() => {
                         match rt {
@@ -394,7 +419,6 @@ impl App {
                         }
                         ctx.load_type = None;
                         last_load_abort = None;
-                        last_time = None;
                         break;
                     },
                     Some(dl) = rx_dl.recv() => {
@@ -413,23 +437,14 @@ impl App {
                         }
                         break;
                     }
-                    _ = async{}, if self.widgets.notification.is_animating() => {
-                        if let Ok(size) = terminal.size() {
-                            let now = Instant::now();
-                            ctx.deltatime = (now - last_time.unwrap_or(now)).as_secs_f64();
-                            last_time = Some(now);
-
-                            if self.widgets.notification.update(ctx.deltatime, size) {
-                                break;
-                            }
-                        } else {
-                            break;
-                        }
-                    },
+                    // _ = async{}, if matches!(terminal.size().map(|s| self.widgets.notification.update(last_time.map(|l| (Instant::now() - l).as_secs_f64()).unwrap_or(0.), s)), Ok(true)) => {
                     else => {
-                        break;
+                        return Err("All channels closed".into());
                     }
                 };
+            }
+            if !self.widgets.notification.is_animating() {
+                last_time = None;
             }
         }
         Ok(())
