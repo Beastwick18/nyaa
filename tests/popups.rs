@@ -101,8 +101,8 @@ async fn test_sort() {
     assert_eq!(
         reset_buffer(&run_app(sync, 60, 22).await.unwrap()),
         Buffer::with_lines([
-            r#"┌Search──────────────────────────────Pre│Sort by "Seeders"│┐"#,
-            r#"│                                       └─────────────────┘│"#,
+            r#"┌Search──────────────────────│Sort by "Seeders" Descending│┐"#,
+            r#"│                            └────────────────────────────┘│"#,
             r#"└──────────────────────────────────────────────────────────┘"#,
             r#"┌Results 1-0 (0 total): Page 1/0─dl: Run Command, src: Nyaa┐"#,
             r#"│                                                          │"#,
@@ -140,8 +140,8 @@ async fn test_sort_reverse() {
     assert_eq!(
         reset_buffer(&run_app(sync, 60, 22).await.unwrap()),
         Buffer::with_lines([
-            r#"┌Search──────────────────────────────Pre│Sort by "Seeders"│┐"#,
-            r#"│                                       └─────────────────┘│"#,
+            r#"┌Search───────────────────────│Sort by "Seeders" Ascending│┐"#,
+            r#"│                             └───────────────────────────┘│"#,
             r#"└──────────────────────────────────────────────────────────┘"#,
             r#"┌Results 1-0 (0 total): Page 1/0─dl: Run Command, src: Nyaa┐"#,
             r#"│                                                          │"#,
