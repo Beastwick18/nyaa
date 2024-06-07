@@ -8,10 +8,11 @@ use ratatui::{
 use reqwest::{StatusCode, Url};
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
+use strum::{Display, FromRepr, VariantArray};
 use urlencoding::encode;
 
 use crate::{
-    cats, cond_vec, popup_enum,
+    cats, cond_vec,
     results::{ResultColumn, ResultHeader, ResultResponse, ResultRow, ResultTable},
     sel,
     sync::SearchQuery,
@@ -20,7 +21,7 @@ use crate::{
         conv::{shorten_number, to_bytes},
         html::{as_type, attr, inner},
     },
-    widget::{sort::SelectedSort, EnumIter as _},
+    widget::sort::SelectedSort,
 };
 
 use super::{
@@ -151,13 +152,19 @@ impl Default for NyaaConfig {
     }
 }
 
-popup_enum! {
-    NyaaSort;
-    (0, Date, "Date");
-    (1, Downloads, "Downloads");
-    (2, Seeders, "Seeders");
-    (3, Leechers, "Leechers");
-    (4, Size, "Size");
+#[derive(Serialize, Deserialize, Display, Clone, Copy, VariantArray, PartialEq, Eq, FromRepr)]
+#[repr(usize)]
+pub enum NyaaSort {
+    #[strum(serialize = "Date")]
+    Date = 0,
+    #[strum(serialize = "Downloads")]
+    Downloads = 1,
+    #[strum(serialize = "Seeders")]
+    Seeders = 2,
+    #[strum(serialize = "Leechers")]
+    Leechers = 3,
+    #[strum(serialize = "Size")]
+    Size = 4,
 }
 
 impl NyaaSort {
@@ -172,13 +179,17 @@ impl NyaaSort {
     }
 }
 
-popup_enum! {
-    NyaaFilter;
+#[derive(Serialize, Deserialize, Display, Clone, Copy, VariantArray, PartialEq, Eq, FromRepr)]
+pub enum NyaaFilter {
     #[allow(clippy::enum_variant_names)]
-    (0, NoFilter, "No Filter");
-    (1, NoRemakes, "No Remakes");
-    (2, TrustedOnly, "Trusted Only");
-    (3, Batches, "Batches");
+    #[strum(serialize = "No Filter")]
+    NoFilter = 0,
+    #[strum(serialize = "No Remakes")]
+    NoRemakes = 1,
+    #[strum(serialize = "Trusted Only")]
+    TrustedOnly = 2,
+    #[strum(serialize = "Batches")]
+    Batches = 3,
 }
 
 pub struct NyaaHtmlSource;
@@ -276,7 +287,7 @@ impl Source for NyaaHtmlSource {
         let filter = search.filter;
         let page = search.page;
         let user = search.user.to_owned().unwrap_or_default();
-        let sort = NyaaSort::try_from(search.sort.sort)
+        let sort = NyaaSort::from_repr(search.sort.sort)
             .unwrap_or(NyaaSort::Date)
             .to_url();
 
@@ -370,11 +381,11 @@ impl Source for NyaaHtmlSource {
                 let downloads = as_type(inner(e, dl_sel, "0")).unwrap_or_default();
                 let torrent_link = url
                     .join(&torrent)
-                    .map(|u| u.to_string())
+                    .map(Into::into)
                     .unwrap_or("null".to_owned());
                 let post_link = url
                     .join(&attr(e, title_sel, "href"))
-                    .map(|url| url.to_string())
+                    .map(Into::into)
                     .unwrap_or("null".to_owned());
 
                 let trusted = e.value().classes().any(|e| e == "success");
@@ -498,8 +509,11 @@ impl Source for NyaaHtmlSource {
         };
         SourceInfo {
             cats,
-            filters: NyaaFilter::iter().map(|f| f.to_string()).collect(),
-            sorts: NyaaSort::iter().map(|item| item.to_string()).collect(),
+            filters: NyaaFilter::VARIANTS
+                .iter()
+                .map(ToString::to_string)
+                .collect(),
+            sorts: NyaaSort::VARIANTS.iter().map(ToString::to_string).collect(),
         }
     }
 

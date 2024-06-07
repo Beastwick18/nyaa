@@ -5,6 +5,7 @@ use ratatui::style::Color;
 use reqwest::{StatusCode, Url};
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
+use strum::VariantArray as _;
 use urlencoding::encode;
 
 use crate::{
@@ -17,7 +18,6 @@ use crate::{
         conv::to_bytes,
         html::{attr, inner},
     },
-    widget::EnumIter as _,
 };
 
 use super::{
@@ -153,7 +153,7 @@ impl Source for SukebeiHtmlSource {
         let filter = search.filter;
         let page = search.page;
         let user = search.user.to_owned().unwrap_or_default();
-        let sort = NyaaSort::try_from(search.sort.sort)
+        let sort = NyaaSort::from_repr(search.sort.sort)
             .unwrap_or(NyaaSort::Date)
             .to_url();
 
@@ -218,7 +218,7 @@ impl Source for SukebeiHtmlSource {
                 let torrent = attr(e, torrent_sel, "href");
                 let post_link = url
                     .join(&attr(e, title_sel, "href"))
-                    .map(|url| url.to_string())
+                    .map(Into::into)
                     .unwrap_or("null".to_owned());
                 let id = post_link.split('/').last()?.parse::<usize>().ok()?;
                 let id = format!("sukebei-{}", id);
@@ -242,7 +242,7 @@ impl Source for SukebeiHtmlSource {
                 let downloads = inner(e, dl_sel, "0").parse().unwrap_or(0);
                 let torrent_link = url
                     .join(&torrent)
-                    .map(|u| u.to_string())
+                    .map(Into::into)
                     .unwrap_or("null".to_owned());
 
                 let trusted = e.value().classes().any(|e| e == "success");
@@ -319,8 +319,11 @@ impl Source for SukebeiHtmlSource {
         };
         SourceInfo {
             cats,
-            filters: NyaaFilter::iter().map(|f| f.to_string()).collect(),
-            sorts: NyaaSort::iter().map(|item| item.to_string()).collect(),
+            filters: NyaaFilter::VARIANTS
+                .iter()
+                .map(ToString::to_string)
+                .collect(),
+            sorts: NyaaSort::VARIANTS.iter().map(ToString::to_string).collect(),
         }
     }
 

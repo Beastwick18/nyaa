@@ -2,10 +2,10 @@ use std::{collections::HashMap, error::Error, sync::Arc, time::Duration};
 
 use reqwest::{cookie::Jar, Proxy};
 use serde::{Deserialize, Serialize};
+use strum::{Display, VariantArray};
 
 use crate::{
     app::{Context, LoadType, Widgets},
-    popup_enum,
     results::{ResultResponse, ResultTable, Results},
     sync::SearchQuery,
     theme::Theme,
@@ -135,11 +135,14 @@ pub struct Item {
     pub extra: HashMap<String, String>,
 }
 
-popup_enum! {
-    Sources;
-    (0, Nyaa, "Nyaa");
-    (1, SubekiNyaa, "Subeki");
-    (2, TorrentGalaxy, "TorrentGalaxy");
+#[derive(Serialize, Deserialize, Display, Clone, Copy, VariantArray, PartialEq, Eq)]
+pub enum Sources {
+    #[strum(serialize = "Nyaa")]
+    Nyaa = 0,
+    #[strum(serialize = "Sukebei")]
+    SukebeiNyaa = 1,
+    #[strum(serialize = "TorrentGalaxy")]
+    TorrentGalaxy = 2,
 }
 
 pub trait Source {
@@ -218,7 +221,7 @@ impl Sources {
                 }
                 LoadType::Downloading | LoadType::Batching => unreachable!(),
             },
-            Sources::SubekiNyaa => match load_type {
+            Sources::SukebeiNyaa => match load_type {
                 LoadType::Searching | LoadType::Sourcing => {
                     SukebeiHtmlSource::search(client, search, config, date_format).await
                 }
@@ -282,7 +285,7 @@ impl Sources {
     pub fn info(self) -> SourceInfo {
         match self {
             Sources::Nyaa => NyaaHtmlSource::info(),
-            Sources::SubekiNyaa => SukebeiHtmlSource::info(),
+            Sources::SukebeiNyaa => SukebeiHtmlSource::info(),
             Sources::TorrentGalaxy => TorrentGalaxyHtmlSource::info(),
         }
     }
@@ -290,7 +293,7 @@ impl Sources {
     pub fn load_config(self, config: &mut SourceConfig) {
         match self {
             Sources::Nyaa => NyaaHtmlSource::load_config(config),
-            Sources::SubekiNyaa => SukebeiHtmlSource::load_config(config),
+            Sources::SukebeiNyaa => SukebeiHtmlSource::load_config(config),
             Sources::TorrentGalaxy => TorrentGalaxyHtmlSource::load_config(config),
         };
     }
@@ -298,7 +301,7 @@ impl Sources {
     pub fn default_category(self, config: &SourceConfig) -> usize {
         match self {
             Sources::Nyaa => NyaaHtmlSource::default_category(config),
-            Sources::SubekiNyaa => SukebeiHtmlSource::default_category(config),
+            Sources::SukebeiNyaa => SukebeiHtmlSource::default_category(config),
             Sources::TorrentGalaxy => TorrentGalaxyHtmlSource::default_category(config),
         }
     }
@@ -306,7 +309,7 @@ impl Sources {
     pub fn default_sort(self, config: &SourceConfig) -> usize {
         match self {
             Sources::Nyaa => NyaaHtmlSource::default_sort(config),
-            Sources::SubekiNyaa => SukebeiHtmlSource::default_sort(config),
+            Sources::SukebeiNyaa => SukebeiHtmlSource::default_sort(config),
             Sources::TorrentGalaxy => TorrentGalaxyHtmlSource::default_sort(config),
         }
     }
@@ -314,7 +317,7 @@ impl Sources {
     pub fn default_filter(self, config: &SourceConfig) -> usize {
         match self {
             Sources::Nyaa => NyaaHtmlSource::default_filter(config),
-            Sources::SubekiNyaa => SukebeiHtmlSource::default_filter(config),
+            Sources::SukebeiNyaa => SukebeiHtmlSource::default_filter(config),
             Sources::TorrentGalaxy => TorrentGalaxyHtmlSource::default_filter(config),
         }
     }
@@ -322,7 +325,7 @@ impl Sources {
     pub fn default_search(self, config: &SourceConfig) -> String {
         match self {
             Sources::Nyaa => NyaaHtmlSource::default_search(config),
-            Sources::SubekiNyaa => SukebeiHtmlSource::default_search(config),
+            Sources::SukebeiNyaa => SukebeiHtmlSource::default_search(config),
             Sources::TorrentGalaxy => TorrentGalaxyHtmlSource::default_search(config),
         }
     }
@@ -336,7 +339,7 @@ impl Sources {
     ) -> ResultTable {
         match self {
             Sources::Nyaa => NyaaHtmlSource::format_table(items, search, config, theme),
-            Sources::SubekiNyaa => SukebeiHtmlSource::format_table(items, search, config, theme),
+            Sources::SukebeiNyaa => SukebeiHtmlSource::format_table(items, search, config, theme),
             Sources::TorrentGalaxy => {
                 TorrentGalaxyHtmlSource::format_table(items, search, config, theme)
             }

@@ -12,10 +12,11 @@ use ratatui::{
 use reqwest::{StatusCode, Url};
 use scraper::{selectable::Selectable, Html, Selector};
 use serde::{Deserialize, Serialize};
+use strum::{FromRepr, VariantArray};
 use urlencoding::encode;
 
 use crate::{
-    cats, collection, cond_vec, popup_enum,
+    cats, collection, cond_vec,
     results::{ResultColumn, ResultHeader, ResultResponse, ResultRow, ResultTable},
     sel,
     sync::SearchQuery,
@@ -24,7 +25,6 @@ use crate::{
         conv::{shorten_number, to_bytes},
         html::{as_type, attr, inner},
     },
-    widget::EnumIter as _,
 };
 
 use super::{add_protocol, Item, ItemType, Source, SourceConfig, SourceInfo, SourceResponse};
@@ -217,22 +217,31 @@ impl TgxColumns {
     }
 }
 
-popup_enum! {
-    TgxSort;
-    (0, Date, "Date");
-    (1, Seeders, "Seeders");
-    (2, Leechers, "Leechers");
-    (3, Size, "Size");
-    (4, Name, "Name");
+#[derive(
+    Serialize, Deserialize, strum::Display, Clone, Copy, VariantArray, PartialEq, Eq, FromRepr,
+)]
+#[repr(usize)]
+pub enum TgxSort {
+    Date = 0,
+    Seeders = 1,
+    Leechers = 2,
+    Size = 3,
+    Name = 4,
 }
 
-popup_enum! {
-    TgxFilter;
+#[derive(
+    Serialize, Deserialize, strum::Display, Clone, Copy, VariantArray, PartialEq, Eq, FromRepr,
+)]
+pub enum TgxFilter {
     #[allow(clippy::enum_variant_names)]
-    (0, NoFilter, "NoFilter");
-    (1, OnlineStreams, "Filter online streams");
-    (2, ExcludeXXX, "Exclude XXX");
-    (3, NoWildcard, "No wildcard");
+    #[strum(serialize = "NoFilter")]
+    NoFilter = 0,
+    #[strum(serialize = "Filter online streams")]
+    OnlineStreams = 1,
+    #[strum(serialize = "Exclude XXX")]
+    ExcludeXXX = 2,
+    #[strum(serialize = "No wildcard")]
+    NoWildcard = 3,
 }
 
 pub struct TorrentGalaxyHtmlSource;
@@ -245,19 +254,19 @@ fn get_url(
 
     let query = encode(&search.query);
 
-    let sort = match TgxSort::try_from(search.sort.sort) {
-        Ok(TgxSort::Date) => "&sort=id",
-        Ok(TgxSort::Seeders) => "&sort=seeders",
-        Ok(TgxSort::Leechers) => "&sort=leechers",
-        Ok(TgxSort::Size) => "&sort=size",
-        Ok(TgxSort::Name) => "&sort=name",
+    let sort = match TgxSort::from_repr(search.sort.sort) {
+        Some(TgxSort::Date) => "&sort=id",
+        Some(TgxSort::Seeders) => "&sort=seeders",
+        Some(TgxSort::Leechers) => "&sort=leechers",
+        Some(TgxSort::Size) => "&sort=size",
+        Some(TgxSort::Name) => "&sort=name",
         _ => "",
     };
     let ord = format!("&order={}", search.sort.dir.to_url());
-    let filter = match TgxFilter::try_from(search.filter) {
-        Ok(TgxFilter::OnlineStreams) => "&filterstream=1",
-        Ok(TgxFilter::ExcludeXXX) => "&nox=1",
-        Ok(TgxFilter::NoWildcard) => "&nowildcard=1",
+    let filter = match TgxFilter::from_repr(search.filter) {
+        Some(TgxFilter::OnlineStreams) => "&filterstream=1",
+        Some(TgxFilter::ExcludeXXX) => "&nox=1",
+        Some(TgxFilter::NoWildcard) => "&nowildcard=1",
         _ => "",
     };
     let cat = match search.category {
@@ -501,9 +510,9 @@ impl Source for TorrentGalaxyHtmlSource {
                     false => ItemType::Remake,
                 };
 
-                let torrent_link = base_url
+                let torrent_link: String = base_url
                     .join(&attr(e, torrent_sel, "href"))
-                    .map(|u| u.to_string())
+                    .map(Into::into)
                     .unwrap_or_default();
                 let magnet_link = attr(e, magnet_sel, "href");
                 let post_link = attr(e, title_sel, "href");
@@ -513,7 +522,7 @@ impl Source for TorrentGalaxyHtmlSource {
 
                 let post_link = base_url
                     .join(&post_link)
-                    .map(|u| u.to_string())
+                    .map(Into::into)
                     .unwrap_or_default();
                 let hash = torrent_link.split('/').nth(4).unwrap_or("unknown");
                 let file_name = format!("{}.torrent", hash);
@@ -587,11 +596,9 @@ impl Source for TorrentGalaxyHtmlSource {
         let time = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis();
 
         let hash = "4578678889c4b42ae37b543434c81d85";
-        // let hash = "ff9df5a6db0ebe6bd636296da767a587";
         let base_url = Url::parse(&tgx.base_url)?;
         let mut hash_url = base_url.clone().join("hub.php")?;
         hash_url.set_query(Some(&format!("a=vlad&u={}", time)));
-        // let hash_url = format!("https://torrentgalaxy.to/hub.php?a=vlad&u={}", time);
         client
             .post(hash_url.clone())
             .body(format!("fash={}", hash))
@@ -679,8 +686,11 @@ impl Source for TorrentGalaxyHtmlSource {
         };
         SourceInfo {
             cats,
-            filters: TgxFilter::iter().map(|f| f.to_string()).collect(),
-            sorts: TgxSort::iter().map(|item| item.to_string()).collect(),
+            filters: TgxFilter::VARIANTS
+                .iter()
+                .map(ToString::to_string)
+                .collect(),
+            sorts: TgxSort::VARIANTS.iter().map(ToString::to_string).collect(),
         }
     }
 

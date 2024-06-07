@@ -44,6 +44,7 @@ shellexpand = "3.1.0"
 indexmap = "2.2.6"
 color-to-tui = "0.3.0"
 human_bytes = "0.4.3"
+strum = "0.26.2"
 ratatui-image = { version = "1.0.1", optional = true }
 image = { version = "0.25.1", optional = true }
 

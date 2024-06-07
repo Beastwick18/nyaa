@@ -171,7 +171,7 @@ pub fn get_configuration_file_path<'a>(
 
 pub fn get_configuration_folder(app_name: &str) -> Result<PathBuf, Box<dyn Error>> {
     let project = ProjectDirs::from("rs", "", app_name)
-        .ok_or_else(|| "could not determine home directory path".to_string())?;
+        .ok_or("could not determine home directory path".to_string())?;
 
     let path = project.config_dir();
     let config_dir_str = path

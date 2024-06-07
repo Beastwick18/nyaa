@@ -1,9 +1,10 @@
 use std::fmt::Display;
 
 use serde::{Deserialize, Serialize};
+use strum::{Display, VariantArray};
 use tokio::task::JoinSet;
 
-use crate::{app::Context, client::cmd::CmdClient, popup_enum, source::Item};
+use crate::{app::Context, client::cmd::CmdClient, source::Item};
 
 use self::{
     cmd::CmdConfig,
@@ -74,31 +75,31 @@ impl DownloadResult {
     }
 }
 
-// pub enum DownloadResult {
-//     Success(String, String),
-//     Failure(String, DownloadError),
-// }
-
-popup_enum! {
-    Client;
-
+#[derive(Serialize, Deserialize, Display, Clone, Copy, VariantArray, PartialEq, Eq)]
+pub enum Client {
     #[serde(rename = "qBittorrent")]
-    (0, Qbit, "qBittorrent");
+    #[strum(serialize = "qBittorrent")]
+    Qbit = 0,
 
     #[serde(rename = "transmission")]
-    (1, Transmission, "transmission");
+    #[strum(serialize = "Transmission")]
+    Transmission = 1,
 
     #[serde(rename = "rqbit")]
-    (2, Rqbit, "rqbit");
+    #[strum(serialize = "rqbit")]
+    Rqbit = 2,
 
     #[serde(rename = "default_app")]
-    (3, DefaultApp, "Default App");
+    #[strum(serialize = "Default App")]
+    DefaultApp = 3,
 
     #[serde(rename = "download")]
-    (4, Download, "Download Torrent File");
+    #[strum(serialize = "Download Torrent File")]
+    Download = 4,
 
     #[serde(rename = "command")]
-    (5, Cmd, "Run Command");
+    #[strum(serialize = "Run Command")]
+    Cmd = 5,
 }
 
 #[derive(Default, Clone, Deserialize, Serialize)]

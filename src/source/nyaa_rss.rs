@@ -26,11 +26,11 @@ pub fn get_ext_value<T: Default + FromStr>(ext_map: &ExtensionMap, key: &str) ->
 }
 
 pub fn sort_items(items: &mut [Item], sort: SelectedSort) {
-    let f: fn(&Item, &Item) -> Ordering = match NyaaSort::try_from(sort.sort) {
-        Ok(NyaaSort::Downloads) => |a, b| b.downloads.cmp(&a.downloads),
-        Ok(NyaaSort::Seeders) => |a, b| b.seeders.cmp(&a.seeders),
-        Ok(NyaaSort::Leechers) => |a, b| b.leechers.cmp(&a.leechers),
-        Ok(NyaaSort::Size) => |a, b| b.bytes.cmp(&a.bytes),
+    let f: fn(&Item, &Item) -> Ordering = match NyaaSort::from_repr(sort.sort) {
+        Some(NyaaSort::Downloads) => |a, b| b.downloads.cmp(&a.downloads),
+        Some(NyaaSort::Seeders) => |a, b| b.seeders.cmp(&a.seeders),
+        Some(NyaaSort::Leechers) => |a, b| b.leechers.cmp(&a.leechers),
+        Some(NyaaSort::Size) => |a, b| b.bytes.cmp(&a.bytes),
         _ => |a, b| a.id.cmp(&b.id),
     };
     items.sort_by(f);
@@ -102,7 +102,7 @@ pub async fn search_rss<S: Source>(
             let date = date.with_timezone(&Local);
             let torrent_link = base_url
                 .join(&format!("/download/{}.torrent", id))
-                .map(|u| u.to_string())
+                .map(Into::into)
                 .unwrap_or("null".to_owned());
             let trusted = get_ext_value::<String>(ext, "trusted").eq("Yes");
             let remake = get_ext_value::<String>(ext, "remake").eq("Yes");

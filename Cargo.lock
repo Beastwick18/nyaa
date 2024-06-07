@@ -1515,6 +1515,7 @@ dependencies = [
  "scraper",
  "serde",
  "shellexpand",
+ "strum",
  "textwrap",
  "tokio",
  "tokio-util",

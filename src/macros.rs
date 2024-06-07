@@ -100,60 +100,6 @@ macro_rules! cats {
 }
 
 #[macro_export]
-macro_rules! popup_enum {
-    (
-        $name:ident;
-        $(
-            $(#[$docs:meta])*
-            ($num:expr, $konst:ident, $phrase:expr);
-        )+
-    ) => {
-        #[derive(PartialEq, Clone, Copy, serde::Serialize, serde::Deserialize)]
-        pub enum $name {
-        $(
-            $(#[$docs])*
-            $konst = $num,
-        )+
-        }
-
-        impl std::fmt::Display for $name {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                let s = match self {
-                    $(
-                        $name::$konst => $phrase,
-                    )+
-                };
-                write!(f, "{}", s)
-            }
-        }
-
-        impl $crate::widget::EnumIter<$name> for $name {
-            fn iter() -> std::slice::Iter<'static, $name> {
-                static ITEMS: &[$name] = &[
-                    $(
-                        $name::$konst,
-                    )+
-                ];
-                ITEMS.iter()
-            }
-        }
-
-        impl TryFrom<usize> for $name {
-            type Error = ();
-
-            fn try_from(v: usize) -> Result<Self, Self::Error> {
-                match v {
-                    $(
-                        x if x == $name::$konst as usize => Ok($name::$konst),
-                    )+
-                    _ => Err(()),
-                }
-            }
-        }
-    }
-}
-
-#[macro_export]
 macro_rules! style {
     (
         $($method:ident$(:$value:expr)?),* $(,)?

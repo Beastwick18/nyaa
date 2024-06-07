@@ -4,6 +4,7 @@ use ratatui::{
     widgets::{Row, StatefulWidget as _, Table},
     Frame,
 };
+use strum::VariantArray;
 
 use crate::{
     app::{Context, LoadType, Mode},
@@ -11,7 +12,7 @@ use crate::{
     style, title,
 };
 
-use super::{border_block, EnumIter, StatefulTable, Widget};
+use super::{border_block, StatefulTable, Widget};
 
 pub struct SourcesPopup {
     pub table: StatefulTable<Sources>,
@@ -20,7 +21,7 @@ pub struct SourcesPopup {
 impl Default for SourcesPopup {
     fn default() -> Self {
         SourcesPopup {
-            table: StatefulTable::new(Sources::iter().copied().collect::<Vec<Sources>>()),
+            table: StatefulTable::new(Sources::VARIANTS),
         }
     }
 }

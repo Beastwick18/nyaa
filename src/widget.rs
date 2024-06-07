@@ -186,12 +186,12 @@ pub struct StatefulTable<T> {
     pub items: Vec<T>,
 }
 
-impl<T> StatefulTable<T> {
-    pub fn new(items: Vec<T>) -> StatefulTable<T> {
+impl<T: std::clone::Clone> StatefulTable<T> {
+    pub fn new(items: &[T]) -> StatefulTable<T> {
         StatefulTable {
             state: TableState::default().with_selected(0),
             scrollbar_state: ScrollbarState::default(),
-            items,
+            items: items.to_vec(),
         }
     }
 
