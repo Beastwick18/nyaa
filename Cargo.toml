@@ -21,23 +21,23 @@ reqwest = { version = "0.12.4", features = [
     "socks",
     "cookies",
 ], default-features = false }
-tokio = { version = "1.36.0", features = ["rt", "macros", "rt-multi-thread"] }
+tokio = { version = "1.38.0", features = ["rt", "macros", "rt-multi-thread"] }
 tokio-util = "0.7.11"
-urlencoding = "2.1.0"
+urlencoding = "2.1.3"
 ratatui = "0.26.3"
 textwrap = "0.16.1"
 crossterm = "0.27.0"
-unicode-width = "0.1.5"
+unicode-width = "0.1.13"
 unicode-segmentation = "1.11.0"
-toml = "0.8.13"
+toml = "0.8.14"
 directories = "5.0.1"
-serde = { version = "1.0.152", features = ["derive"] }
+serde = { version = "1.0.203", features = ["derive"] }
 scraper = "0.19.0"
-regex = "1.10.3"
-rss = "2.0.1"
-chrono = "0.4.34"
+regex = "1.10.4"
+rss = "2.0.8"
+chrono = "0.4.38"
 transmission-rpc = { git = "https://github.com/Beastwick18/transmission-rpc", branch = "stable" }
-open = "5.1.2"
+open = "5.1.4"
 cli-clipboard = "0.4.0"
 dirs = "5.0.1"
 shellexpand = "3.1.0"
