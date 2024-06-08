@@ -100,7 +100,7 @@ impl Config {
         }
 
         ctx.client.load_config(ctx);
-        let path = C::path().map_err(|e| e.to_string())?;
+        let path = C::path()?;
         // Load user-defined themes
         theme::load_user_themes(ctx, path)?;
         // Set selected theme
@@ -141,11 +141,11 @@ pub fn load_path<T: Serialize + DeserializeOwned + Default>(
     }
 }
 
-fn store_path<T: Serialize>(path: impl AsRef<Path>, cfg: T) -> Result<(), Box<dyn Error>> {
+fn store_path(path: impl AsRef<Path>, cfg: impl Serialize) -> Result<(), Box<dyn Error>> {
     let path = path.as_ref();
     let config_dir = path
         .parent()
-        .ok_or_else(|| format!("{path:?} is a root or prefix"))?;
+        .ok_or(format!("{path:?} is a root or prefix"))?;
     fs::create_dir_all(config_dir)?;
 
     let s = toml::to_string_pretty(&cfg)?;
@@ -164,7 +164,7 @@ pub fn get_configuration_file_path<'a>(
     app_name: &str,
     config_name: impl Into<Option<&'a str>>,
 ) -> Result<PathBuf, Box<dyn Error>> {
-    let config_name = config_name.into().unwrap_or("config");
+    let config_name: &str = Into::<Option<&'a str>>::into(config_name).unwrap_or("config");
     let path = get_configuration_folder(app_name)?.join(format!("{config_name}.toml"));
     Ok(path)
 }
@@ -176,7 +176,7 @@ pub fn get_configuration_folder(app_name: &str) -> Result<PathBuf, Box<dyn Error
     let path = project.config_dir();
     let config_dir_str = path
         .to_str()
-        .ok_or_else(|| format!("{path:?} is not valid Unicode"))?;
+        .ok_or(format!("{path:?} is not valid Unicode"))?;
 
     Ok(config_dir_str.into())
 }

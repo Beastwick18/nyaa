@@ -46,7 +46,6 @@ pub async fn search_rss<S: Source>(
     search: &SearchQuery,
     date_format: Option<String>,
 ) -> Result<SourceResponse, Box<dyn Error + Send + Sync>> {
-    // let nyaa = config.nyaa.to_owned().unwrap_or_default();
     let query = search.query.to_owned();
     let cat = search.category;
     let filter = search.filter;
@@ -63,8 +62,6 @@ pub async fn search_rss<S: Source>(
         filter, high, low, query, user
     );
     url.set_query(Some(&query));
-
-    // let client = super::request_client(ctx)?;
 
     let mut request = client.get(url.to_owned());
     if let Some(timeout) = timeout {

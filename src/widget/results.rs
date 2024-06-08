@@ -18,9 +18,16 @@ use crate::{
 
 use super::{border_block, centered_rect, Corner, VirtualStatefulTable};
 
+#[derive(Clone, Copy)]
+enum Direction {
+    Up,
+    Down,
+}
+
 pub struct ResultsWidget {
     pub table: VirtualStatefulTable,
     control_space: bool,
+    visual_anchor: usize,
     // draw_count: u64,
 }
 
@@ -42,15 +49,15 @@ impl ResultsWidget {
         }
     }
 
-    fn try_select(&self, ctx: &mut Context) {
-        if let Some(sel) = self.table.state.selected() {
-            if let Some(item) = ctx.results.response.items.get(sel) {
-                if !ctx.batch.iter().any(|s| s.id == item.id) {
-                    ctx.batch.push(item.to_owned());
-                }
-            }
-        }
-    }
+    // fn try_select(&self, ctx: &mut Context) {
+    //     if let Some(sel) = self.table.state.selected() {
+    //         if let Some(item) = ctx.results.response.items.get(sel) {
+    //             if !ctx.batch.iter().any(|s| s.id == item.id) {
+    //                 ctx.batch.push(item.to_owned());
+    //             }
+    //         }
+    //     }
+    // }
 }
 
 impl Default for ResultsWidget {
@@ -58,6 +65,7 @@ impl Default for ResultsWidget {
         ResultsWidget {
             table: VirtualStatefulTable::new(),
             control_space: false,
+            visual_anchor: 0,
             // draw_count: 0,
         }
     }
@@ -232,23 +240,37 @@ impl super::Widget for ResultsWidget {
                     ctx.quit();
                 }
                 (Char('j') | KeyCode::Down, &KeyModifiers::NONE) => {
-                    if self
-                        .table
-                        .state
-                        .selected()
-                        .is_some_and(|s| s + 1 != ctx.results.response.items.len())
-                    {
-                        self.table.next(ctx.results.response.items.len(), 1);
-                        if self.control_space {
+                    // if self
+                    //     .table
+                    //     .state
+                    //     .selected()
+                    //     .is_some_and(|s| s + 1 != ctx.results.response.items.len())
+                    // {
+                    if self.control_space {
+                        let selected = self.table.selected().unwrap_or(0);
+                        if selected >= self.visual_anchor {
+                            self.table.next(ctx.results.response.items.len(), 1);
                             self.try_select_toggle(ctx);
+                        } else {
+                            self.try_select_toggle(ctx);
+                            self.table.next(ctx.results.response.items.len(), 1);
                         }
+                    } else {
+                        self.table.next(ctx.results.response.items.len(), 1);
                     }
+                    // }
                 }
                 (Char('k') | KeyCode::Up, &KeyModifiers::NONE) => {
-                    if self.table.state.selected().is_some_and(|s| s != 0) {
-                        if self.control_space {
+                    if self.control_space {
+                        let selected = self.table.selected().unwrap_or(0);
+                        if selected <= self.visual_anchor {
+                            self.table.next(ctx.results.response.items.len(), -1);
                             self.try_select_toggle(ctx);
+                        } else {
+                            self.try_select_toggle(ctx);
+                            self.table.next(ctx.results.response.items.len(), -1);
                         }
+                    } else {
                         self.table.next(ctx.results.response.items.len(), -1);
                     }
                 }
@@ -311,9 +333,11 @@ impl super::Widget for ResultsWidget {
                     self.control_space = !self.control_space;
                     if self.control_space {
                         ctx.notify("Entered VISUAL mode");
-                        self.try_select(ctx);
+                        self.try_select_toggle(ctx);
+                        self.visual_anchor = self.table.selected().unwrap_or(0);
                     } else {
                         ctx.notify("Exited VISUAL mode");
+                        self.visual_anchor = 0;
                     }
                 }
                 (Char(' '), &KeyModifiers::NONE) => {
@@ -333,6 +357,7 @@ impl super::Widget for ResultsWidget {
                 (Esc, &KeyModifiers::NONE) => {
                     if self.control_space {
                         ctx.notify("Exited VISUAL mode");
+                        self.visual_anchor = 0;
                         self.control_space = false;
                     } else {
                         ctx.dismiss_notifications();

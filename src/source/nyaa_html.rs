@@ -303,7 +303,6 @@ impl Source for NyaaHtmlSource {
             query, high, low, filter, page, sort, dir, user
         )));
 
-        // let client = super::request_client(ctx)?;
         let mut request = client.get(url_query.to_owned());
         if let Some(timeout) = nyaa.timeout {
             request = request.timeout(Duration::from_secs(timeout));
