@@ -271,7 +271,7 @@ impl App {
         let mut last_time: Option<Instant> = None;
 
         while !ctx.should_quit {
-            if ctx.should_save_config {
+            if ctx.should_save_config && ctx.config.save_config_on_change {
                 if let Err(e) = C::store(&ctx.config) {
                     ctx.show_error(e);
                 }

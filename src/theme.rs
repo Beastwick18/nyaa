@@ -50,7 +50,6 @@ pub struct Theme {
 }
 
 pub fn load_user_themes(ctx: &mut Context, config_path: PathBuf) -> Result<(), String> {
-    // let path = path.map_err(|e| e.to_string())?;
     let path = config_path.join("themes");
     if !path.exists() {
         return Ok(()); // Allow no theme folder

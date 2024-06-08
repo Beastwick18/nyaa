@@ -31,7 +31,7 @@ impl Default for NotificationWidget {
             duration: 3.0,
             position: Corner::TopRight,
             max_width: 75,
-            animation_speed: 8.,
+            animation_speed: 4.,
         }
     }
 }
