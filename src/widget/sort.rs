@@ -6,6 +6,7 @@ use ratatui::{
     widgets::{Row, StatefulWidget as _, Table},
     Frame,
 };
+use serde::{Deserialize, Serialize};
 
 use crate::{
     app::{Context, LoadType, Mode},
@@ -29,9 +30,11 @@ impl Default for SelectedSort {
     }
 }
 
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub enum SortDir {
+    #[serde(rename = "Desc")]
     Desc,
+    #[serde(rename = "Asc")]
     Asc,
 }
 

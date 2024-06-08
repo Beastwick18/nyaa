@@ -10,7 +10,10 @@ use crate::{
     sync::SearchQuery,
     theme::Theme,
     util::conv::add_protocol,
-    widget::category::{CatEntry, CatIcon, CatStruct},
+    widget::{
+        category::{CatEntry, CatIcon, CatStruct},
+        sort::SelectedSort,
+    },
 };
 
 use self::{
@@ -181,7 +184,7 @@ pub trait Source {
     fn load_config(config: &mut SourceConfig);
 
     fn default_category(config: &SourceConfig) -> usize;
-    fn default_sort(config: &SourceConfig) -> usize;
+    fn default_sort(config: &SourceConfig) -> SelectedSort;
     fn default_filter(config: &SourceConfig) -> usize;
     fn default_search(config: &SourceConfig) -> String;
 
@@ -270,7 +273,7 @@ impl Sources {
         w.category.major = major;
         w.category.minor = minor;
 
-        w.sort.selected.sort = self.default_sort(&ctx.config.sources);
+        w.sort.selected = self.default_sort(&ctx.config.sources);
         w.sort.table.select(w.sort.selected.sort);
         w.filter.selected = self.default_filter(&ctx.config.sources);
         w.filter.table.select(w.filter.selected);
@@ -306,7 +309,7 @@ impl Sources {
         }
     }
 
-    pub fn default_sort(self, config: &SourceConfig) -> usize {
+    pub fn default_sort(self, config: &SourceConfig) -> SelectedSort {
         match self {
             Sources::Nyaa => NyaaHtmlSource::default_sort(config),
             Sources::SukebeiNyaa => SukebeiHtmlSource::default_sort(config),

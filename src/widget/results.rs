@@ -1,5 +1,3 @@
-use std::cmp::max;
-
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::{
     layout::{Margin, Rect},
@@ -18,12 +16,6 @@ use crate::{
 
 use super::{border_block, centered_rect, Corner, VirtualStatefulTable};
 
-#[derive(Clone, Copy)]
-enum Direction {
-    Up,
-    Down,
-}
-
 pub struct ResultsWidget {
     pub table: VirtualStatefulTable,
     control_space: bool,
@@ -37,27 +29,15 @@ impl ResultsWidget {
         *self.table.state.offset_mut() = 0;
     }
 
-    fn try_select_toggle(&self, ctx: &mut Context) {
-        if let Some(sel) = self.table.state.selected() {
-            if let Some(item) = ctx.results.response.items.get(sel) {
-                if let Some(p) = ctx.batch.iter().position(|s| s.id == item.id) {
-                    ctx.batch.remove(p);
-                } else {
-                    ctx.batch.push(item.to_owned());
-                }
+    fn try_select_toggle(&self, ctx: &mut Context, sel: usize) {
+        if let Some(item) = ctx.results.response.items.get(sel) {
+            if let Some(p) = ctx.batch.iter().position(|s| s.id == item.id) {
+                ctx.batch.remove(p);
+            } else {
+                ctx.batch.push(item.to_owned());
             }
         }
     }
-
-    // fn try_select(&self, ctx: &mut Context) {
-    //     if let Some(sel) = self.table.state.selected() {
-    //         if let Some(item) = ctx.results.response.items.get(sel) {
-    //             if !ctx.batch.iter().any(|s| s.id == item.id) {
-    //                 ctx.batch.push(item.to_owned());
-    //             }
-    //         }
-    //     }
-    // }
 }
 
 impl Default for ResultsWidget {
@@ -240,38 +220,29 @@ impl super::Widget for ResultsWidget {
                     ctx.quit();
                 }
                 (Char('j') | KeyCode::Down, &KeyModifiers::NONE) => {
-                    // if self
-                    //     .table
-                    //     .state
-                    //     .selected()
-                    //     .is_some_and(|s| s + 1 != ctx.results.response.items.len())
-                    // {
-                    if self.control_space {
-                        let selected = self.table.selected().unwrap_or(0);
-                        if selected >= self.visual_anchor {
-                            self.table.next(ctx.results.response.items.len(), 1);
-                            self.try_select_toggle(ctx);
-                        } else {
-                            self.try_select_toggle(ctx);
-                            self.table.next(ctx.results.response.items.len(), 1);
-                        }
-                    } else {
-                        self.table.next(ctx.results.response.items.len(), 1);
+                    let prev = self.table.selected().unwrap_or(0);
+                    let selected = self.table.next(ctx.results.response.items.len(), 1);
+                    if self.control_space && prev != selected {
+                        self.try_select_toggle(
+                            ctx,
+                            match selected <= self.visual_anchor {
+                                true => prev,
+                                false => selected,
+                            },
+                        );
                     }
-                    // }
                 }
                 (Char('k') | KeyCode::Up, &KeyModifiers::NONE) => {
-                    if self.control_space {
-                        let selected = self.table.selected().unwrap_or(0);
-                        if selected <= self.visual_anchor {
-                            self.table.next(ctx.results.response.items.len(), -1);
-                            self.try_select_toggle(ctx);
-                        } else {
-                            self.try_select_toggle(ctx);
-                            self.table.next(ctx.results.response.items.len(), -1);
-                        }
-                    } else {
-                        self.table.next(ctx.results.response.items.len(), -1);
+                    let prev = self.table.selected().unwrap_or(0);
+                    let selected = self.table.next(ctx.results.response.items.len(), -1);
+                    if self.control_space && prev != selected {
+                        self.try_select_toggle(
+                            ctx,
+                            match selected >= self.visual_anchor {
+                                true => prev,
+                                false => selected,
+                            },
+                        );
                     }
                 }
                 (Char('J'), &KeyModifiers::SHIFT) => {
@@ -282,7 +253,7 @@ impl super::Widget for ResultsWidget {
                 }
                 (Char('G'), &KeyModifiers::SHIFT) => {
                     self.table
-                        .select(max(ctx.results.response.items.len(), 1) - 1);
+                        .select(ctx.results.response.items.len().saturating_sub(1));
                 }
                 (Char('g'), &KeyModifiers::NONE) => {
                     self.table.select(0);
@@ -333,8 +304,8 @@ impl super::Widget for ResultsWidget {
                     self.control_space = !self.control_space;
                     if self.control_space {
                         ctx.notify("Entered VISUAL mode");
-                        self.try_select_toggle(ctx);
                         self.visual_anchor = self.table.selected().unwrap_or(0);
+                        self.try_select_toggle(ctx, self.visual_anchor);
                     } else {
                         ctx.notify("Exited VISUAL mode");
                         self.visual_anchor = 0;

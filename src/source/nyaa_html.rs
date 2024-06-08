@@ -21,7 +21,7 @@ use crate::{
         conv::{shorten_number, to_bytes},
         html::{as_type, attr, inner},
     },
-    widget::sort::SelectedSort,
+    widget::sort::{SelectedSort, SortDir},
 };
 
 use super::{
@@ -104,6 +104,7 @@ impl Default for NyaaCategoryTheme {
 pub struct NyaaConfig {
     pub base_url: String,
     pub default_sort: NyaaSort,
+    pub default_sort_dir: SortDir,
     pub default_filter: NyaaFilter,
     pub default_category: String,
     pub default_search: String,
@@ -142,6 +143,7 @@ impl Default for NyaaConfig {
         Self {
             base_url: "https://nyaa.si/".to_owned(),
             default_sort: NyaaSort::Date,
+            default_sort_dir: SortDir::Desc,
             default_filter: NyaaFilter::NoFilter,
             default_category: "AllCategories".to_owned(),
             default_search: Default::default(),
@@ -531,10 +533,13 @@ impl Source for NyaaHtmlSource {
         Self::info().entry_from_cfg(&default).id
     }
 
-    fn default_sort(cfg: &SourceConfig) -> usize {
+    fn default_sort(cfg: &SourceConfig) -> SelectedSort {
         cfg.nyaa
             .as_ref()
-            .map(|c| c.default_sort as usize)
+            .map(|c| SelectedSort {
+                sort: c.default_sort as usize,
+                dir: c.default_sort_dir,
+            })
             .unwrap_or_default()
     }
 

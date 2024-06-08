@@ -203,13 +203,6 @@ impl<T: std::clone::Clone> StatefulTable<T> {
         }
     }
 
-    // pub fn with_items(&mut self, items: Vec<T>) -> &mut Self {
-    //     self.state = TableState::new().with_selected(Some(0));
-    //     self.scrollbar_state = ScrollbarState::new(items.len());
-    //     self.items = items;
-    //     self
-    // }
-
     pub fn next_wrap(&mut self, amt: isize) {
         if self.items.is_empty() {
             return;
@@ -259,29 +252,30 @@ impl VirtualStatefulTable {
         }
     }
 
-    pub fn next_wrap(&mut self, length: usize, amt: isize) {
+    pub fn next_wrap(&mut self, length: usize, amt: isize) -> usize {
         if length == 0 {
-            return;
+            return 0;
         }
         let i = match self.state.selected() {
             Some(i) => (i as isize + amt).rem_euclid(length as isize),
             None => 0,
-        };
-        self.state.select(Some(i as usize));
-        self.scrollbar_state = self.scrollbar_state.position(i as usize);
+        } as usize;
+        self.state.select(Some(i));
+        self.scrollbar_state = self.scrollbar_state.position(i);
+        i
     }
 
-    pub fn next(&mut self, length: usize, amt: isize) {
+    pub fn next(&mut self, length: usize, amt: isize) -> usize {
         if length == 0 {
-            return;
+            return 0;
         }
-        let i = match self.state.selected() {
-            Some(i) => i as isize + amt,
+        let idx = match self.state.selected() {
+            Some(i) => i.saturating_add_signed(amt),
             None => 0,
         };
-        let idx = i.max(0).min(length as isize - 1) as usize;
         self.state.select(Some(idx));
         self.scrollbar_state = self.scrollbar_state.position(idx);
+        idx
     }
 
     pub fn select(&mut self, idx: usize) {

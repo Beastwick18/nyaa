@@ -25,6 +25,7 @@ use crate::{
         conv::{shorten_number, to_bytes},
         html::{as_type, attr, inner},
     },
+    widget::sort::{SelectedSort, SortDir},
 };
 
 use super::{add_protocol, Item, ItemType, Source, SourceConfig, SourceInfo, SourceResponse};
@@ -165,6 +166,7 @@ impl Default for TgxCategoryTheme {
 pub struct TgxConfig {
     pub base_url: String,
     pub default_sort: TgxSort,
+    pub default_sort_dir: SortDir,
     pub default_filter: TgxFilter,
     pub default_category: String,
     pub default_search: String,
@@ -177,6 +179,7 @@ impl Default for TgxConfig {
         Self {
             base_url: "https://torrentgalaxy.to/".to_owned(),
             default_sort: TgxSort::Date,
+            default_sort_dir: SortDir::Desc,
             default_filter: TgxFilter::NoFilter,
             default_category: "AllCategories".to_owned(),
             default_search: Default::default(),
@@ -709,10 +712,13 @@ impl Source for TorrentGalaxyHtmlSource {
         Self::info().entry_from_cfg(&default).id
     }
 
-    fn default_sort(cfg: &SourceConfig) -> usize {
+    fn default_sort(cfg: &SourceConfig) -> SelectedSort {
         cfg.tgx
             .as_ref()
-            .map(|c| c.default_sort as usize)
+            .map(|c| SelectedSort {
+                sort: c.default_sort as usize,
+                dir: c.default_sort_dir,
+            })
             .unwrap_or_default()
     }
 
