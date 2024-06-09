@@ -81,7 +81,7 @@ pub enum Client {
     #[strum(serialize = "qBittorrent")]
     Qbit = 0,
 
-    #[serde(rename = "transmission")]
+    #[serde(rename = "Transmission")]
     #[strum(serialize = "Transmission")]
     Transmission = 1,
 
@@ -89,15 +89,15 @@ pub enum Client {
     #[strum(serialize = "rqbit")]
     Rqbit = 2,
 
-    #[serde(rename = "default_app")]
+    #[serde(rename = "DefaultApp")]
     #[strum(serialize = "Default App")]
     DefaultApp = 3,
 
-    #[serde(rename = "download")]
+    #[serde(rename = "DownloadTorrentFile")]
     #[strum(serialize = "Download Torrent File")]
     Download = 4,
 
-    #[serde(rename = "command")]
+    #[serde(rename = "RunCommand")]
     #[strum(serialize = "Run Command")]
     Cmd = 5,
 }

@@ -649,43 +649,43 @@ impl Source for TorrentGalaxyHtmlSource {
 
     fn info() -> SourceInfo {
         let cats = cats! {
-            "All Categories" => { 0 => ("---", "All Categories", "AllCategories", tgx.cat.all_categories); }
-            "Movies" => {3 => ("4kM", "4K UHD Movies", "4kMovies", tgx.cat.movies_4k);
-                46 => ("Bly", "Bollywood", "Bollywood Movies", tgx.cat.movies_bollywood);
-                45 => ("Cam", "Cam/TS", "CamMovies", tgx.cat.movies_cam);
-                42 => ("HdM", "HD Movies", "HdMovies", tgx.cat.movies_hd);
-                4 => ("PkM", "Movie Packs", "PackMovies", tgx.cat.movies_pack);
-                1 => ("SdM", "SD Movies", "SdMovies", tgx.cat.movies_sd);}
-            "TV" => {41 => ("HdT", "TV HD", "HdTV", tgx.cat.tv_hd);
-                5 => ("SdT", "TV SD", "SdTV", tgx.cat.tv_sd);
-                11 => ("4kT", "TV 4k", "4kTV", tgx.cat.tv_4k);
-                6 => ("PkT", "TV Packs", "PacksTV", tgx.cat.tv_pack);
-                7 => ("Spo", "Sports", "SportsTV", tgx.cat.tv_sports);}
-            "Anime" => {28 => ("Ani", "All Anime", "Anime", tgx.cat.anime);}
-            "Apps" => {20 => ("Mob", "Mobile Apps", "AppsMobile", tgx.cat.apps_mobile);
-                21 => ("App", "Other Apps", "AppsOther", tgx.cat.apps_other);
-                18 => ("Win", "Windows Apps", "AppsWindows", tgx.cat.apps_windows);}
-            "Books" => {13 => ("Abk", "Audiobooks", "Audiobooks", tgx.cat.audiobooks);
-                19 => ("Com", "Comics", "Comics", tgx.cat.comics);
-                12 => ("Ebk", "Ebooks", "Ebooks", tgx.cat.ebooks);
-                14 => ("Edu", "Educational", "Educational", tgx.cat.educational);
-                15 => ("Mag", "Magazines", "Magazines", tgx.cat.magazines);}
-            "Documentaries" => {9 => ("Doc", "All Documentaries", "Documentaries", tgx.cat.documentaries);}
-            "Games" => {10 => ("Wgm", "Windows Games", "WindowsGames", tgx.cat.games_windows);
-                43 => ("Ogm", "Other Games", "OtherGames", tgx.cat.games_other);}
-            "Music" => {22 => ("Alb", "Music Albums", "AlbumsMusic", tgx.cat.music_albums);
-                26 => ("Dis", "Music Discography", "DiscographyMusic", tgx.cat.music_discography);
-                23 => ("Los", "Music Lossless", "LosslessMusic", tgx.cat.music_lossless);
-                25 => ("MV ", "Music Video", "MusicVideo", tgx.cat.music_video);
-                24 => ("Sin", "Music Singles", "SinglesMusic", tgx.cat.music_singles);}
-            "Other" => {17 => ("Aud", "Other Audio", "AudioOther", tgx.cat.audio_other);
-                40 => ("Pic", "Other Pictures", "PicturesOther", tgx.cat.pictures_other);
-                37 => ("Tra", "Other Training", "TrainingOther", tgx.cat.training_other);
-                33 => ("Oth", "Other", "Other", tgx.cat.other);}
-            "XXX" => {48 => ("4kX", "XXX 4k", "4kXXX", tgx.cat.xxx_4k);
-                35 => ("HdX", "XXX HD", "HdXXX", tgx.cat.xxx_hd);
-                47 => ("MsX", "XXX Misc", "MiscXXX", tgx.cat.xxx_misc);
-                34 => ("SdX", "XXX SD", "SdXXX", tgx.cat.xxx_sd);}
+            "All Categories" => { 0 => ("---", "All Categories", "AllCategories", source.tgx.cat.all_categories); }
+            "Movies" => {3 => ("4kM", "4K UHD Movies", "4kMovies", source.tgx.cat.movies_4k);
+                46 => ("Bly", "Bollywood", "Bollywood Movies", source.tgx.cat.movies_bollywood);
+                45 => ("Cam", "Cam/TS", "CamMovies", source.tgx.cat.movies_cam);
+                42 => ("HdM", "HD Movies", "HdMovies", source.tgx.cat.movies_hd);
+                4 => ("PkM", "Movie Packs", "PackMovies", source.tgx.cat.movies_pack);
+                1 => ("SdM", "SD Movies", "SdMovies", source.tgx.cat.movies_sd);}
+            "TV" => {41 => ("HdT", "TV HD", "HdTV", source.tgx.cat.tv_hd);
+                5 => ("SdT", "TV SD", "SdTV", source.tgx.cat.tv_sd);
+                11 => ("4kT", "TV 4k", "4kTV", source.tgx.cat.tv_4k);
+                6 => ("PkT", "TV Packs", "PacksTV", source.tgx.cat.tv_pack);
+                7 => ("Spo", "Sports", "SportsTV", source.tgx.cat.tv_sports);}
+            "Anime" => {28 => ("Ani", "All Anime", "Anime", source.tgx.cat.anime);}
+            "Apps" => {20 => ("Mob", "Mobile Apps", "AppsMobile", source.tgx.cat.apps_mobile);
+                21 => ("App", "Other Apps", "AppsOther", source.tgx.cat.apps_other);
+                18 => ("Win", "Windows Apps", "AppsWindows", source.tgx.cat.apps_windows);}
+            "Books" => {13 => ("Abk", "Audiobooks", "Audiobooks", source.tgx.cat.audiobooks);
+                19 => ("Com", "Comics", "Comics", source.tgx.cat.comics);
+                12 => ("Ebk", "Ebooks", "Ebooks", source.tgx.cat.ebooks);
+                14 => ("Edu", "Educational", "Educational", source.tgx.cat.educational);
+                15 => ("Mag", "Magazines", "Magazines", source.tgx.cat.magazines);}
+            "Documentaries" => {9 => ("Doc", "All Documentaries", "Documentaries", source.tgx.cat.documentaries);}
+            "Games" => {10 => ("Wgm", "Windows Games", "WindowsGames", source.tgx.cat.games_windows);
+                43 => ("Ogm", "Other Games", "OtherGames", source.tgx.cat.games_other);}
+            "Music" => {22 => ("Alb", "Music Albums", "AlbumsMusic", source.tgx.cat.music_albums);
+                26 => ("Dis", "Music Discography", "DiscographyMusic", source.tgx.cat.music_discography);
+                23 => ("Los", "Music Lossless", "LosslessMusic", source.tgx.cat.music_lossless);
+                25 => ("MV ", "Music Video", "MusicVideo", source.tgx.cat.music_video);
+                24 => ("Sin", "Music Singles", "SinglesMusic", source.tgx.cat.music_singles);}
+            "Other" => {17 => ("Aud", "Other Audio", "AudioOther", source.tgx.cat.audio_other);
+                40 => ("Pic", "Other Pictures", "PicturesOther", source.tgx.cat.pictures_other);
+                37 => ("Tra", "Other Training", "TrainingOther", source.tgx.cat.training_other);
+                33 => ("Oth", "Other", "Other", source.tgx.cat.other);}
+            "XXX" => {48 => ("4kX", "XXX 4k", "4kXXX", source.tgx.cat.xxx_4k);
+                35 => ("HdX", "XXX HD", "HdXXX", source.tgx.cat.xxx_hd);
+                47 => ("MsX", "XXX Misc", "MiscXXX", source.tgx.cat.xxx_misc);
+                34 => ("SdX", "XXX SD", "SdXXX", source.tgx.cat.xxx_sd);}
         };
         SourceInfo {
             cats,

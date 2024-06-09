@@ -15,7 +15,13 @@ strip = true
 lto = true
 
 [dependencies]
-reqwest = { version = "0.12.4", features = [
+# reqwest2 = { package = "reqwest", version = "0.11.27", features = [
+#     "gzip",
+#     "rustls-tls",
+#     "socks",
+#     "cookies",
+# ], default-features = false }
+reqwest = { version = "0.11.27", features = [
     "gzip",
     "rustls-tls",
     "socks",
@@ -36,7 +42,7 @@ scraper = "0.19.0"
 regex = "1.10.4"
 rss = "2.0.8"
 chrono = "0.4.38"
-transmission-rpc = { git = "https://github.com/Beastwick18/transmission-rpc", branch = "stable" }
+transmission-rpc = { version = "0.4.2" }
 open = "5.1.4"
 cli-clipboard = "0.4.0"
 dirs = "5.0.1"

@@ -308,16 +308,16 @@ impl Source for SukebeiHtmlSource {
             }
             "Art" => {
                 10 => ("Art", "All Art", "AllArt", fg);
-                11 => ("Ani", "Anime", "ArtAnime", sukebei.cat.art_anime);
-                12 => ("Dou", "Doujinshi", "ArtDoujinshi", sukebei.cat.art_doujinshi);
-                13 => ("Gam", "Games", "ArtGames", sukebei.cat.art_games);
-                14 => ("Man", "Manga", "ArtManga", sukebei.cat.art_manga);
-                15 => ("Pic", "Pictures", "ArtPictures", sukebei.cat.art_pictures);
+                11 => ("Ani", "Anime", "ArtAnime", source.sukebei.cat.art_anime);
+                12 => ("Dou", "Doujinshi", "ArtDoujinshi", source.sukebei.cat.art_doujinshi);
+                13 => ("Gam", "Games", "ArtGames", source.sukebei.cat.art_games);
+                14 => ("Man", "Manga", "ArtManga", source.sukebei.cat.art_manga);
+                15 => ("Pic", "Pictures", "ArtPictures", source.sukebei.cat.art_pictures);
             }
             "Real Life" => {
                 20 => ("Rea", "All Real Life", "AllReal", fg);
-                21 => ("Pho", "Photobooks and Pictures", "RealPhotos", sukebei.cat.real_photos);
-                22 => ("Vid", "Videos", "RealVideos", sukebei.cat.real_videos);
+                21 => ("Pho", "Photobooks and Pictures", "RealPhotos", source.sukebei.cat.real_photos);
+                22 => ("Vid", "Videos", "RealVideos", source.sukebei.cat.real_videos);
             }
         };
         SourceInfo {

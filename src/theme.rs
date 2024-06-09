@@ -8,11 +8,7 @@ use indexmap::IndexMap;
 use ratatui::{style::Color, widgets::BorderType};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use crate::{
-    app::Context,
-    collection, config,
-    source::{nyaa_html::NyaaTheme, sukebei_nyaa::SukebeiTheme, torrent_galaxy::TgxTheme},
-};
+use crate::{app::Context, collection, config, source::SourceTheme};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Theme {
@@ -42,11 +38,7 @@ pub struct Theme {
     pub error: Color,
 
     #[serde(default)]
-    pub nyaa: NyaaTheme,
-    #[serde(default)]
-    pub sukebei: SukebeiTheme,
-    #[serde(default, rename = "torrent_galaxy")]
-    pub tgx: TgxTheme,
+    pub source: SourceTheme,
 }
 
 pub fn load_user_themes(ctx: &mut Context, config_path: PathBuf) -> Result<(), String> {
@@ -142,9 +134,7 @@ impl Default for Theme {
             solid_fg: Color::Black,
             success: Color::Green,
             error: Color::Red,
-            nyaa: Default::default(),
-            sukebei: Default::default(),
-            tgx: Default::default(),
+            source: Default::default(),
         }
     }
 }
@@ -170,9 +160,7 @@ pub fn default_themes() -> IndexMap<String, Theme> {
             solid_bg: Color::Rgb(139, 233, 253),
             success: Color::Rgb(80, 250, 123),
             error: Color::Rgb(255, 85, 85),
-            nyaa: Default::default(),
-            sukebei: Default::default(),
-            tgx: Default::default(),
+            source: Default::default(),
         },
         "Gruvbox".to_owned() => Theme {
             name: "Gruvbox".to_owned(),
@@ -186,9 +174,7 @@ pub fn default_themes() -> IndexMap<String, Theme> {
             solid_fg: Color::Rgb(235, 219, 178),
             success: Color::Rgb(152, 151, 26),
             error: Color::Rgb(204, 36, 29),
-            nyaa: Default::default(),
-            sukebei: Default::default(),
-            tgx: Default::default(),
+            source: Default::default(),
         },
         "Catppuccin Macchiato".to_owned() => Theme {
             name: "Catppuccin Macchiato".to_owned(),
@@ -202,9 +188,7 @@ pub fn default_themes() -> IndexMap<String, Theme> {
             solid_fg: Color::Rgb(24, 25, 38),
             success: Color::Rgb(166, 218, 149),
             error: Color::Rgb(237, 135, 150),
-            nyaa: Default::default(),
-            sukebei: Default::default(),
-            tgx: Default::default(),
+            source: Default::default(),
         },
     ]
 }

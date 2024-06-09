@@ -1,8 +1,11 @@
 use std::{collections::HashMap, error::Error, sync::Arc, time::Duration};
 
+use nyaa_html::NyaaTheme;
 use reqwest::{cookie::Jar, Proxy};
 use serde::{Deserialize, Serialize};
 use strum::{Display, VariantArray};
+use sukebei_nyaa::SukebeiTheme;
+use torrent_galaxy::TgxTheme;
 
 use crate::{
     app::{Context, LoadType, Widgets},
@@ -42,6 +45,16 @@ pub enum SourceResponse {
     Results(ResultResponse),
     #[cfg(feature = "captcha")]
     Captcha(Box<dyn StatefulProtocol>),
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, Default)]
+pub struct SourceTheme {
+    #[serde(default)]
+    pub nyaa: NyaaTheme,
+    #[serde(default)]
+    pub sukebei: SukebeiTheme,
+    #[serde(default, rename = "torrentgalaxy")]
+    pub tgx: TgxTheme,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default)]

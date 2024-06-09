@@ -1,13 +1,21 @@
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use transmission_rpc::{
-    types::{BasicAuth, Priority, TorrentAddArgs},
+    types::{BasicAuth, TorrentAddArgs},
     TransClient,
 };
 
 use crate::{app::Context, source::Item, util::conv::add_protocol};
 
 use super::{multidownload, ClientConfig, DownloadClient, DownloadError, DownloadResult};
+
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(i8)]
+pub enum Priority {
+    Low = -1,
+    Normal = 0,
+    High = 1,
+}
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(default)]
@@ -49,7 +57,7 @@ impl TransmissionConfig {
             paused: self.paused,
             peer_limit: self.peer_limit,
             download_dir: self.download_dir.to_owned(),
-            bandwidth_priority: self.bandwidth_priority,
+            bandwidth_priority: self.bandwidth_priority.map(|r| r as i64),
             ..Default::default()
         }
     }
