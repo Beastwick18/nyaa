@@ -11,4 +11,5 @@ jobs:
       - uses: cachix/install-nix-action@v27
         with:
           nix-path: nixpkgs=channel:nixos-unstable
+      - run: nix-instantiate --eval -E '(import <nixpkgs> {}).lib.version'
       - run: nix-build
