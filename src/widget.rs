@@ -271,7 +271,7 @@ impl VirtualStatefulTable {
             return 0;
         }
         let idx = match self.state.selected() {
-            Some(i) => i.saturating_add_signed(amt),
+            Some(i) => i.saturating_add_signed(amt).min(length.saturating_sub(1)),
             None => 0,
         };
         self.state.select(Some(idx));
