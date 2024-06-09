@@ -1,14 +1,12 @@
 {pkgs ? import <nixpkgs> {}}:
-pkgs.rustPlatform.buildRustPackage rec {
+pkgs.rustPlatform.buildRustPackage {
   pname = "nyaa";
-  version = "0.9.0";
-
-  # src = fetchFromGitHub {
-  #   owner = "Beastwick18";
-  #   repo = "nyaa";
-  #   rev = "v${version}";
-  #   hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
-  # };
+  version =
+    (builtins.fromTOML (
+      builtins.readFile ./Cargo.toml
+    ))
+    .package
+    .version;
 
   cargoLock.lockFile = ./Cargo.lock;
   src = pkgs.lib.cleanSource ./.;
