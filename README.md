@@ -1,6 +1,7 @@
 <div align="center">
   <h1>nyaa 🐈‍⬛</h1>
   <h3>A simple TUI for browsing and downloading anime torrents from nyaa.si.</h3>
+  <a href="https://github.com/Beastwick18/nyaa/actions"><img src="https://img.shields.io/github/check-runs/Beastwick18/nyaa/main?label=build" /></a>
   <a href="https://github.com/Beastwick18/nyaa/releases/latest"><img src="https://img.shields.io/github/v/release/Beastwick18/nyaa.svg?color=#2ea043" /></a>
   <a href="https://aur.archlinux.org/packages/nyaa"><img src="https://img.shields.io/aur/version/nyaa?color=blue" /></a>
   <a href="https://aur.archlinux.org/packages/nyaa-bin"><img src="https://img.shields.io/aur/version/nyaa-bin?color=blue&label=aur%20(bin)" /></a>
@@ -8,8 +9,6 @@
   <br />
   <a href="https://crates.io/crates/nyaa"><img src="https://img.shields.io/crates/d/nyaa?label=crates.io%20downloads&color=orange" /></a>
   <a href="https://github.com/Beastwick18/nyaa/releases/latest"><img src="https://img.shields.io/github/downloads/Beastwick18/nyaa/total?label=github%20downloads&color=#2ea043" /></a>
-  <br />
-  <a href="https://github.com/Beastwick18/nyaa/actions"><img src="https://img.shields.io/github/checks-status/Beastwick18/nyaa/main" /></a>
 </div>
 
 <p align="center">
