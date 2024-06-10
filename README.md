@@ -8,6 +8,8 @@
   <br />
   <a href="https://crates.io/crates/nyaa"><img src="https://img.shields.io/crates/d/nyaa?label=crates.io%20downloads&color=orange" /></a>
   <a href="https://github.com/Beastwick18/nyaa/releases/latest"><img src="https://img.shields.io/github/downloads/Beastwick18/nyaa/total?label=github%20downloads&color=#2ea043" /></a>
+  <br />
+  <a href="https://github.com/Beastwick18/nyaa/actions"><img src="https://img.shields.io/github/checks-status/Beastwick18/nyaa/main" /></a>
 </div>
 
 <p align="center">
