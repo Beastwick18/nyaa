@@ -1,3 +1,37 @@
+# v0.9.0
+## Adds:
+- Ability to interact with application while searching or downloading
+  - These operations now happen asynchronously
+- Torrent Galaxy support (check [wiki](./docs/sources/torrent_galaxy.md) for configuration info)
+  - Can copy IMDB id while in this source using <kbd>yi</kbd>
+- New sources have separate filters, sorts, categories, and results tables
+- New sources have their own config tables in `config.toml`
+- Sukebei-nyaa support (check [wiki](./docs/sources/sukebei.md) for configuration info)
+  - Includes both HTML scraper and RSS searching options
+- Nyaa.si configuration separated out into its own config table
+  - See [wiki](./docs/sources/nyaa.md) for information on the new config for `nyaa.si`
+- Nyaa-rss and Nyaa-HTML scraper combined into a single source
+  - You can set `rss = true` for nyaa to enable rss
+- Adds tests for UI and corresponding GitHub Action
+- Adds new animated notification popup, which replaces both the old notifications and error popups
+  - These can be [configured](./docs/notifications.md) to change the animation speed, popup size, duration, and popup position
+- Adds ability to override request timeout setting for each individual source
+- Adds captcha solver popup
+  - This feature is disabled by default, but can be enabled by compiling with `--features="captcha"`
+- Add ability to [change category icon colors](./docs/user_themes.md#category-colors) through user-themes
+- Visual mode now works more intuitively
+- Adds `default_sort_dir` to each source
+- Adds nix GitHub Action for ensuring working builds (#18)
+## Fixes:
+- Terminal no longer becomes malformed after panics
+- Config will not be overwritten if it failed to parse correctly
+- User-themes will now load on startup when selected as default theme
+- Removes some unused dependencies
+## Breaking Changes
+- `source` value in config now references a table of sources, instead of the default source. `default_source` now replaces the old name
+- Clients `transmission`, `default_app`, `download`, and `command` have been renamed to `Transmission`, `DefaultApp`, `DownloadTorrentFile`, and `RunCommand`
+- `default_sort`, `default_filter`, `default_category`, and `default_search` for nyaa have been moved to the config table `[source.nyaa]` in `config.toml`.
+
 # v0.8.1
 ## Adds:
 - Suspend to background with <kbd>Ctrl</kbd>+<kbd>z</kbd> on Unix-like systems

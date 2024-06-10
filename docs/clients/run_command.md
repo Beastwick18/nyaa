@@ -7,14 +7,14 @@ This "client" only runs a command with substitutions on pressing Enter. The vali
 
 
 ## Default config
-If you've selected "command" as your default download client, you will find this towards the bottom of your config (with only the required values present). This client has no values as of now.
+If you've selected "RunCommand" as your default download client, you will find this towards the bottom of your config (with only the required values present). This client has no values as of now.
 
 The default configuration for Linux is:
 
 ```toml
 # Your config in ~/.config/nyaa/config.toml
 # ...
-default_client = "command"
+download_client = "RunCommand"
 # ...
 
 [client.command]
@@ -27,7 +27,7 @@ and on Windows is:
 ```toml
 # Your config in %appdata%\nyaa\config\config.toml
 # ...
-default_client = "command"
+download_client = "RunCommand"
 # ...
 
 [client.command]

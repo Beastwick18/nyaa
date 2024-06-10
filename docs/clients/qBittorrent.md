@@ -14,15 +14,15 @@ If you've selected qBittorrent as your default download client, you will find th
 ```toml
 # Your config in ~/.config/nyaa/config.toml or %appdata%\nyaa\config\config.toml
 # ...
-default_client = "qBittorrent"
+download_client = "qBittorrent"
 # ...
 
 [client.qBittorrent]
 base_url = "http://localhost:8080" # required
-username = "admin"        # required
-password = "adminadmin"   # required
-use_magnet = true         # optional, will be true by default
-savepath = "~/Downloads/" # all optional with no default here and below...
+username = "admin"                 # required
+password = "adminadmin"            # required
+use_magnet = true          # optional, will be true by default
+savepath = "~/Downloads/"  # all optional with no default here and below...
 category = "Category Name"
 tags = [ # must not contain commas in any of the tags
   "Tag one",

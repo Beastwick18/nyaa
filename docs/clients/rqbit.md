@@ -10,7 +10,7 @@ If you've selected rqbit as your default download client, you will find this tow
 ```toml
 # Your config in ~/.config/nyaa/config.toml or %appdata%\nyaa\config\config.toml
 # ...
-default_client = "rqbit"
+download_client = "rqbit"
 # ...
 
 [client.rqbit]

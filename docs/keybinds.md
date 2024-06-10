@@ -6,11 +6,11 @@ This mode is entered when the results table is focused.
 | Key | Map |
 | --- | --- |
 | Enter | Confirm |
-| Esc | Dismiss notification |
+| Esc | Dismiss notification/errors |
 | q | Exit App |
 | g/G | Goto Top/Bottom |,
-| j, ↓ | Down |
 | k, ↑ | Up |
+| j, ↓ | Down |
 | K, J | Up/Down 4 items |,
 | n, l, → | Next Page |
 | p, h, ← | Prev Page |
@@ -18,9 +18,9 @@ This mode is entered when the results table is focused.
 | P, H | First Page |
 | r | Reload |
 | o | Open in browser |
-| yt, ym, yp | Copy torrent/magnet/post link |
+| yt, ym, yp, yi | Copy torrent link/magnet link/post link/imdb id |
 | Space | Toggle item for batch download |
-| Ctrl-Space | Multi-line select torrents|
+| Ctrl-Space | Multi-line select torrents |
 | Tab/Shift-Tab | Switch to Batches|
 | /, i | Search |
 | c | Categories |
@@ -33,7 +33,7 @@ This mode is entered when the results table is focused.
 | Ctrl-p | Goto page |
 | Ctrl-s | Select source |
 
-## Search/Page/Input
+## Search/Page/User/Input
 This mode is entered when any input field is focused
 | Key | Map |
 | --- | --- |
@@ -56,6 +56,7 @@ This mode is entered when any input field is focused
 | --- | --- |
 | Enter | Download single torrent |
 | Ctrl-A | Download all torrents |
+| Ctrl-X | Clear batch |
 | Esc/Tab/Shift-Tab | Back to results |
 | q | Exit app |
 | g/G | Goto Top/Bottom |
@@ -131,14 +132,20 @@ This mode is entered when the sort popup is focused
 | g | Top |
 | G | Bottom |
 
-## Error
-This mode is entered when the error popup is focused
+## Themes
 | Key | Map |
 | --- | --- |
-| Any key | Close |
+| Enter | Confirm |
+| Esc, t, q | Close |
+| j, ↓ | Down |
+| k, ↑ | Up |
+| g | Top |
+| G | Bottom |
 
 ## Help
-There are no keybinds for this mode.
+| Key | Map |
+| --- | --- |
+| Esc | Close |
 
 ## Loading
 There are no keybinds for this mode.

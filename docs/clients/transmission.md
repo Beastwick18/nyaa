@@ -15,12 +15,12 @@ If you've selected Transmission as your default download client, you will find t
 ```toml
 # Your config in ~/.config/nyaa/config.toml or %appdata%\nyaa\config\config.toml
 # ...
-default_client = "transmission"
+download_client = "Transmission"
 # ...
 
 [client.transmission]
 base_url = "http://localhost:9091/transmission/rpc" # required
-username = "user" # all options here and below are optional
+username = "user" # all optional here and below are optional
 password = "pass"
 use_magnet = true
 labels = [ # must not contain commas in any of the labels
@@ -30,5 +30,8 @@ labels = [ # must not contain commas in any of the labels
 paused = false
 peer_limit = 100
 download_dir = "~/Downloads/"
-bandwidth_priority = 25
+bandwidth_priority = "Low"
 ```
+
+### Bandwidth Priority
+This value can be one of the following: `Low`, `Normal`, `High`

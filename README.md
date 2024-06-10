@@ -17,12 +17,11 @@
 ## Table of Contents
 
 - [Installation](#-installation)
-  - [With Cargo](#with-cargo)
-  - [On Arch Linux](#on-arch-linux-aur)
-  - [Using nix (flakes)](#using-nix-flakes)
-  - [Ubuntu/Debian](#ubuntudebian)
+  - [With a package manager](#with-a-package-manager)
+  - [Nix (via home-manager)](#nix-via-home-manager)
   - [Windows/Linux Binaries](#windowslinux-binaries)
   - [From Source](#from-source)
+- [Wiki](#-wiki)
 - [Keybinds](#%EF%B8%8F-keybinds)
 - [Proxies](#-proxies)
 - [Configuration](#%EF%B8%8F-configuration)
@@ -32,67 +31,41 @@
 
 ## ⚡ Installation
 
+### With a package manager
+```sh
 ### With cargo
-
-```sh
 cargo install nyaa
-```
 
-### On Arch Linux ([AUR](https://aur.archlinux.org/packages/nyaa))
+### On Arch Linux (AUR)
+yay -S nyaa # or `nyaa-bin` for a pre-compiled binary
 
-```sh
-yay -S nyaa
-```
+### Ubuntu/Debian (.deb file from latest release)
+# with `apt`:
+sudo apt install ./nyaa-VERSION-x86_64.deb
+# or `dpkg`:
+sudo dpkg -i ./nyaa-VERSION-x86_64.deb
 
-or
+### Fedora (.rpm file from latest release)
+sudo dnf install ./nyaa-VERSION-x86_64.rpm
 
-```sh
-yay -S nyaa-bin
-```
+### With `nix profile`
+nix profile install github:Beastwick18/nyaa
 
-### Using nix (flakes)
-
-#### Run without installing
-
-```sh
+### nix (flakes) run without installing
 nix run github:Beastwick18/nyaa
 ```
 
-#### Install (via `home-manager`)
-
+### Nix (via home-manager)
 Add to `inputs` in `flake.nix`
-
 ```nix
 nyaa = {
     url = "github:Beastwick18/nyaa";
     inputs.nixpkgs.follows = "nixpkgs";
 };
 ```
-
 Add to `home.nix`
-
 ```nix
 home.packages = [ inputs.nyaa.packages.x86_64-linux.default ];
-```
-
-#### Install (via `nix profile`)
-
-```sh
-nix profile install github:Beastwick18/nyaa
-```
-
-### Ubuntu/Debian
-
-Download the .deb file from the [latest release](https://github.com/Beastwick18/nyaa/releases/latest) and install with `apt`:
-
-```sh
-sudo apt install ./nyaa-VERSION-x86_64.deb
-```
-
-or `dpkg`
-
-```sh
-sudo dpkg -i ./nyaa-VERSION-x86_64.deb
 ```
 
 ### Windows/Linux Binaries
@@ -101,13 +74,15 @@ Binaries for Linux and Windows are available on the [releases](https://github.co
 
 ### From Source
 
-To build from source, you must have both `git` and `cargo` installed.
+To install from source, you must have `git`, `cargo`, and Rust version $\ge$ 1.75 installed.
 
 ```sh
 git clone https://github.com/Beastwick18/nyaa
 cd nyaa
 cargo install --path .
 ```
+## 📗 Wiki
+For detailed information on configuration, themes, sources, and download client integration check the [Wiki](https://github.com/Beastwick18/nyaa/wiki).
 
 ## ⌨️ Keybinds
 
@@ -147,46 +122,45 @@ to the top of your config. Replace the value with the IP and port for your proxy
 
 The location of the config file for linux is:
 
-`~/.config/nyaa/config.toml`
+```
+~/.config/nyaa/config.toml
+```
 
 and on windows is
 
-`C:\Users\%USERNAME%\AppData\Roaming\nyaa\config\config.toml`
+```
+C:\Users\%USERNAME%\AppData\Roaming\nyaa\config\config.toml
+```
 
+### Default Config
 ```toml
-theme = "Default"
-default_source = "Nyaa"
-download_client = "Cmd"
-date_format = "%Y-%m-%d %H:%M" # Unset by default
-request_proxy = "localhost:8118" # Unset by default
-timeout = 30 # Timeout for requests, measured in seconds
+theme = "Default"                # the theme to use by default
+default_source = "Nyaa"          # the source to use by default
+download_client = "qBittorrent"  # the download client to use by default
+date_format = "%Y-%m-%d %H:%M"   # date format for results (unset by default)
+request_proxy = "localhost:8118" # request proxy for sending requests through (unset by default)
+timeout = 30                     # request timeout for sources and clients (measured in seconds)
+scroll_padding = 6               # scroll padding for results table
+save_config_on_change = true     # save config when changing sources/themes
+
 
 [source.nyaa]
-...
+# ...
 
 [source.torrentgalaxy]
-...
+# ...
 
 [client.cmd]
-...
+# ...
 
 # ...
 ```
 
-- `theme` refers to the theme selected by default when the app is opened. Possible values are `Default`, `Dracula`, `Gruvbox`, or `Catppuccin Macchiato`. Custom themes coming soon!
+`theme` refers to the theme selected by default when the app is opened. Possible values are `Default`, `Dracula`, `Gruvbox`, or `Catppuccin Macchiato`. You can also use custom [user-defined themes](https://github.com/Beastwick18/nyaa/wiki/User%E2%80%90defined-Themes).
 
-- `default_source` refers to the source selected by default once the app is opened. Possible values are `Nyaa`, `TorrentGalaxy`, or `Sukebei`.
-  - Each source has its own configuration. Check the [wiki]() for more information on each sources config.
+`default_source` refers to the source selected by default once the app is opened. Possible values are `Nyaa`, `TorrentGalaxy`, or `Sukebei`. Each source has its own configuration. Check the [wiki](https://github.com/Beastwick18/nyaa/wiki#sources) for more information on each sources config.
 
-- `download_client` refers to the download client selected by default once the app is opened.
-  - Each download client has its own configuration. Check the [wiki](https://github.com/Beastwick18/nyaa/wiki#download-clients) for more information on each download clients config.
-
-- `date_format` refers to the formatting of the dates in the Date column of the results table. Refer to [chrono's documentation](https://docs.rs/chrono/latest/chrono/format/strftime/index.html) for information on how to format the date.
-
-- `request_proxy` refers to the url to proxy request through. This is not to be confused with _nyaa_ proxies, which are defined with `base_url`.
-
-- `timeout` refers to how long the program will wait for a search request before it times out. This value is measured in seconds. You may want to increase this if your request times are usually long.
-
+`download_client` refers to the download client selected by default once the app is opened. Each download client has its own configuration. Check the [wiki](https://github.com/Beastwick18/nyaa/wiki#download-clients) for more information on each download clients config.
 
 ### Download Client Integration
 
@@ -204,7 +178,8 @@ Check the wiki for how to add [User-defined Themes](https://github.com/Beastwick
 ## 🗺️ Planned Features
 
 - [ ] Mouse support
-- [ ] Sources other than nyaa/Custom user-defined sources
+- [ ] Custom user-defined sources
+- [x] ~~Sources other than nyaa~~
 - [x] ~~User-defined themes~~
 - [x] ~~Integration with torrent clients~~
 - [x] ~~RPM Release~~
