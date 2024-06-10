@@ -22,15 +22,18 @@
 - Visual mode now works more intuitively
 - Adds `default_sort_dir` to each source
 - Adds nix GitHub Action for ensuring working builds (#18)
+- Removes extra padding around popups
 ## Fixes:
 - Terminal no longer becomes malformed after panics
 - Config will not be overwritten if it failed to parse correctly
 - User-themes will now load on startup when selected as default theme
 - Removes some unused dependencies
+- Removes wide characters that would extend into popups
 ## Breaking Changes
 - `source` value in config now references a table of sources, instead of the default source. `default_source` now replaces the old name
 - Clients `transmission`, `default_app`, `download`, and `command` have been renamed to `Transmission`, `DefaultApp`, `DownloadTorrentFile`, and `RunCommand`
 - `default_sort`, `default_filter`, `default_category`, and `default_search` for nyaa have been moved to the config table `[source.nyaa]` in `config.toml`.
+
 
 # v0.8.1
 ## Adds:
