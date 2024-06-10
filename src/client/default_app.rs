@@ -7,7 +7,7 @@ use super::{multidownload, ClientConfig, DownloadClient, DownloadError, Download
 #[derive(Serialize, Deserialize, Clone, Default)]
 #[serde(default)]
 pub struct DefaultAppConfig {
-    use_magnet: Option<bool>,
+    use_magnet: bool,
 }
 
 pub struct DefaultAppClient;
@@ -30,8 +30,8 @@ impl DownloadClient for DefaultAppClient {
             }
         };
         let link = match conf.use_magnet {
-            None | Some(true) => item.magnet_link.to_owned(),
-            Some(false) => item.torrent_link.to_owned(),
+            true => item.magnet_link.to_owned(),
+            false => item.torrent_link.to_owned(),
         };
         let (success_ids, errors) =
             match open::that_detached(link).map_err(|e| DownloadError(e.to_string())) {
