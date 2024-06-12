@@ -5,3 +5,4 @@ assets/*.cast
 /release
 /result
 **/*.deb
+/.direnv
