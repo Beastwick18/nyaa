@@ -38,7 +38,7 @@ rss = "2.0.8"
 chrono = "0.4.38"
 transmission-rpc = { version = "0.4.2" }
 open = "5.1.4"
-cli-clipboard = "0.4.0"
+clipboard = "0.5.0"
 dirs = "5.0.1"
 shellexpand = "3.1.0"
 indexmap = "2.2.6"
