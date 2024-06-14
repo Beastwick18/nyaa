@@ -18,7 +18,7 @@ impl Selection {
             Self::Primary => vec![LinuxClipboardKind::Primary],
             Self::Clipboard => vec![LinuxClipboardKind::Clipboard],
             Self::Secondary => vec![LinuxClipboardKind::Secondary],
-            Self::Both => vec![LinuxClipboardKind::Secondary, LinuxClipboardKind::Primary],
+            Self::Both => vec![LinuxClipboardKind::Clipboard, LinuxClipboardKind::Primary],
         }
     }
 }
