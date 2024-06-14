@@ -4,6 +4,7 @@ use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 use nyaa::{
     app::App,
     client::{Client, ClientConfig, DownloadResult},
+    clip::ClipboardConfig,
     config::{Config, ConfigManager},
     results::Results,
     source::{Item, SourceResults},
@@ -187,7 +188,14 @@ impl EventSync for TestSync {
 
 impl ConfigManager for TestConfig {
     fn load() -> Result<nyaa::config::Config, Box<dyn Error>> {
-        Ok(Config::default())
+        Ok(Config {
+            save_config_on_change: false,
+            clipboard: Some(ClipboardConfig {
+                cmd: Some("".to_owned()),
+                ..Default::default()
+            }),
+            ..Default::default()
+        })
     }
 
     fn store(_cfg: &nyaa::config::Config) -> Result<(), Box<dyn Error>> {

@@ -19,7 +19,7 @@ use tokio::{sync::mpsc, task::AbortHandle};
 use crate::widget::captcha::CaptchaPopup;
 use crate::{
     client::{Client, DownloadResult},
-    clip,
+    clip::ClipboardManager,
     config::{Config, ConfigManager},
     results::Results,
     source::{
@@ -270,6 +270,12 @@ impl App {
         let mut last_load_abort: Option<AbortHandle> = None;
         let mut last_time: Option<Instant> = None;
 
+        let (clipboard, err) =
+            &mut ClipboardManager::new(ctx.config.clipboard.clone().unwrap_or_default());
+        if let Some(err) = err {
+            ctx.show_error(err);
+        }
+
         while !ctx.should_quit {
             if ctx.should_save_config && ctx.config.save_config_on_change {
                 if let Err(e) = C::store(&ctx.config) {
@@ -380,9 +386,9 @@ impl App {
                     biased;
                     Some(evt) = rx_evt.recv() => {
                         #[cfg(unix)]
-                        self.on::<B, TEST>(&evt, ctx, terminal);
+                        self.on::<B, TEST>(&evt, ctx, clipboard, terminal);
                         #[cfg(not(unix))]
-                        self.on::<B, TEST>(&evt, ctx);
+                        self.on::<B, TEST>(&evt, ctx, clipboard);
 
                         break;
                     },
@@ -483,6 +489,7 @@ impl App {
         &mut self,
         evt: &Event,
         ctx: &mut Context,
+        clipboard: &mut ClipboardManager,
         #[cfg(unix)] terminal: &mut Terminal<B>,
     ) {
         if TEST && Event::FocusLost == *evt {
@@ -515,7 +522,7 @@ impl App {
             };
         }
         match ctx.mode.to_owned() {
-            Mode::KeyCombo(keys) => self.on_combo(ctx, keys, evt),
+            Mode::KeyCombo(keys) => self.on_combo(ctx, clipboard, keys, evt),
             Mode::Loading(_) => {}
             _ => self.widgets.handle_event(ctx, evt),
         }
@@ -551,7 +558,13 @@ impl App {
         }
     }
 
-    fn on_combo(&mut self, ctx: &mut Context, mut keys: String, e: &Event) {
+    fn on_combo(
+        &mut self,
+        ctx: &mut Context,
+        clipboard: &mut ClipboardManager,
+        mut keys: String,
+        e: &Event,
+    ) {
         if let Event::Key(KeyEvent {
             code,
             kind: KeyEventKind::Press,
@@ -586,9 +599,8 @@ impl App {
                             },
                             _ => return,
                         };
-                        match clip::copy_to_clipboard(link.to_owned(), ctx.config.clipboard.clone())
-                        {
-                            Ok(_) => ctx.notify(format!("Copied \"{}\" to clipboard", link)),
+                        match clipboard.try_copy(&link) {
+                            Ok(()) => ctx.notify(format!("Copied \"{}\" to clipboard", link)),
                             Err(e) => ctx.show_error(e),
                         }
                     }

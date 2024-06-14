@@ -1,98 +1,110 @@
-use std::error::Error;
-
+use arboard::{Clipboard, GetExtLinux, LinuxClipboardKind, SetExtLinux};
 use serde::{Deserialize, Serialize};
 
-#[derive(Copy, Clone, Serialize, Deserialize, PartialEq, Eq)]
+use crate::util::cmd::CommandBuilder;
+
+#[derive(Default, Copy, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum Selection {
-    Primary,
+    #[default]
     Clipboard,
+    Primary,
+    Secondary,
     Both,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+impl Selection {
+    fn get_all(self) -> Vec<LinuxClipboardKind> {
+        match self {
+            Self::Primary => vec![LinuxClipboardKind::Primary],
+            Self::Clipboard => vec![LinuxClipboardKind::Clipboard],
+            Self::Secondary => vec![LinuxClipboardKind::Secondary],
+            Self::Both => vec![LinuxClipboardKind::Secondary, LinuxClipboardKind::Primary],
+        }
+    }
+}
+
+#[derive(Clone, Default, Serialize, Deserialize)]
 pub struct ClipboardConfig {
     pub cmd: Option<String>,
     pub shell_cmd: Option<String>,
     pub selection: Option<Selection>,
 }
 
-use clipboard::ClipboardProvider as _;
+pub struct ClipboardManager {
+    clipboard: Option<Clipboard>,
+    config: ClipboardConfig,
+}
 
-#[cfg(target_os = "linux")]
-use {
-    clipboard::x11_clipboard::{Clipboard, Primary, X11ClipboardContext},
-    wl_clipboard_rs::copy::Error::WaylandConnection,
-    wl_clipboard_rs::copy::{ClipboardType, MimeType, Options, Source},
-};
+impl ClipboardManager {
+    pub fn new(conf: ClipboardConfig) -> (ClipboardManager, Option<String>) {
+        // Dont worry about connecting to OS clipboard if using command
+        if conf.cmd.is_some() {
+            return (
+                Self {
+                    clipboard: None,
+                    config: conf,
+                },
+                None,
+            );
+        }
 
-use clipboard::ClipboardContext;
+        let clipboard = Clipboard::new();
+        let err = clipboard.as_ref().err().map(|x| x.to_string());
+        let cb = clipboard.ok();
+        (
+            Self {
+                clipboard: cb,
+                config: conf,
+            },
+            err,
+        )
+    }
 
-use crate::util::cmd::CommandBuilder;
-
-pub fn copy_to_clipboard(
-    link: String,
-    conf: Option<ClipboardConfig>,
-) -> Result<(), Box<dyn Error>> {
-    if let Some(conf) = conf.to_owned() {
-        if let Some(cmd) = conf.cmd {
+    pub fn try_copy(&mut self, content: &String) -> Result<(), String> {
+        if let Some(cmd) = self.config.cmd.clone() {
             return CommandBuilder::new(cmd)
-                .sub("{content}", &link)
-                .run(conf.shell_cmd);
+                .sub("{content}", content)
+                .run(self.config.shell_cmd.clone())
+                .map_err(|e| e.to_string());
+        }
+        match &mut self.clipboard {
+            // Some(cb) => Ok(cb.set_text(content)?),
+            Some(cb) => Self::copy(&self.config, cb, content).map_err(|e| e.to_string()),
+            None => Err("The clipboard is not loaded".to_owned()),
         }
     }
 
-    #[cfg(target_os = "linux")]
-    {
-        let clip_type = match conf.as_ref().and_then(|sel| sel.selection) {
-            Some(Selection::Primary) => ClipboardType::Primary,
-            Some(Selection::Both) => ClipboardType::Both,
-            None | Some(Selection::Clipboard) => ClipboardType::Regular,
-        };
-        let mut opts = Options::new();
-        let res = opts.clipboard(clip_type).clone().copy(
-            Source::Bytes(link.clone().into_bytes().into()),
-            MimeType::Autodetect,
-        );
-        // If we successfully connected to wayland compositor, return result
-        if !matches!(res, Err(WaylandConnection(_))) {
-            return res.map_err(|e| e.into());
-        }
-        // Otherwise, try X11
-        match conf.and_then(|sel| sel.selection) {
-            Some(Selection::Primary) => X11ClipboardContext::<Primary>::new()
-                .and_then(|mut s| s.set_contents(link))
-                .map_err(|e| format!("Failed to copy to x11 \"primary\":\n{}", e).into()),
-            Some(Selection::Clipboard) => X11ClipboardContext::<Clipboard>::new()
-                .and_then(|mut s| s.set_contents(link))
-                .map_err(|e| format!("Failed to copy to x11 \"clipboard\":\n{}", e).into()),
-            Some(Selection::Both) => {
-                let cb = X11ClipboardContext::<Clipboard>::new()
-                    .and_then(|mut s| s.set_contents(link.clone()))
-                    .map_err(|e| format!("Failed to copy to x11 \"clipboard\":\n{}", e));
-                let pr = X11ClipboardContext::<Primary>::new()
-                    .and_then(|mut s| s.set_contents(link))
-                    .map_err(|e| format!("Failed to copy to x11 \"primary\":\n{}", e));
-                let mut errors = String::new();
-                if let Err(e) = cb {
-                    errors.push_str(&e);
-                }
-                if let Err(e) = pr {
-                    errors.push_str(&e);
-                }
-                if !errors.is_empty() {
-                    return Err(errors.into());
-                }
-                Ok(())
+    fn copy(
+        config: &ClipboardConfig,
+        clipboard: &mut Clipboard,
+        content: &String,
+    ) -> Result<(), String> {
+        #[cfg(target_os = "linux")]
+        {
+            let errors = config
+                .selection
+                .unwrap_or_default()
+                .get_all()
+                .into_iter()
+                .filter_map(|t| {
+                    let res = clipboard.set().clipboard(t).text(content);
+                    let _ = clipboard.get().clipboard(t).text();
+                    res.err()
+                        .map(|e| format!("Failed to copy to \"{t:?}\" selection:\n{e}"))
+                })
+                .collect::<Vec<String>>();
+            if !errors.is_empty() {
+                return Err(errors.join("\n\n"));
             }
-            None => ClipboardContext::new()
-                .and_then(|mut s| s.set_contents(link))
-                .map_err(|e| format!("Failed to copy to clipboard:\n{}", e).into()),
+            Ok(())
         }
-    }
-    #[cfg(not(target_os = "linux"))]
-    {
-        ClipboardContext::new()
-            .and_then(|mut s| s.set_contents(link))
-            .map_err(|e| format!("Failed to copy to clipboard:\n{}", e).into())
+        #[cfg(not(target_os = "linux"))]
+        {
+            clipboard
+                .set_text(content)
+                .map_err(|e| format!("Failed to copy:\n{e}"))?;
+            let _ = clipboard.get_text();
+            Ok(())
+        }
     }
 }
