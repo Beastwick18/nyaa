@@ -69,6 +69,7 @@ impl DownloadClient for DownloadFileClient {
             }
         };
 
+        // TODO: Substitutions
         let filename = conf.filename.unwrap_or(item.file_name.to_owned());
         let (success_msg, success_ids, errors) = match download_torrent(
             item.torrent_link.to_owned(),

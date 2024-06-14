@@ -6,7 +6,7 @@
   outputs = {
     self,
     nixpkgs,
-  }: let
+  }@inputs: let
     supportedSystems = ["x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin"];
     forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
     pkgsFor = nixpkgs.legacyPackages;
@@ -18,5 +18,7 @@
     devShells = forAllSystems (system: {
       default = pkgsFor.${system}.callPackage ./shell.nix {};
     });
+
+    homeManagerModule = import ./modules/home-manager.nix inputs;
   };
 }

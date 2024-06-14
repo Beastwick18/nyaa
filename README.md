@@ -60,13 +60,16 @@ nix run github:Beastwick18/nyaa
 Add to `inputs` in `flake.nix`
 ```nix
 nyaa = {
-    url = "github:Beastwick18/nyaa";
-    inputs.nixpkgs.follows = "nixpkgs";
+  url = "github:Beastwick18/nyaa";
+  inputs.nixpkgs.follows = "nixpkgs";
 };
 ```
-Add to `home.nix`
+Add to `home.nix` imports and enable
 ```nix
-home.packages = [ inputs.nyaa.packages.x86_64-linux.default ];
+imports = [
+  inputs.nyaa.homeManagerModule
+]
+programs.nyaa.enable = true;
 ```
 
 ### Windows/Linux Binaries

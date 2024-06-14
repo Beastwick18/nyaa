@@ -1,4 +1,4 @@
-{pkgs ? import <nixpkgs> {}}:
+{ pkgs ? import <nixpkgs> {} }:
 pkgs.rustPlatform.buildRustPackage {
   pname = "nyaa";
   version =
