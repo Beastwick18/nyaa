@@ -3,22 +3,27 @@ use std::error::Error;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub enum X11Selection {
+pub enum Selection {
     Primary,
     Clipboard,
+    Both,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ClipboardConfig {
     pub cmd: Option<String>,
     pub shell_cmd: Option<String>,
-    pub x11_selection: Option<X11Selection>,
+    pub selection: Option<Selection>,
+    pub wayland: Option<bool>,
 }
 
 use clipboard::ClipboardProvider as _;
 
 #[cfg(target_os = "linux")]
-use clipboard::x11_clipboard::{Clipboard, Primary, X11ClipboardContext};
+use {
+    clipboard::x11_clipboard::{Clipboard, Primary, X11ClipboardContext},
+    wl_clipboard_rs::copy::{ClipboardType, MimeType, Options, Source},
+};
 
 use clipboard::ClipboardContext;
 
@@ -38,13 +43,45 @@ pub fn copy_to_clipboard(
 
     #[cfg(target_os = "linux")]
     {
-        match conf.and_then(|sel| sel.x11_selection) {
-            Some(X11Selection::Primary) => X11ClipboardContext::<Primary>::new()
+        if conf.as_ref().and_then(|c| c.wayland) == Some(true) {
+            let clip_type = match conf.and_then(|sel| sel.selection) {
+                Some(Selection::Primary) => ClipboardType::Primary,
+                Some(Selection::Both) => ClipboardType::Both,
+                None | Some(Selection::Clipboard) => ClipboardType::Regular,
+            };
+            let mut opts = Options::new();
+            opts.clipboard(clip_type).clone().copy(
+                Source::Bytes(link.into_bytes().into()),
+                MimeType::Autodetect,
+            )?;
+            return Ok(());
+        }
+        match conf.and_then(|sel| sel.selection) {
+            Some(Selection::Primary) => X11ClipboardContext::<Primary>::new()
                 .and_then(|mut s| s.set_contents(link))
                 .map_err(|e| format!("Failed to copy to x11 \"primary\":\n{}", e).into()),
-            Some(X11Selection::Clipboard) => X11ClipboardContext::<Clipboard>::new()
+            Some(Selection::Clipboard) => X11ClipboardContext::<Clipboard>::new()
                 .and_then(|mut s| s.set_contents(link))
                 .map_err(|e| format!("Failed to copy to x11 \"clipboard\":\n{}", e).into()),
+            Some(Selection::Both) => {
+                let cb = X11ClipboardContext::<Clipboard>::new()
+                    .and_then(|mut s| s.set_contents(link.clone()))
+                    .map_err(|e| format!("Failed to copy to x11 \"clipboard\":\n{}", e));
+                let pr = X11ClipboardContext::<Primary>::new()
+                    .and_then(|mut s| s.set_contents(link))
+                    .map_err(|e| format!("Failed to copy to x11 \"primary\":\n{}", e));
+                let mut errors = String::new();
+                if let Err(e) = cb {
+                    errors.push_str(&e);
+                }
+                if let Err(e) = pr {
+                    errors.push_str(&e);
+                }
+                if !errors.is_empty() {
+                    return Err(errors.into());
+                }
+                Ok(())
+            }
             None => ClipboardContext::new()
                 .and_then(|mut s| s.set_contents(link))
                 .map_err(|e| format!("Failed to copy to clipboard:\n{}", e).into()),
