@@ -20,7 +20,7 @@ download_client = "Transmission"
 
 [client.transmission]
 base_url = "http://localhost:9091/transmission/rpc" # required
-username = "user" # all optional here and below are optional
+username = "user" # all optional here and below
 password = "pass"
 use_magnet = true
 labels = [ # must not contain commas in any of the labels
