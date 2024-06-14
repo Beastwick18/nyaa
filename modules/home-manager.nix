@@ -130,12 +130,13 @@ in {
           Example: `bash -c`
         '';
       };
-      x11_selection = lib.mkOption {
+      selection = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
         description = ''
           (optional) Which X11 selection to copy into
-          Possible values are `Primary` or `Clipboard`
+          Possible values are `Primary`, `Clipboard`, `Both`, or `Secondary`
+          `Both` enables `Primary` and `Clipboard`, but not `Secondary`
         '';
       };
     };
