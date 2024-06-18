@@ -1,6 +1,6 @@
 { lib, ... }:
 {
-  options.programs.nyaa.clients.transmission = {
+  options.programs.nyaa.client.transmission = {
     base_url = lib.mkOption {
       type = lib.types.str;
       default = "http://localhost:9091/transmission/rpc";

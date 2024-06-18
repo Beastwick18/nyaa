@@ -1,6 +1,6 @@
 { lib, ... }:
 {
-  options.programs.nyaa.clients.rqbit = {
+  options.programs.nyaa.client.rqbit = {
     base_url = lib.mkOption {
       type = lib.types.str;
       default = "http://localhost:3030";

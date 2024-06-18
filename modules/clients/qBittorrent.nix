@@ -1,7 +1,7 @@
 
 { lib, ... }:
 {
-  options.programs.nyaa.clients.qBittorrent = {
+  options.programs.nyaa.client.qBittorrent = {
     base_url = lib.mkOption {
       type = lib.types.str;
       default = "http://localhost:8080";

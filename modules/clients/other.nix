@@ -1,6 +1,6 @@
 { lib, ... }:
 {
-  options.programs.nyaa.clients.cmd = {
+  options.programs.nyaa.client.cmd = {
     cmd = lib.mkOption {
       type = lib.types.str;
       default = ''curl "{torrent}" > ~/{file}'';
@@ -24,7 +24,7 @@
     };
   };
 
-  options.programs.nyaa.clients.default_app = {
+  options.programs.nyaa.client.default_app = {
     use_magnet = lib.mkOption {
       type = lib.types.nullOr lib.types.bool;
       default = null;
@@ -34,7 +34,7 @@
     };
   };
 
-  options.programs.nyaa.clients.download = {
+  options.programs.nyaa.client.download = {
     save_dir = lib.mkOption {
       type = lib.types.str;
       default = "~/Downloads";
