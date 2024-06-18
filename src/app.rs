@@ -266,7 +266,10 @@ impl App {
         }
 
         let jar = Arc::new(Jar::default());
-        let client = request_client(&jar, ctx)?;
+        let source_rqclient =
+            request_client(&jar, ctx.config.timeout, ctx.config.request_proxy.clone())?;
+        // Don't use proxy for clients
+        let client_rqclient = request_client(&jar, ctx.config.timeout, None)?;
         let mut last_load_abort: Option<AbortHandle> = None;
         let mut last_time: Option<Instant> = None;
 
@@ -322,7 +325,7 @@ impl App {
                                 false,
                                 vec![i.to_owned()],
                                 ctx.config.client.clone(),
-                                client.clone(),
+                                client_rqclient.clone(),
                                 ctx.client,
                             ));
                             ctx.notify(format!("Downloading torrent with {}", ctx.client));
@@ -335,7 +338,7 @@ impl App {
                             true,
                             ctx.batch.clone(),
                             ctx.config.client.clone(),
-                            client.clone(),
+                            client_rqclient.clone(),
                             ctx.client,
                         ));
                         ctx.notify(format!(
@@ -371,7 +374,7 @@ impl App {
                     tx_res.clone(),
                     load_type.clone(),
                     ctx.src,
-                    client.clone(),
+                    source_rqclient.clone(),
                     search,
                     ctx.config.sources.clone(),
                     ctx.theme.clone(),

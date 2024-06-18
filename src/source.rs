@@ -111,13 +111,16 @@ impl SourceInfo {
     }
 }
 
-pub fn request_client(jar: &Arc<Jar>, ctx: &Context) -> Result<reqwest::Client, reqwest::Error> {
+pub fn request_client(
+    jar: &Arc<Jar>,
+    timeout: u64,
+    proxy_url: Option<String>,
+) -> Result<reqwest::Client, reqwest::Error> {
     let mut client = reqwest::Client::builder()
         .gzip(true)
         .cookie_provider(jar.clone())
-        // .cookie_store(true)
-        .timeout(Duration::from_secs(ctx.config.timeout));
-    if let Some(proxy_url) = ctx.config.request_proxy.to_owned() {
+        .timeout(Duration::from_secs(timeout));
+    if let Some(proxy_url) = proxy_url {
         client = client.proxy(Proxy::all(add_protocol(proxy_url, false))?);
     }
     client.build()
