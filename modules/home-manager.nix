@@ -131,12 +131,20 @@ in {
         '';
       };
       selection = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
+        type = lib.types.nullOr (lib.types.either lib.types.str (lib.types.listOf lib.types.str));
         default = null;
         description = ''
-          (optional) Which X11 selection to copy into
-          Possible values are `Primary`, `Clipboard`, `Both`, or `Secondary`
-          `Both` enables `Primary` and `Clipboard`, but not `Secondary`
+          (optional) Which selection to copy into
+          Possible values are `Primary`, `Clipboard`, or `Secondary`
+					Can be a single selection or list of selections to copy to
+        '';
+      };
+      osc52 = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = ''
+					Whether to use OS Code 52 method to copy to the OS clipboard
+					This is not supported on all terminals, so disabling it may be required
         '';
       };
     };

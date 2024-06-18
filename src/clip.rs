@@ -1,5 +1,7 @@
 use arboard::{Clipboard, GetExtLinux, LinuxClipboardKind, SetExtLinux};
+use base64::Engine;
 use serde::{Deserialize, Serialize};
+use serde_with::{serde_as, OneOrMany};
 
 use crate::util::cmd::CommandBuilder;
 
@@ -11,29 +13,25 @@ pub enum Selection {
     Secondary,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
-#[serde(tag = "type")]
-pub enum OneOrMany<T> {
-    One(T),
-    Many(Vec<T>),
-}
-
 impl Selection {
     fn get_kind(&self) -> LinuxClipboardKind {
         match self {
             Self::Primary => LinuxClipboardKind::Primary,
             Self::Clipboard => LinuxClipboardKind::Clipboard,
             Self::Secondary => LinuxClipboardKind::Secondary,
-            //Self::Both => vec![LinuxClipboardKind::Secondary, LinuxClipboardKind::Primary],
         }
     }
 }
 
+#[serde_as]
 #[derive(Clone, Default, Serialize, Deserialize)]
 pub struct ClipboardConfig {
     pub cmd: Option<String>,
     pub shell_cmd: Option<String>,
-    pub selection: Option<OneOrMany<Selection>>,
+    pub osc52: bool,
+    #[serde_as(as = "Option<OneOrMany<_>>")]
+    #[serde(default)]
+    pub selection: Option<Vec<Selection>>,
 }
 
 pub struct ClipboardManager {
@@ -73,6 +71,14 @@ impl ClipboardManager {
                 .run(self.config.shell_cmd.clone())
                 .map_err(|e| e.to_string());
         }
+        if self.config.osc52 {
+            print!(
+                "\x1B]52;c;{}\x07",
+                base64::engine::general_purpose::STANDARD.encode(content)
+            );
+
+            return Ok(());
+        }
         match &mut self.clipboard {
             // Some(cb) => Ok(cb.set_text(content)?),
             Some(cb) => Self::copy(&self.config, cb, content).map_err(|e| e.to_string()),
@@ -88,11 +94,7 @@ impl ClipboardManager {
         #[cfg(target_os = "linux")]
         {
             if let Some(selection) = &config.selection {
-                let x = match selection.to_owned() {
-                    OneOrMany::One(one) => vec![one],
-                    OneOrMany::Many(many) => many,
-                };
-                let errors = x
+                let errors = selection
                     .iter()
                     .map(Selection::get_kind)
                     .filter_map(|t| {
@@ -105,16 +107,13 @@ impl ClipboardManager {
                 if !errors.is_empty() {
                     return Err(errors.join("\n\n"));
                 }
+                return Ok(());
             }
-            Ok(())
         }
-        #[cfg(not(target_os = "linux"))]
-        {
-            clipboard
-                .set_text(content)
-                .map_err(|e| format!("Failed to copy:\n{e}"))?;
-            let _ = clipboard.get_text();
-            Ok(())
-        }
+        clipboard
+            .set_text(content)
+            .map_err(|e| format!("Failed to copy:\n{e}"))?;
+        let _ = clipboard.get_text();
+        Ok(())
     }
 }
