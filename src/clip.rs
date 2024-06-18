@@ -9,16 +9,22 @@ pub enum Selection {
     Clipboard,
     Primary,
     Secondary,
-    Both,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum OneOrMany<T> {
+    One(T),
+    Many(Vec<T>),
 }
 
 impl Selection {
-    fn get_all(self) -> Vec<LinuxClipboardKind> {
+    fn get_kind(&self) -> LinuxClipboardKind {
         match self {
-            Self::Primary => vec![LinuxClipboardKind::Primary],
-            Self::Clipboard => vec![LinuxClipboardKind::Clipboard],
-            Self::Secondary => vec![LinuxClipboardKind::Secondary],
-            Self::Both => vec![LinuxClipboardKind::Clipboard, LinuxClipboardKind::Primary],
+            Self::Primary => LinuxClipboardKind::Primary,
+            Self::Clipboard => LinuxClipboardKind::Clipboard,
+            Self::Secondary => LinuxClipboardKind::Secondary,
+            //Self::Both => vec![LinuxClipboardKind::Secondary, LinuxClipboardKind::Primary],
         }
     }
 }
@@ -27,7 +33,7 @@ impl Selection {
 pub struct ClipboardConfig {
     pub cmd: Option<String>,
     pub shell_cmd: Option<String>,
-    pub selection: Option<Selection>,
+    pub selection: Option<OneOrMany<Selection>>,
 }
 
 pub struct ClipboardManager {
@@ -81,20 +87,24 @@ impl ClipboardManager {
     ) -> Result<(), String> {
         #[cfg(target_os = "linux")]
         {
-            let errors = config
-                .selection
-                .unwrap_or_default()
-                .get_all()
-                .into_iter()
-                .filter_map(|t| {
-                    let res = clipboard.set().clipboard(t).text(content);
-                    let _ = clipboard.get().clipboard(t).text();
-                    res.err()
-                        .map(|e| format!("Failed to copy to \"{t:?}\" selection:\n{e}"))
-                })
-                .collect::<Vec<String>>();
-            if !errors.is_empty() {
-                return Err(errors.join("\n\n"));
+            if let Some(selection) = &config.selection {
+                let x = match selection.to_owned() {
+                    OneOrMany::One(one) => vec![one],
+                    OneOrMany::Many(many) => many,
+                };
+                let errors = x
+                    .iter()
+                    .map(Selection::get_kind)
+                    .filter_map(|t| {
+                        let res = clipboard.set().clipboard(t).text(content);
+                        let _ = clipboard.get().clipboard(t).text();
+                        res.err()
+                            .map(|e| format!("Failed to copy to \"{t:?}\" selection:\n{e}"))
+                    })
+                    .collect::<Vec<String>>();
+                if !errors.is_empty() {
+                    return Err(errors.join("\n\n"));
+                }
             }
             Ok(())
         }
