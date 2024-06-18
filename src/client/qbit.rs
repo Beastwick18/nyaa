@@ -1,9 +1,6 @@
 use std::collections::HashMap;
 
-use reqwest::{
-    header::{COOKIE, REFERER, SET_COOKIE},
-    Response, StatusCode,
-};
+use reqwest::{header::REFERER, Response, StatusCode};
 use serde::{Deserialize, Serialize};
 
 use crate::{app::Context, source::Item, util::conv::add_protocol};
@@ -114,43 +111,28 @@ struct QbitForm {
     // rename: String // Disabled
 }
 
-async fn login(qbit: &QbitConfig, client: &reqwest::Client) -> Result<String, String> {
+async fn login(qbit: &QbitConfig, client: &reqwest::Client) -> Result<(), String> {
     let base_url = add_protocol(qbit.base_url.clone(), false);
     let url = format!("{}/api/v2/auth/login", base_url);
     let mut params = HashMap::new();
     params.insert("username", qbit.username.to_owned());
     params.insert("password", qbit.password.to_owned());
     let res = client.post(url).form(&params).send().await;
-    let res = res.map_err(|e| format!("Failed to send data to qBittorrent\n{}", e))?;
-    let headers = res.headers().clone();
-    let cookie = headers.get(SET_COOKIE).ok_or(format!(
-        "Failed to get cookie from qBittorrent:\n{}",
-        res.text().await.unwrap_or_default()
-    ))?;
-
-    let cookie = cookie
-        .to_str()
-        .map_err(|e| format!("Failed to parse cookie:\n{}", e))?;
-    cookie
-        .split(';')
-        .find(|c| c.split_once('=').is_some_and(|s| s.0 == "SID"))
-        .ok_or("No cookie returned by qBittorrent".to_owned())
-        .map(|s| s.to_owned())
+    let _ = res.map_err(|e| format!("Failed to send data to qBittorrent\n{}", e))?;
+    Ok(())
 }
 
-async fn logout(qbit: &QbitConfig, sid: String, client: &reqwest::Client) {
+async fn logout(qbit: &QbitConfig, client: &reqwest::Client) {
     let base_url = add_protocol(qbit.base_url.clone(), false);
     let _ = client
         .get(format!("{}/api/v2/auth/logout", base_url))
         .header(REFERER, base_url)
-        .header(COOKIE, sid)
         .send()
         .await;
 }
 
 async fn add_torrent(
     qbit: &QbitConfig,
-    sid: String,
     links: String,
     client: &reqwest::Client,
 ) -> Result<Response, reqwest::Error> {
@@ -160,7 +142,6 @@ async fn add_torrent(
     client
         .post(url)
         .header(REFERER, base_url)
-        .header(COOKIE, sid)
         .form(&qbit.to_form(links))
         .send()
         .await
@@ -199,12 +180,9 @@ impl DownloadClient for QbitClient {
                 ));
             }
         }
-        let sid = match login(&qbit, &client).await {
-            Ok(s) => s,
-            Err(e) => {
-                return DownloadResult::error(DownloadError(format!("Failed to get SID:\n{}", e)))
-            }
-        };
+        if let Err(e) = login(&qbit, &client).await {
+            return DownloadResult::error(DownloadError(format!("Failed to get SID:\n{}", e)));
+        }
         let links = match qbit.use_magnet.unwrap_or(true) {
             true => items
                 .iter()
@@ -217,7 +195,7 @@ impl DownloadClient for QbitClient {
                 .collect::<Vec<String>>()
                 .join("\n"),
         };
-        let res = match add_torrent(&qbit, sid.to_owned(), links, &client).await {
+        let res = match add_torrent(&qbit, links, &client).await {
             Ok(res) => res,
             Err(e) => {
                 return DownloadResult::error(DownloadError(format!(
@@ -233,7 +211,7 @@ impl DownloadClient for QbitClient {
             )));
         }
 
-        logout(&qbit, sid.clone(), &client).await;
+        logout(&qbit, &client).await;
 
         DownloadResult::new(
             format!("Successfully sent {} torrents to qBittorrent", items.len()),

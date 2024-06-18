@@ -16,7 +16,7 @@ win:
 	cargo build --target $(WINDOWS_TARGET) --release
 
 linux:
-	cargo build --target $(LINUX_TARGET) --release
+	cargo build --target $(LINUX_TARGET) --profile=github
 
 fedora:
 	@mkdir -p "release/$(VERSION)"

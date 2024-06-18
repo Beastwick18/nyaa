@@ -18,7 +18,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Clippy
-      run: cargo clippy --verbose
+      run: cargo clippy --verbose --release
   test:
 
     runs-on: ubuntu-latest
@@ -27,4 +27,4 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test --verbose --release

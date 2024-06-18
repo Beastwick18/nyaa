@@ -1,5 +1,4 @@
 use crossterm::event::{KeyCode, KeyModifiers, MediaKeyCode, ModifierKeyCode};
-use regex::Regex;
 
 pub fn add_protocol<S: Into<String>>(url: S, default_https: bool) -> String {
     let protocol = match default_https {
@@ -7,12 +6,12 @@ pub fn add_protocol<S: Into<String>>(url: S, default_https: bool) -> String {
         false => "http",
     };
     let url = url.into();
-    let re = Regex::new(r"^(https?|socks5)?://.+$").unwrap();
-    match re.is_match(&url) {
-        true => url,
-        // Assume http(s) if not present
-        false => format!("{}://{}", protocol, url),
+    if let Some((method, other)) = url.split_once(':') {
+        if matches!(method, "http" | "https" | "socks5") && matches!(other.get(..2), Some("//")) {
+            return url;
+        }
     }
+    format!("{}://{}", protocol, url)
 }
 
 pub fn to_bytes(size: &str) -> usize {
