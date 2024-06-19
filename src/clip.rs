@@ -1,9 +1,8 @@
 use arboard::{Clipboard, GetExtLinux, LinuxClipboardKind, SetExtLinux};
 use base64::Engine;
 use serde::{Deserialize, Serialize};
-use serde_with::{serde_as, OneOrMany};
 
-use crate::util::cmd::CommandBuilder;
+use crate::util::{cmd::CommandBuilder, types::OneOrMany};
 
 #[derive(Default, Copy, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum Selection {
@@ -23,15 +22,12 @@ impl Selection {
     }
 }
 
-#[serde_as]
 #[derive(Clone, Default, Serialize, Deserialize)]
 pub struct ClipboardConfig {
     pub cmd: Option<String>,
     pub shell_cmd: Option<String>,
     pub osc52: bool,
-    #[serde_as(as = "Option<OneOrMany<_>>")]
-    #[serde(default)]
-    pub selection: Option<Vec<Selection>>,
+    pub selection: Option<OneOrMany<Selection>>,
 }
 
 pub struct ClipboardManager {
@@ -93,8 +89,9 @@ impl ClipboardManager {
     ) -> Result<(), String> {
         #[cfg(target_os = "linux")]
         {
-            if let Some(selection) = &config.selection {
-                let errors = selection
+            if let Some(selections) = config.selection.to_owned() {
+                let errors = selections
+                    .vec()
                     .iter()
                     .map(Selection::get_kind)
                     .filter_map(|t| {

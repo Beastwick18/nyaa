@@ -1,4 +1,4 @@
-use std::{env, io::stdout};
+use std::io::stdout;
 
 use app::App;
 use config::AppConfig;
@@ -17,6 +17,35 @@ pub mod theme;
 pub mod util;
 pub mod widget;
 
+struct Args {
+    config_path: Option<String>,
+}
+
+fn parse_args() -> Result<Args, lexopt::Error> {
+    use lexopt::prelude::*;
+
+    let mut config_path = None;
+    let mut parser = lexopt::Parser::from_env();
+    while let Some(arg) = parser.next()? {
+        match arg {
+            Short('c') | Long("config") => {
+                config_path = Some(parser.value()?.string()?);
+            }
+            Short('v') | Short('V') | Long("version") => {
+                println!("nyaa v{}", env!("CARGO_PKG_VERSION"));
+                std::process::exit(0);
+            }
+            Long("help") => {
+                println!("Usage: nyaa [-v|-V|--version] [-c|--config=/path/to/config/folder]");
+                std::process::exit(0);
+            }
+            _ => return Err(arg.unexpected()),
+        }
+    }
+
+    Ok(Args { config_path })
+}
+
 #[tokio::main()]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let default_panic = std::panic::take_hook();
@@ -27,22 +56,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         std::process::exit(1);
     }));
 
-    // TODO: Use real command line package
-    let args: Vec<String> = env::args().collect();
-    for arg in args {
-        if arg == "--version" || arg == "-V" || arg == "-v" {
-            println!("nyaa v{}", env!("CARGO_PKG_VERSION"));
-            return Ok(());
-        }
-    }
+    let args = parse_args()?;
     util::term::setup_terminal()?;
     let backend = CrosstermBackend::new(stdout());
     let mut terminal = Terminal::new(backend)?;
 
     let mut app = App::default();
     let sync = AppSync {};
+    let config = match args.config_path {
+        Some(path) => AppConfig::from_path(path),
+        None => AppConfig::new(),
+    }?;
 
-    app.run_app::<_, _, AppConfig, false>(&mut terminal, sync)
+    app.run_app::<_, _, AppConfig, false>(&mut terminal, sync, config)
         .await?;
 
     util::term::reset_terminal()?;

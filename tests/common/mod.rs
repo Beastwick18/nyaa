@@ -4,7 +4,6 @@ use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 use nyaa::{
     app::App,
     client::{Client, ClientConfig, DownloadResult},
-    clip::ClipboardConfig,
     config::{Config, ConfigManager},
     results::Results,
     source::{Item, SourceResults},
@@ -22,7 +21,17 @@ pub struct TestSync {
     events: Vec<Event>,
 }
 
-pub struct TestConfig;
+pub struct TestConfig {
+    config_path: PathBuf,
+}
+
+impl TestConfig {
+    fn new() -> Self {
+        Self {
+            config_path: PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/config"),
+        }
+    }
+}
 
 pub type QueryFn = fn(
     nyaa::app::LoadType,
@@ -120,8 +129,9 @@ pub async fn run_app<S: EventSync + Clone>(
     let _ = terminal.clear();
 
     let mut app = App::default();
+    let config = TestConfig::new();
 
-    app.run_app::<_, S, TestConfig, true>(&mut terminal, sync)
+    app.run_app::<_, S, TestConfig, true>(&mut terminal, sync, config)
         .await?;
     Ok(terminal)
 }
@@ -187,22 +197,15 @@ impl EventSync for TestSync {
 }
 
 impl ConfigManager for TestConfig {
-    fn load() -> Result<nyaa::config::Config, Box<dyn Error>> {
-        Ok(Config {
-            save_config_on_change: false,
-            clipboard: Some(ClipboardConfig {
-                cmd: Some("".to_owned()),
-                ..Default::default()
-            }),
-            ..Default::default()
-        })
+    fn load(&self) -> Result<Config, Box<dyn Error>> {
+        Ok(Config::default())
     }
 
-    fn store(_cfg: &nyaa::config::Config) -> Result<(), Box<dyn Error>> {
+    fn store(&self, _cfg: &Config) -> Result<(), Box<dyn Error>> {
         Ok(())
     }
 
-    fn path() -> Result<std::path::PathBuf, Box<dyn Error>> {
-        Ok(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/config"))
+    fn path(&self) -> PathBuf {
+        self.config_path.clone()
     }
 }

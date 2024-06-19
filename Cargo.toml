@@ -32,7 +32,6 @@ unicode-width = "0.1.13"
 toml = "0.8.14"
 directories = "5.0.1"
 serde = { version = "1.0.203", default-features = false }
-serde_with = { version = "3.8.1", features = ["alloc", "macros"], default-features = false }
 scraper = { version = "0.19.0", default-features = false }
 rss = { version = "2.0.8", default-features = false }
 chrono = { version = "0.4.38", features = ["clock"], default-features = false }
@@ -48,6 +47,7 @@ strum = { version = "0.26.2", default-features = false }
 ratatui-image = { version = "1.0.1", optional = true , default-features = false }
 image = { version = "0.25.1", optional = true , default-features = false }
 base64 = { version = "0.22.1", features = ["alloc"], default-features = false }
+lexopt = "0.3.0"
 
 [lib]
 name = "nyaa"

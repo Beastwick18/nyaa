@@ -3,6 +3,7 @@ use std::{
     fs::{self, File, OpenOptions},
     io::{ErrorKind, Read, Write as _},
     path::{Path, PathBuf},
+    str::FromStr,
 };
 
 use crate::{
@@ -16,15 +17,30 @@ use crate::{
 use directories::ProjectDirs;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
+pub static CONFIG_FILE: &str = "config.toml";
+
 pub trait ConfigManager {
-    fn load() -> Result<Config, Box<dyn Error>>;
-    fn store(cfg: &Config) -> Result<(), Box<dyn Error>>;
-    fn path() -> Result<PathBuf, Box<dyn Error>>;
+    fn load(&self) -> Result<Config, Box<dyn Error>>;
+    fn store(&self, cfg: &Config) -> Result<(), Box<dyn Error>>;
+    fn path(&self) -> PathBuf;
 }
 
-pub struct AppConfig;
+pub struct AppConfig {
+    config_path: PathBuf,
+}
 
-pub static CONFIG_FILE: &str = "config";
+impl AppConfig {
+    pub fn new() -> Result<Self, Box<dyn Error>> {
+        Ok(Self {
+            config_path: get_configuration_folder(APP_NAME)?,
+        })
+    }
+    pub fn from_path(config_path: String) -> Result<Self, Box<dyn Error>> {
+        Ok(Self {
+            config_path: PathBuf::from_str(&config_path)?,
+        })
+    }
+}
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(default)]
@@ -70,20 +86,21 @@ impl Default for Config {
 }
 
 impl ConfigManager for AppConfig {
-    fn load() -> Result<Config, Box<dyn Error>> {
-        get_configuration_file_path(APP_NAME, CONFIG_FILE).and_then(load_path)
+    fn load(&self) -> Result<Config, Box<dyn Error>> {
+        load_path(&self.config_path.join(CONFIG_FILE))
     }
-    fn store(cfg: &Config) -> Result<(), Box<dyn Error>> {
-        get_configuration_file_path(APP_NAME, CONFIG_FILE).and_then(|p| store_path(p, cfg))
+    fn store(&self, cfg: &Config) -> Result<(), Box<dyn Error>> {
+        store_path(&self.config_path.join(CONFIG_FILE), cfg)
     }
-    fn path() -> Result<PathBuf, Box<dyn Error>> {
-        get_configuration_folder(APP_NAME)
+    fn path(&self) -> PathBuf {
+        self.config_path.clone()
     }
 }
 
 impl Config {
     pub fn apply<C: ConfigManager>(
         &self,
+        config_manager: &C,
         ctx: &mut Context,
         w: &mut Widgets,
     ) -> Result<(), Box<dyn Error>> {
@@ -102,7 +119,7 @@ impl Config {
         }
 
         ctx.client.load_config(ctx);
-        let path = C::path()?;
+        let path = config_manager.path();
         // Load user-defined themes
         theme::load_user_themes(ctx, path)?;
         // Set selected theme

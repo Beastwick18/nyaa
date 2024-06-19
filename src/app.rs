@@ -235,6 +235,7 @@ impl App {
         &mut self,
         terminal: &mut Terminal<B>,
         sync: S,
+        config_manager: C,
     ) -> Result<(), Box<dyn Error>> {
         let ctx = &mut Context::default();
 
@@ -248,10 +249,10 @@ impl App {
 
         tokio::task::spawn(sync.clone().read_event_loop(tx_evt));
 
-        match C::load() {
+        match config_manager.load() {
             Ok(config) => {
                 ctx.failed_config_load = false;
-                if let Err(e) = config.apply::<C>(ctx, &mut self.widgets) {
+                if let Err(e) = config.apply::<C>(&config_manager, ctx, &mut self.widgets) {
                     ctx.show_error(e);
                 } else if let Err(e) = ctx.save_config() {
                     ctx.show_error(e);
@@ -259,7 +260,11 @@ impl App {
             }
             Err(e) => {
                 ctx.show_error(format!("Failed to load config:\n{}", e));
-                if let Err(e) = ctx.config.clone().apply::<C>(ctx, &mut self.widgets) {
+                if let Err(e) =
+                    ctx.config
+                        .clone()
+                        .apply::<C>(&config_manager, ctx, &mut self.widgets)
+                {
                     ctx.show_error(e);
                 }
             }
@@ -281,7 +286,7 @@ impl App {
 
         while !ctx.should_quit {
             if ctx.should_save_config && ctx.config.save_config_on_change {
-                if let Err(e) = C::store(&ctx.config) {
+                if let Err(e) = config_manager.store(&ctx.config) {
                     ctx.show_error(e);
                 }
             }
