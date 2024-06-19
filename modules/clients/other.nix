@@ -49,5 +49,19 @@
         The filename to save the `.torrent` file as (optional)
       '';
     };
+    overwrite = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = ''
+        Whether to overwrite the file if it exists
+      '';
+    };
+    create_root_folder = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = ''
+        Whether to create the parent directory if it does not exist
+      '';
+    };
   };
 }

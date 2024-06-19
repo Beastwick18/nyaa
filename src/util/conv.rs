@@ -1,29 +1,36 @@
 use crossterm::event::{KeyCode, KeyModifiers, MediaKeyCode, ModifierKeyCode};
 
+pub fn get_hash(magnet: String) -> Option<String> {
+    magnet
+        .split_once("xt=urn:btih:")
+        .and_then(|m| m.1.split_once('&').map(|m| m.0.to_owned()))
+}
+
 pub fn add_protocol<S: Into<String>>(url: S, default_https: bool) -> String {
-    let protocol = match default_https {
-        true => "https",
-        false => "http",
-    };
     let url = url.into();
     if let Some((method, other)) = url.split_once(':') {
         if matches!(method, "http" | "https" | "socks5") && matches!(other.get(..2), Some("//")) {
             return url;
         }
     }
+    let protocol = match default_https {
+        true => "https",
+        false => "http",
+    };
     format!("{}://{}", protocol, url)
 }
 
 pub fn to_bytes(size: &str) -> usize {
     let mut split = size.split_whitespace();
-    let b = split.next().unwrap_or("0");
-    let unit = split.last().unwrap_or("B");
-    let f = b.parse::<f64>().unwrap_or(0.0);
-    let power = match unit.chars().next().unwrap_or('B') {
-        'T' => 4,
-        'G' => 3,
-        'M' => 2,
-        'K' => 1,
+    let f = split
+        .next()
+        .and_then(|b| b.parse::<f64>().ok())
+        .unwrap_or(-1.);
+    let power = match split.last().and_then(|u| u.chars().next()) {
+        Some('T') => 4,
+        Some('G') => 3,
+        Some('M') => 2,
+        Some('K') => 1,
         _ => 0,
     };
     (1024_f64.powi(power) * f) as usize

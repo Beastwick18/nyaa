@@ -3,7 +3,7 @@ use std::{error::Error, fs, path::PathBuf};
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 
-use crate::{app::Context, source::Item};
+use crate::{app::Context, source::Item, util::conv::get_hash};
 
 use super::{multidownload, ClientConfig, DownloadClient, DownloadError, DownloadResult};
 
@@ -12,6 +12,8 @@ use super::{multidownload, ClientConfig, DownloadClient, DownloadError, Download
 pub struct DownloadConfig {
     save_dir: String,
     filename: Option<String>,
+    overwrite: bool,
+    create_root_folder: bool,
 }
 
 pub struct DownloadFileClient;
@@ -28,6 +30,8 @@ impl Default for DownloadConfig {
         DownloadConfig {
             save_dir: download_dir.to_string_lossy().to_string(),
             filename: None,
+            overwrite: true,
+            create_root_folder: true,
         }
     }
 }
@@ -43,6 +47,8 @@ async fn download_torrent(
     torrent_link: String,
     filename: String,
     save_dir: String,
+    create_root_folder: bool,
+    overwrite: bool,
     client: reqwest::Client,
 ) -> Result<String, Box<dyn Error>> {
     let response = client.get(torrent_link.to_owned()).send().await?;
@@ -52,10 +58,20 @@ async fn download_torrent(
         return Err(format!("{}\nInvalid response code: {}", torrent_link, code).into());
     }
     let content = response.bytes().await?;
-    let mut buf = PathBuf::from(shellexpand::tilde(&save_dir).to_string());
-    buf.push(filename);
-    fs::write(buf.clone(), content)?;
-    Ok(buf.to_string_lossy().to_string())
+    let folder = PathBuf::from(shellexpand::full(&save_dir)?.to_string());
+    let filepath = folder.join(filename);
+    if !overwrite && filepath.exists() {
+        return Err(format!(
+            "{} already exists.\nEnable \"overwrite\" to overwrite files",
+            filepath.to_string_lossy().to_string()
+        )
+        .into());
+    }
+    if create_root_folder && !folder.exists() {
+        fs::create_dir_all(folder)?;
+    }
+    fs::write(filepath.clone(), content)?;
+    Ok(filepath.to_string_lossy().to_string())
 }
 
 impl DownloadClient for DownloadFileClient {
@@ -70,11 +86,29 @@ impl DownloadClient for DownloadFileClient {
         };
 
         // TODO: Substitutions
-        let filename = conf.filename.unwrap_or(item.file_name.to_owned());
+        let filename = conf
+            .filename
+            .map(|f| {
+                f.replace("{file}", &item.file_name)
+                    .replace(
+                        "{basename}",
+                        item.file_name
+                            .split_once(".torrent")
+                            .map(|f| f.0)
+                            .unwrap_or(&item.file_name),
+                    )
+                    .replace(
+                        "{hash}",
+                        &get_hash(item.magnet_link).unwrap_or("NO_HASH_FOUND".to_string()),
+                    )
+            })
+            .unwrap_or(item.file_name.to_owned());
         let (success_msg, success_ids, errors) = match download_torrent(
             item.torrent_link.to_owned(),
             filename,
             conf.save_dir.clone(),
+            conf.create_root_folder,
+            conf.overwrite,
             client,
         )
         .await
