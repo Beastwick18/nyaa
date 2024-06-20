@@ -28,6 +28,18 @@ impl Default for ThemePopup {
     }
 }
 
+fn preview_theme(idx: usize, ctx: &mut Context) {
+    if let Some((_, theme)) = ctx.themes.get_index(idx) {
+        ctx.theme = theme.clone();
+        ctx.results.table = ctx.src.format_table(
+            &ctx.results.response.items,
+            &ctx.results.search,
+            &ctx.config.sources,
+            &ctx.theme,
+        );
+    }
+}
+
 impl Widget for ThemePopup {
     fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
         let buf = f.buffer_mut();
@@ -84,18 +96,26 @@ impl Widget for ThemePopup {
             match code {
                 KeyCode::Esc | KeyCode::Char('t') | KeyCode::Char('q') => {
                     ctx.mode = Mode::Normal;
+                    if Some(self.selected) != self.table.selected() {
+                        preview_theme(self.selected, ctx);
+                    }
                 }
                 KeyCode::Char('j') | KeyCode::Down => {
-                    self.table.next_wrap(ctx.themes.len(), 1);
+                    let idx = self.table.next_wrap(ctx.themes.len(), 1);
+                    preview_theme(idx, ctx);
                 }
                 KeyCode::Char('k') | KeyCode::Up => {
-                    self.table.next_wrap(ctx.themes.len(), -1);
+                    let idx = self.table.next_wrap(ctx.themes.len(), -1);
+                    preview_theme(idx, ctx);
                 }
                 KeyCode::Char('G') => {
-                    self.table.select(ctx.themes.len() - 1);
+                    let idx = ctx.themes.len().saturating_sub(1);
+                    self.table.select(idx);
+                    preview_theme(idx, ctx);
                 }
                 KeyCode::Char('g') => {
                     self.table.select(0);
+                    preview_theme(0, ctx);
                 }
                 KeyCode::Enter => {
                     let idx = self.table.selected().unwrap_or(0);
