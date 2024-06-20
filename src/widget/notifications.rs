@@ -98,14 +98,7 @@ impl NotificationWidget {
             let res = x.update(deltatime, area);
             res || acc
         });
-        self.notifs.retain(|n| !n.is_done());
-        res
-    }
-}
-
-impl Widget for NotificationWidget {
-    fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
-        let res = self
+        let finished = self
             .notifs
             .iter()
             .filter_map(|n| match n.is_done() {
@@ -113,14 +106,22 @@ impl Widget for NotificationWidget {
                 false => None,
             })
             .collect::<Vec<(u16, u16)>>();
-        for (offset, height) in res.iter() {
+        // Offset unfinished notifications by space left from finished notifs
+        for (offset, height) in finished.iter() {
             self.notifs.iter_mut().for_each(|n| {
                 if n.is_error() && n.offset() > *offset {
                     n.add_offset(-(*height as i32));
                 }
             })
         }
+        // Delete finished notifications
+        self.notifs.retain(|n| !n.is_done());
+        res
+    }
+}
 
+impl Widget for NotificationWidget {
+    fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
         for n in self.notifs.iter_mut() {
             n.draw(f, ctx, area);
         }
