@@ -300,6 +300,9 @@ impl App {
                 ctx.notifications.clear();
             }
             if !ctx.errors.is_empty() {
+                if TEST {
+                    return Err(ctx.errors.join("\n\n").into());
+                }
                 ctx.errors
                     .clone()
                     .into_iter()
