@@ -280,8 +280,11 @@ impl App {
         let mut last_load_abort: Option<AbortHandle> = None;
         let mut last_time: Option<Instant> = None;
 
-        let (clipboard, err) =
-            &mut ClipboardManager::new(ctx.config.clipboard.clone().unwrap_or_default());
+        let (clipboard, err) = &mut if TEST {
+            ClipboardManager::empty(ctx.config.clipboard.clone().unwrap_or_default())
+        } else {
+            ClipboardManager::new(ctx.config.clipboard.clone().unwrap_or_default())
+        };
         if let Some(err) = err {
             ctx.show_error(err);
         }
@@ -551,6 +554,7 @@ impl App {
     ) {
         if TEST && Event::FocusLost == *evt {
             ctx.quit();
+            return;
         }
 
         if let Event::Key(KeyEvent {

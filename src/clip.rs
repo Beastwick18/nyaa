@@ -60,6 +60,16 @@ impl ClipboardManager {
         )
     }
 
+    pub fn empty(conf: ClipboardConfig) -> (ClipboardManager, Option<String>) {
+        (
+            Self {
+                clipboard: None,
+                config: conf,
+            },
+            None,
+        )
+    }
+
     pub fn try_copy(&mut self, content: &String) -> Result<(), String> {
         if let Some(cmd) = self.config.cmd.clone() {
             return CommandBuilder::new(cmd)
