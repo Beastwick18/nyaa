@@ -24,13 +24,6 @@ impl Default for CaptchaPopup {
     }
 }
 
-impl InputWidget {
-    pub fn clear(&mut self) {
-        self.input.clear();
-        self.cursor = 0;
-    }
-}
-
 impl Widget for CaptchaPopup {
     fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
         let center = area.inner(&Margin {

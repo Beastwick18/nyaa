@@ -67,8 +67,7 @@ impl Widget for PagePopup {
                 KeyCode::Esc => {
                     ctx.mode = Mode::Normal;
                     // Clear input on Esc
-                    self.input.input.clear();
-                    self.input.cursor = 0;
+                    self.input.clear();
                 }
                 KeyCode::Enter => {
                     ctx.page = max(
@@ -81,8 +80,7 @@ impl Widget for PagePopup {
                     ctx.mode = Mode::Loading(LoadType::Searching);
 
                     // Clear input on Enter
-                    self.input.input.clear();
-                    self.input.cursor = 0;
+                    self.input.clear();
                 }
                 _ => {}
             }

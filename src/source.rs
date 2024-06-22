@@ -297,7 +297,9 @@ impl Sources {
         w.filter.table.select(w.filter.selected);
 
         w.search.input.input = self.default_search(&ctx.config.sources);
-        w.search.input.cursor = w.search.input.input.len();
+        w.search
+            .input
+            .set_cursor(w.search.input.input.chars().count());
 
         // Go back to first page when changing source
         ctx.page = 1;

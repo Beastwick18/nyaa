@@ -658,6 +658,7 @@ impl App {
                                 Some(imdb) => imdb,
                                 None => return ctx.show_error("No imdb ID found for this item."),
                             },
+                            'n' => item.title,
                             _ => return,
                         };
                         match clipboard.try_copy(&link) {
@@ -665,7 +666,7 @@ impl App {
                             Err(e) => ctx.show_error(e),
                         }
                     }
-                    None if ['t', 'm', 'p', 'i'].contains(&c) => {
+                    None if ['t', 'm', 'p', 'i', 'n'].contains(&c) => {
                         ctx.show_error("Failed to copy:\nFailed to get item")
                     }
                     None => {}

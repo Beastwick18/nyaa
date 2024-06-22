@@ -419,7 +419,10 @@ impl super::Widget for ResultsWidget {
             ("P, H", "First Page"),
             ("r", "Reload"),
             ("o", "Open in browser"),
-            ("yt, ym, yp, yi", "Copy torrent/magnet/post/imdb id"),
+            (
+                "yt, ym, yp, yi, yn",
+                "Copy torrent/magnet/post link/imdb id/name",
+            ),
             ("Space", "Toggle item for batch download"),
             ("Ctrl-Space", "Multi-line select torrents"),
             ("Tab/Shift-Tab", "Switch to Batches"),

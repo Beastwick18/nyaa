@@ -24,7 +24,7 @@ pub struct SearchWidget {
 impl Default for SearchWidget {
     fn default() -> Self {
         SearchWidget {
-            input: InputWidget::new(300, Some(|_| true)),
+            input: InputWidget::new(4, Some(|_| true)),
         }
     }
 }
