@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{app::Context, source::Item};
+use crate::source::Item;
 
 use super::{multidownload, ClientConfig, DownloadClient, DownloadError, DownloadResult};
 
@@ -12,10 +12,10 @@ pub struct DefaultAppConfig {
 
 pub struct DefaultAppClient;
 
-pub fn load_config(app: &mut Context) {
-    if app.config.client.default_app.is_none() {
+pub fn load_config(cfg: &mut ClientConfig) {
+    if cfg.default_app.is_none() {
         let def = DefaultAppConfig::default();
-        app.config.client.default_app = Some(def);
+        cfg.default_app = Some(def);
     }
 }
 

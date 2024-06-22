@@ -1,11 +1,12 @@
-use reqwest::Url;
+use std::{error::Error, fs};
+
 use serde::{Deserialize, Serialize};
 use transmission_rpc::{
     types::{BasicAuth, TorrentAddArgs},
     TransClient,
 };
 
-use crate::{app::Context, source::Item, util::conv::add_protocol};
+use crate::{source::Item, util::conv::add_protocol};
 
 use super::{multidownload, ClientConfig, DownloadClient, DownloadError, DownloadResult};
 
@@ -23,6 +24,7 @@ pub struct TransmissionConfig {
     pub base_url: String,
     pub username: Option<String>,
     pub password: Option<String>,
+    pub password_file: Option<String>,
     pub use_magnet: Option<bool>,
     pub labels: Option<Vec<String>>,
     pub paused: Option<bool>,
@@ -39,6 +41,7 @@ impl Default for TransmissionConfig {
             base_url: "http://localhost:9091/transmission/rpc".to_owned(),
             username: None,
             password: None,
+            password_file: None,
             use_magnet: None,
             labels: None,
             paused: None,
@@ -67,26 +70,38 @@ async fn add_torrent(
     conf: &TransmissionConfig,
     link: String,
     client: reqwest::Client,
-) -> Result<(), String> {
-    let base_url = add_protocol(conf.base_url.clone(), false);
-    let url = match base_url.parse::<Url>() {
-        Ok(url) => url,
-        Err(e) => return Err(format!("Failed to parse base_url \"{}\":\n{}", base_url, e)),
+) -> Result<(), Box<dyn Error + Send + Sync>> {
+    let base_url = add_protocol(conf.base_url.clone(), false)?;
+    let mut client = TransClient::new_with_client(base_url, client);
+
+    let pass = match conf.password.as_ref() {
+        Some(pass) => Some(pass.to_owned()),
+        None => match conf.password_file.as_ref() {
+            Some(file) => {
+                let contents = fs::read_to_string(file)?;
+                let expand = shellexpand::full(contents.trim())?;
+                Some(expand.to_string())
+            }
+            None => None,
+        },
     };
-    let mut client = TransClient::new_with_client(url.to_owned(), client);
-    if let (Some(user), Some(password)) = (conf.username.clone(), conf.password.clone()) {
-        client.set_auth(BasicAuth { user, password });
+    if let (Some(user), Some(password)) = (conf.username.as_ref(), pass) {
+        client.set_auth(BasicAuth {
+            user: user.clone(),
+            password: password.clone(),
+        });
     }
     let add = conf.clone().to_form(link);
-    match client.torrent_add(add).await {
-        Ok(_) => Ok(()),
-        Err(e) => Err(format!("Failed to add torrent:\n{}", e)),
-    }
+    client
+        .torrent_add(add)
+        .await
+        .map_err(|e| format!("Failed to add torrent:\n{}", e))?;
+    Ok(())
 }
 
-pub fn load_config(app: &mut Context) {
-    if app.config.client.transmission.is_none() {
-        app.config.client.transmission = Some(TransmissionConfig::default());
+pub fn load_config(cfg: &mut ClientConfig) {
+    if cfg.transmission.is_none() {
+        cfg.transmission = Some(TransmissionConfig::default());
     }
 }
 
@@ -129,7 +144,7 @@ impl DownloadClient for TransmissionClient {
         client: reqwest::Client,
     ) -> DownloadResult {
         multidownload::<TransmissionClient, _>(
-            |s| format!("Successfully sent {} torrents to rqbit", s),
+            |s| format!("Successfully sent {} torrents to Transmission", s),
             &items,
             &conf,
             &client,

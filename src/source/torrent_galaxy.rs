@@ -253,7 +253,7 @@ fn get_url(
     base_url: String,
     search: &SearchQuery,
 ) -> Result<(Url, Url), Box<dyn Error + Send + Sync>> {
-    let base_url = Url::parse(&add_protocol(base_url, true))?.join("torrents.php")?;
+    let base_url = add_protocol(base_url, true)?.join("torrents.php")?;
 
     let query = encode(&search.query);
 

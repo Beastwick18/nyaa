@@ -80,6 +80,14 @@ in {
       '';
     };
 
+    hot_reload_config = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = ''
+        Whether to automatically reload config/user-themes once modified
+      '';
+    };
+
     notifications = {
       position = lib.mkOption {
         type = lib.types.nullOr lib.types.str;

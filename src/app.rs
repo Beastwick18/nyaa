@@ -25,7 +25,7 @@ use crate::{
     source::{
         nyaa_html::NyaaHtmlSource, request_client, Item, Source, SourceInfo, SourceResults, Sources,
     },
-    sync::{EventSync, SearchQuery},
+    sync::{EventSync, ReloadType, SearchQuery},
     theme::{self, Theme},
     util::conv::key_to_string,
     widget::{
@@ -246,13 +246,15 @@ impl App {
             mpsc::channel::<Result<SourceResults, Box<dyn Error + Send + Sync>>>(32);
         let (tx_evt, mut rx_evt) = mpsc::channel::<Event>(100);
         let (tx_dl, mut rx_dl) = mpsc::channel::<DownloadResult>(100);
+        let (tx_cfg, mut rx_cfg) = mpsc::channel::<ReloadType>(1);
 
         tokio::task::spawn(sync.clone().read_event_loop(tx_evt));
+        tokio::task::spawn(sync.clone().watch_config_loop(tx_cfg));
 
         match config_manager.load() {
             Ok(config) => {
                 ctx.failed_config_load = false;
-                if let Err(e) = config.apply::<C>(&config_manager, ctx, &mut self.widgets) {
+                if let Err(e) = config.full_apply(config_manager.path(), ctx, &mut self.widgets) {
                     ctx.show_error(e);
                 } else if let Err(e) = ctx.save_config() {
                     ctx.show_error(e);
@@ -263,7 +265,7 @@ impl App {
                 if let Err(e) =
                     ctx.config
                         .clone()
-                        .apply::<C>(&config_manager, ctx, &mut self.widgets)
+                        .full_apply(config_manager.path(), ctx, &mut self.widgets)
                 {
                     ctx.show_error(e);
                 }
@@ -453,6 +455,50 @@ impl App {
                         }
                         break;
                     }
+                    Some(notif) = rx_cfg.recv() => {
+                        match notif {
+                            ReloadType::Config => {
+                                match config_manager.load() {
+                                    Ok(config) => {
+                                        match config.partial_apply(ctx, &mut self.widgets) {
+                                            Ok(()) => ctx.notify("Reloaded config".to_owned()),
+                                            Err(e) => ctx.show_error(e),
+                                        }
+                                    }
+                                    Err(e) => ctx.show_error(e),
+                                }
+                            },
+                            ReloadType::Theme(t) => match theme::load_user_themes(ctx, config_manager.path()) {
+                                Ok(()) => ctx.notify(format!("Reloaded theme \"{t}\"")),
+                                Err(e) => ctx.show_error(e)
+                            },
+                        }
+                        //match config_manager.load() {
+                        //    Ok(config) => {
+                        //        ctx.failed_config_load = false;
+                        //        if let Err(e) = config.apply::<C>(&config_manager, ctx, &mut self.widgets) {
+                        //            ctx.show_error(e);
+                        //        } else {
+                        //            ctx.notify(match notif {
+                        //                ReloadType::Config => "Reloaded config".to_owned(),
+                        //                ReloadType::Theme(theme) => format!("Reloaded theme \"{theme}\""),
+                        //            });
+                        //        }
+                        //    }
+                        //    Err(e) => {
+                        //        ctx.show_error(format!("Failed to load config:\n{}", e));
+                        //        if let Err(e) =
+                        //            ctx.config
+                        //                .clone()
+                        //                .apply::<C>(&config_manager, ctx, &mut self.widgets)
+                        //        {
+                        //            ctx.show_error(e);
+                        //        }
+                        //    }
+                        //}
+
+                        break;
+                    },
                     // _ = async{}, if matches!(terminal.size().map(|s| self.widgets.notification.update(last_time.map(|l| (Instant::now() - l).as_secs_f64()).unwrap_or(0.), s)), Ok(true)) => {
                     else => {
                         return Err("All channels closed".into());

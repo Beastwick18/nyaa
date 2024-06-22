@@ -1,4 +1,9 @@
-use std::error::Error;
+use std::{
+    error::Error,
+    fs,
+    path::PathBuf,
+    time::{Duration, SystemTime},
+};
 
 use crossterm::event::{self, Event};
 use tokio::sync::mpsc;
@@ -6,9 +11,10 @@ use tokio::sync::mpsc;
 use crate::{
     app::LoadType,
     client::{Client, ClientConfig, DownloadResult},
+    config::CONFIG_FILE,
     results::Results,
     source::{Item, SourceConfig, SourceResponse, SourceResults, Sources},
-    theme::Theme,
+    theme::{Theme, THEMES_PATH},
     widget::sort::SelectedSort,
 };
 
@@ -38,10 +44,22 @@ pub trait EventSync {
         self,
         tx_evt: mpsc::Sender<Event>,
     ) -> impl std::future::Future<Output = ()> + std::marker::Send + 'static;
+    fn watch_config_loop(
+        self,
+        tx_evt: mpsc::Sender<ReloadType>,
+    ) -> impl std::future::Future<Output = ()> + std::marker::Send + 'static;
 }
 
 #[derive(Clone)]
-pub struct AppSync;
+pub struct AppSync {
+    config_path: PathBuf,
+}
+
+impl AppSync {
+    pub fn new(config_path: PathBuf) -> Self {
+        Self { config_path }
+    }
+}
 
 #[derive(Clone, Default)]
 pub struct SearchQuery {
@@ -51,6 +69,23 @@ pub struct SearchQuery {
     pub filter: usize,
     pub sort: SelectedSort,
     pub user: Option<String>,
+}
+
+#[derive(Clone)]
+pub enum ReloadType {
+    Config,
+    Theme(String),
+}
+
+fn watch(path: &PathBuf, last_modified: SystemTime) -> bool {
+    if let Ok(meta) = fs::metadata(path) {
+        if let Ok(time) = meta.modified() {
+            if time > last_modified {
+                return true;
+            }
+        }
+    }
+    false
 }
 
 impl EventSync for AppSync {
@@ -102,6 +137,39 @@ impl EventSync for AppSync {
             if let Ok(evt) = event::read() {
                 let _ = tx_evt.send(evt).await;
             }
+        }
+    }
+
+    async fn watch_config_loop(self, tx_cfg: mpsc::Sender<ReloadType>) {
+        let config_path = self.config_path.clone();
+        let config_file = config_path.join(CONFIG_FILE);
+        let themes_path = config_path.join(THEMES_PATH);
+        let now = SystemTime::now();
+
+        let mut last_modified = now;
+        loop {
+            if watch(&config_file, last_modified) {
+                last_modified = SystemTime::now();
+                let _ = tx_cfg.send(ReloadType::Config).await;
+            }
+            let theme_files = fs::read_dir(&themes_path).ok().and_then(|v| {
+                v.filter_map(Result::ok)
+                    .map(|v| v.path())
+                    .find(|p| watch(&p, last_modified))
+            });
+            if let Some(theme) = theme_files {
+                last_modified = SystemTime::now();
+                let _ = tx_cfg
+                    .send(ReloadType::Theme(
+                        theme
+                            .file_name()
+                            .unwrap_or_default()
+                            .to_string_lossy()
+                            .to_string(),
+                    ))
+                    .await;
+            }
+            tokio::time::sleep(Duration::from_millis(500)).await;
         }
     }
 }

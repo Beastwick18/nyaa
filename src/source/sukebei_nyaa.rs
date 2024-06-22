@@ -2,7 +2,7 @@ use std::{error::Error, time::Duration};
 
 use chrono::{DateTime, Local, NaiveDateTime, TimeZone};
 use ratatui::style::Color;
-use reqwest::{StatusCode, Url};
+use reqwest::StatusCode;
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
 use strum::VariantArray as _;
@@ -160,12 +160,11 @@ impl Source for SukebeiHtmlSource {
             .unwrap_or(NyaaSort::Date)
             .to_url();
 
-        let base_url = add_protocol(sukebei.base_url, true);
+        let base_url = add_protocol(sukebei.base_url, true)?;
         let (high, low) = (cat / 10, cat % 10);
         let query = encode(&search.query);
         let dir = search.sort.dir.to_url();
-        let url = Url::parse(&base_url)?;
-        let mut url_query = url.clone();
+        let mut url_query = base_url.clone();
         url_query.set_query(Some(&format!(
             "q={}&c={}_{}&f={}&p={}&s={}&o={}&u={}",
             query, high, low, filter, page, sort, dir, user
@@ -219,7 +218,7 @@ impl Source for SukebeiHtmlSource {
                 let icon = cat.icon.clone();
 
                 let torrent = attr(e, torrent_sel, "href");
-                let post_link = url
+                let post_link = base_url
                     .join(&attr(e, title_sel, "href"))
                     .map(Into::into)
                     .unwrap_or("null".to_owned());
@@ -243,7 +242,7 @@ impl Source for SukebeiHtmlSource {
                 let seeders = inner(e, seed_sel, "0").parse().unwrap_or(0);
                 let leechers = inner(e, leech_sel, "0").parse().unwrap_or(0);
                 let downloads = inner(e, dl_sel, "0").parse().unwrap_or(0);
-                let torrent_link = url
+                let torrent_link = base_url
                     .join(&torrent)
                     .map(Into::into)
                     .unwrap_or("null".to_owned());

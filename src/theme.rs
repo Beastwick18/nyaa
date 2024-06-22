@@ -10,6 +10,8 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::{app::Context, collection, config, source::SourceTheme};
 
+pub static THEMES_PATH: &str = "themes";
+
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Theme {
     pub name: String,
@@ -42,7 +44,7 @@ pub struct Theme {
 }
 
 pub fn load_user_themes(ctx: &mut Context, config_path: PathBuf) -> Result<(), String> {
-    let path = config_path.join("themes");
+    let path = config_path.join(THEMES_PATH);
     if !path.exists() {
         return Ok(()); // Allow no theme folder
     }

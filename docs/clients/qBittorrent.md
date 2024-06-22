@@ -18,9 +18,10 @@ download_client = "qBittorrent"
 # ...
 
 [client.qBittorrent]
-base_url = "http://localhost:8080" # required
-username = "admin"                 # required
-password = "adminadmin"            # required
+base_url = "http://localhost:8080"       # required
+username = "admin"                       # optional
+password = "adminadmin"                  # optional
+password_file = "/path/to/password.txt"  # optional
 use_magnet = true          # optional, will be true by default
 savepath = "~/Downloads/"  # all optional with no default here and below...
 category = "Category Name"
@@ -40,5 +41,4 @@ sequential_download = true
 prioritize_first_last_pieces = true
 ```
 
-For more information on what each of the values represent, check qBittorrents [WebUI-API documentation](https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-4.1)). For most users, you will only need the three required parts at the top to get downloads working.
-
+For more information on what each of the values represent, check qBittorrents [WebUI-API documentation](https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-4.1)). For most users, you will only need the base URL, username, and password to get downloads working. The password can either be defined in `password_file` (a raw text file containing only the password) or hardcoded in `password`.

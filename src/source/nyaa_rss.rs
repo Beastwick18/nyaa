@@ -1,7 +1,7 @@
 use std::{cmp::Ordering, collections::BTreeMap, error::Error, str::FromStr, time::Duration};
 
 use chrono::{DateTime, Local};
-use reqwest::{StatusCode, Url};
+use reqwest::StatusCode;
 use rss::{extension::Extension, Channel};
 use urlencoding::encode;
 
@@ -53,8 +53,7 @@ pub async fn search_rss<S: Source>(
     let last_page = 1;
     let (high, low) = (cat / 10, cat % 10);
     let query = encode(&query);
-    let base_url = add_protocol(base_url, true);
-    let base_url = Url::parse(&base_url)?;
+    let base_url = add_protocol(base_url, true)?;
 
     let mut url = base_url.clone();
     let query = format!(

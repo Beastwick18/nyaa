@@ -1,9 +1,9 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, error::Error, fs};
 
-use reqwest::{header::REFERER, Response, StatusCode};
+use reqwest::{Response, StatusCode};
 use serde::{Deserialize, Serialize};
 
-use crate::{app::Context, source::Item, util::conv::add_protocol};
+use crate::{source::Item, util::conv::add_protocol};
 
 use super::{ClientConfig, DownloadClient, DownloadError, DownloadResult};
 
@@ -11,8 +11,9 @@ use super::{ClientConfig, DownloadClient, DownloadError, DownloadResult};
 #[serde(default)]
 pub struct QbitConfig {
     pub base_url: String,
-    pub username: String,
-    pub password: String, // TODO: introduce password_env and password_cmd for retreiving
+    pub username: Option<String>,
+    pub password: Option<String>,
+    pub password_file: Option<String>,
     pub use_magnet: Option<bool>,
     pub savepath: Option<String>,
     pub category: Option<String>,  // Single category
@@ -56,8 +57,9 @@ impl Default for QbitConfig {
     fn default() -> Self {
         Self {
             base_url: "http://localhost:8080".to_owned(),
-            username: "admin".to_owned(),
-            password: "adminadmin".to_owned(),
+            username: None,
+            password: None,
+            password_file: None,
             use_magnet: None,
             savepath: None,
             category: None,
@@ -111,45 +113,56 @@ struct QbitForm {
     // rename: String // Disabled
 }
 
-async fn login(qbit: &QbitConfig, client: &reqwest::Client) -> Result<(), String> {
-    let base_url = add_protocol(qbit.base_url.clone(), false);
-    let url = format!("{}/api/v2/auth/login", base_url);
-    let mut params = HashMap::new();
-    params.insert("username", qbit.username.to_owned());
-    params.insert("password", qbit.password.to_owned());
-    let res = client.post(url).form(&params).send().await;
-    let _ = res.map_err(|e| format!("Failed to send data to qBittorrent\n{}", e))?;
+async fn login(
+    qbit: &QbitConfig,
+    client: &reqwest::Client,
+) -> Result<(), Box<dyn Error + Send + Sync>> {
+    let pass = match qbit.password.as_ref() {
+        Some(pass) => Some(pass.to_owned()),
+        None => match qbit.password_file.as_ref() {
+            Some(file) => {
+                let contents = fs::read_to_string(file)?;
+                let expand = shellexpand::full(contents.trim())?;
+                Some(expand.to_string())
+            }
+            None => None,
+        },
+    };
+    if let (Some(user), Some(pass)) = (qbit.username.as_ref(), pass) {
+        let base_url = add_protocol(qbit.base_url.clone(), false)?;
+        let url = base_url.join("/api/v2/auth/login")?;
+        let mut params = HashMap::new();
+        params.insert("username", user);
+        params.insert("password", &pass);
+        let _ = client.post(url).form(&params).send().await?;
+    }
     Ok(())
 }
 
-async fn logout(qbit: &QbitConfig, client: &reqwest::Client) {
-    let base_url = add_protocol(qbit.base_url.clone(), false);
-    let _ = client
-        .get(format!("{}/api/v2/auth/logout", base_url))
-        .header(REFERER, base_url)
-        .send()
-        .await;
+async fn logout(
+    qbit: &QbitConfig,
+    client: &reqwest::Client,
+) -> Result<(), Box<dyn Error + Send + Sync>> {
+    let base_url = add_protocol(qbit.base_url.clone(), false)?;
+    let url = base_url.join("/api/v2/auth/logout")?;
+    let _ = client.get(url).send().await;
+    Ok(())
 }
 
 async fn add_torrent(
     qbit: &QbitConfig,
     links: String,
     client: &reqwest::Client,
-) -> Result<Response, reqwest::Error> {
-    let base_url = add_protocol(qbit.base_url.clone(), false);
-    let url = format!("{}/api/v2/torrents/add", base_url);
+) -> Result<Response, Box<dyn Error + Send + Sync>> {
+    let base_url = add_protocol(qbit.base_url.clone(), false)?;
+    let url = base_url.join("/api/v2/torrents/add")?;
 
-    client
-        .post(url)
-        .header(REFERER, base_url)
-        .form(&qbit.to_form(links))
-        .send()
-        .await
+    Ok(client.post(url).form(&qbit.to_form(links)).send().await?)
 }
 
-pub fn load_config(app: &mut Context) {
-    if app.config.client.qbit.is_none() {
-        app.config.client.qbit = Some(QbitConfig::default());
+pub fn load_config(cfg: &mut ClientConfig) {
+    if cfg.qbit.is_none() {
+        cfg.qbit = Some(QbitConfig::default());
     }
 }
 
@@ -211,7 +224,7 @@ impl DownloadClient for QbitClient {
             )));
         }
 
-        logout(&qbit, &client).await;
+        let _ = logout(&qbit, &client).await;
 
         DownloadResult::new(
             format!("Successfully sent {} torrents to qBittorrent", items.len()),

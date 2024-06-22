@@ -1,4 +1,7 @@
+use std::error::Error;
+
 use crossterm::event::{KeyCode, KeyModifiers, MediaKeyCode, ModifierKeyCode};
+use reqwest::Url;
 
 pub fn get_hash(magnet: String) -> Option<String> {
     magnet
@@ -6,18 +9,21 @@ pub fn get_hash(magnet: String) -> Option<String> {
         .and_then(|m| m.1.split_once('&').map(|m| m.0.to_owned()))
 }
 
-pub fn add_protocol<S: Into<String>>(url: S, default_https: bool) -> String {
+pub fn add_protocol<S: Into<String>>(
+    url: S,
+    default_https: bool,
+) -> Result<Url, Box<dyn Error + Send + Sync>> {
     let url = url.into();
     if let Some((method, other)) = url.split_once(':') {
         if matches!(method, "http" | "https" | "socks5") && matches!(other.get(..2), Some("//")) {
-            return url;
+            return Ok(url.parse::<Url>()?);
         }
     }
     let protocol = match default_https {
         true => "https",
         false => "http",
     };
-    format!("{}://{}", protocol, url)
+    Ok(format!("{}://{}", protocol, url).parse::<Url>()?)
 }
 
 pub fn to_bytes(size: &str) -> usize {

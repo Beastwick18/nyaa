@@ -20,6 +20,15 @@
       default = null;
       description = ''
         The password to login to Transmission (optional)
+				Has higher priority than `password_file`
+      '';
+    };
+    password_file = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = ''
+        The path to a file containing the password to login to Transmission (optional)
+				Has lower priority than `password`
       '';
     };
     use_magnet = lib.mkOption {

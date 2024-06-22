@@ -69,8 +69,9 @@ impl Widget for ClientsPopup {
                 KeyCode::Enter => {
                     if let Some(c) = self.table.selected() {
                         ctx.client = *c;
+                        ctx.config.download_client = *c;
 
-                        c.load_config(ctx);
+                        c.load_config(&mut ctx.config.client);
                         match ctx.save_config() {
                             Ok(_) => ctx.notify(format!("Updated download client to \"{}\"", c)),
                             Err(e) => ctx.show_error(format!("Failed to update config:\n{}", e)),

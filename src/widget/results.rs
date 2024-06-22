@@ -1,3 +1,5 @@
+use core::str;
+
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::{
     layout::{Margin, Rect},
@@ -16,9 +18,16 @@ use crate::{
 
 use super::{border_block, centered_rect, Corner, VirtualStatefulTable};
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum VisualMode {
+    Toggle,
+    Select,
+    None, // TODO: Remove for just Option
+}
+
 pub struct ResultsWidget {
     pub table: VirtualStatefulTable,
-    control_space: bool,
+    control_space_toggle: VisualMode,
     visual_anchor: usize,
     // draw_count: u64,
 }
@@ -27,6 +36,14 @@ impl ResultsWidget {
     pub fn reset(&mut self) {
         self.table.select(0);
         *self.table.state.offset_mut() = 0;
+    }
+
+    fn try_select(&self, ctx: &mut Context, sel: usize) {
+        if let Some(item) = ctx.results.response.items.get(sel) {
+            if ctx.batch.iter().position(|s| s.id == item.id).is_none() {
+                ctx.batch.push(item.to_owned());
+            }
+        }
     }
 
     fn try_select_toggle(&self, ctx: &mut Context, sel: usize) {
@@ -38,13 +55,39 @@ impl ResultsWidget {
             }
         }
     }
+
+    fn try_select_toggle_range(&self, ctx: &mut Context, start: usize, stop: usize) {
+        for i in start..=stop {
+            self.try_select_toggle(ctx, i);
+        }
+    }
+
+    fn select_on_move(&self, ctx: &mut Context, start: usize, stop: usize) {
+        if start != stop {
+            let sel = match stop <= self.visual_anchor {
+                true => start,
+                false => stop,
+            };
+            match self.control_space_toggle {
+                VisualMode::Toggle => self.try_select_toggle(ctx, sel),
+                //VisualMode::Select => self.try_select(ctx, sel),
+                VisualMode::Select => {
+                    if stop.abs_diff(self.visual_anchor) < start.abs_diff(self.visual_anchor) {
+                        self.try_select_toggle(ctx, start);
+                    }
+                    self.try_select(ctx, stop);
+                }
+                _ => {}
+            }
+        }
+    }
 }
 
 impl Default for ResultsWidget {
     fn default() -> Self {
         ResultsWidget {
             table: VirtualStatefulTable::new(),
-            control_space: false,
+            control_space_toggle: VisualMode::None,
             visual_anchor: 0,
             // draw_count: 0,
         }
@@ -222,28 +265,21 @@ impl super::Widget for ResultsWidget {
                 (Char('j') | KeyCode::Down, &KeyModifiers::NONE) => {
                     let prev = self.table.selected().unwrap_or(0);
                     let selected = self.table.next(ctx.results.response.items.len(), 1);
-                    if self.control_space && prev != selected {
-                        self.try_select_toggle(
-                            ctx,
-                            match selected <= self.visual_anchor {
-                                true => prev,
-                                false => selected,
-                            },
-                        );
-                    }
+                    self.select_on_move(ctx, prev, selected);
                 }
                 (Char('k') | KeyCode::Up, &KeyModifiers::NONE) => {
                     let prev = self.table.selected().unwrap_or(0);
                     let selected = self.table.next(ctx.results.response.items.len(), -1);
-                    if self.control_space && prev != selected {
-                        self.try_select_toggle(
-                            ctx,
-                            match selected >= self.visual_anchor {
-                                true => prev,
-                                false => selected,
-                            },
-                        );
-                    }
+                    self.select_on_move(ctx, selected, prev);
+                    //if self.control_space_toggle.is_some() && prev != selected {
+                    //    self.try_select_toggle(
+                    //        ctx,
+                    //        match selected >= self.visual_anchor {
+                    //            true => prev,
+                    //            false => selected,
+                    //        },
+                    //    );
+                    //}
                 }
                 (Char('J'), &KeyModifiers::SHIFT) => {
                     self.table.next(ctx.results.response.items.len(), 4);
@@ -252,8 +288,20 @@ impl super::Widget for ResultsWidget {
                     self.table.next(ctx.results.response.items.len(), -4);
                 }
                 (Char('G'), &KeyModifiers::SHIFT) => {
-                    self.table
-                        .select(ctx.results.response.items.len().saturating_sub(1));
+                    let prev = self.table.selected().unwrap_or(0);
+                    let selected = ctx.results.response.items.len().saturating_sub(1);
+                    self.table.select(selected);
+
+                    if self.control_space_toggle != VisualMode::None && prev != selected {
+                        self.try_select_toggle_range(ctx, prev + 1, selected);
+                        //self.try_select_toggle(
+                        //    ctx,
+                        //    match selected <= self.visual_anchor {
+                        //        true => prev,
+                        //        false => selected,
+                        //    },
+                        //);
+                    }
                 }
                 (Char('g'), &KeyModifiers::NONE) => {
                     self.table.select(0);
@@ -300,9 +348,26 @@ impl super::Widget for ResultsWidget {
                     }
                 }
                 (Char('y'), &KeyModifiers::NONE) => ctx.mode = Mode::KeyCombo("y".to_string()),
-                (Char(' '), &KeyModifiers::CONTROL) => {
-                    self.control_space = !self.control_space;
-                    if self.control_space {
+                (Char(' '), &KeyModifiers::CONTROL) | (Char('v'), &KeyModifiers::NONE) => {
+                    self.control_space_toggle = match self.control_space_toggle {
+                        VisualMode::None => VisualMode::Toggle,
+                        _ => VisualMode::None,
+                    };
+                    if self.control_space_toggle != VisualMode::None {
+                        ctx.notify("Entered VISUAL mode");
+                        self.visual_anchor = self.table.selected().unwrap_or(0);
+                        self.try_select_toggle(ctx, self.visual_anchor);
+                    } else {
+                        ctx.notify("Exited VISUAL mode");
+                        self.visual_anchor = 0;
+                    }
+                }
+                (Char('V'), &KeyModifiers::SHIFT) => {
+                    self.control_space_toggle = match self.control_space_toggle {
+                        VisualMode::None => VisualMode::Select,
+                        _ => VisualMode::None,
+                    };
+                    if self.control_space_toggle != VisualMode::None {
                         ctx.notify("Entered VISUAL mode");
                         self.visual_anchor = self.table.selected().unwrap_or(0);
                         self.try_select_toggle(ctx, self.visual_anchor);
@@ -326,10 +391,10 @@ impl super::Widget for ResultsWidget {
                     ctx.mode = Mode::Batch;
                 }
                 (Esc, &KeyModifiers::NONE) => {
-                    if self.control_space {
+                    if self.control_space_toggle != VisualMode::None {
                         ctx.notify("Exited VISUAL mode");
                         self.visual_anchor = 0;
-                        self.control_space = false;
+                        self.control_space_toggle = VisualMode::None;
                     } else {
                         ctx.dismiss_notifications();
                     }

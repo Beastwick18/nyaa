@@ -55,6 +55,7 @@ pub struct Config {
     pub timeout: u64,
     pub scroll_padding: usize,
     pub save_config_on_change: bool,
+    pub hot_reload_config: bool,
 
     #[serde(rename = "notifications")]
     pub notifications: Option<NotificationConfig>,
@@ -77,6 +78,8 @@ impl Default for Config {
             timeout: 30,
             scroll_padding: 3,
             save_config_on_change: true,
+            hot_reload_config: true,
+
             notifications: None,
             clipboard: None,
             client: ClientConfig::default(),
@@ -98,30 +101,38 @@ impl ConfigManager for AppConfig {
 }
 
 impl Config {
-    pub fn apply<C: ConfigManager>(
+    pub fn full_apply(
         &self,
-        config_manager: &C,
+        path: PathBuf,
         ctx: &mut Context,
         w: &mut Widgets,
     ) -> Result<(), Box<dyn Error>> {
-        ctx.config = self.clone();
-        w.search.input.cursor = w.search.input.input.len();
-        w.sort.selected.sort = 0;
-        w.filter.selected = 0;
+        // Load user-defined themes
+        theme::load_user_themes(ctx, path)?;
+
+        self.partial_apply(ctx, w)?;
+
+        // Set download client
         ctx.client = ctx.config.download_client;
+        // Set source
         ctx.src = ctx.config.source;
+        // Set source info (categories, etc.)
         ctx.src_info = ctx.src.info();
 
-        ctx.src.load_config(&mut ctx.config.sources);
         ctx.src.apply(ctx, w);
         if let Some(conf) = ctx.config.notifications {
             w.notification.load_config(&conf);
         }
 
-        ctx.client.load_config(ctx);
-        let path = config_manager.path();
-        // Load user-defined themes
-        theme::load_user_themes(ctx, path)?;
+        w.clients.table.select(ctx.client as usize);
+
+        // Load defaults for default source
+        Ok(())
+    }
+
+    pub fn partial_apply(&self, ctx: &mut Context, w: &mut Widgets) -> Result<(), Box<dyn Error>> {
+        ctx.config = self.clone();
+
         // Set selected theme
         if let Some((i, _, theme)) = ctx.themes.get_full(&self.theme) {
             w.theme.selected = i;
@@ -129,7 +140,12 @@ impl Config {
             ctx.theme = theme.clone();
         }
 
-        // Load defaults for default source
+        // Load download client config
+        ctx.client.load_config(&mut ctx.config.client);
+
+        // Load current source config
+        ctx.src.load_config(&mut ctx.config.sources);
+
         Ok(())
     }
 }

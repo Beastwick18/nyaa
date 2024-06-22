@@ -3,7 +3,7 @@ use std::{error::Error, fs, path::PathBuf};
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 
-use crate::{app::Context, source::Item, util::conv::get_hash};
+use crate::{source::Item, util::conv::get_hash};
 
 use super::{multidownload, ClientConfig, DownloadClient, DownloadError, DownloadResult};
 
@@ -36,10 +36,9 @@ impl Default for DownloadConfig {
     }
 }
 
-pub fn load_config(app: &mut Context) {
-    if app.config.client.download.is_none() {
-        let def = DownloadConfig::default();
-        app.config.client.download = Some(def);
+pub fn load_config(cfg: &mut ClientConfig) {
+    if cfg.download.is_none() {
+        cfg.download = Some(DownloadConfig::default());
     }
 }
 

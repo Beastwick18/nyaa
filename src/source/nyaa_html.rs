@@ -5,7 +5,7 @@ use ratatui::{
     layout::{Alignment, Constraint},
     style::{Color, Stylize as _},
 };
-use reqwest::{StatusCode, Url};
+use reqwest::StatusCode;
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
 use strum::{Display, FromRepr, VariantArray};
@@ -293,19 +293,18 @@ impl Source for NyaaHtmlSource {
             .unwrap_or(NyaaSort::Date)
             .to_url();
 
-        let base_url = add_protocol(nyaa.base_url, true);
+        let base_url = add_protocol(nyaa.base_url, true)?;
+        let mut url = base_url.clone();
         // let base_url = add_protocol(ctx.config.base_url.clone(), true);
         let (high, low) = (cat / 10, cat % 10);
         let query = encode(&search.query);
         let dir = search.sort.dir.to_url();
-        let url = Url::parse(&base_url)?;
-        let mut url_query = url.clone();
-        url_query.set_query(Some(&format!(
+        url.set_query(Some(&format!(
             "q={}&c={}_{}&f={}&p={}&s={}&o={}&u={}",
             query, high, low, filter, page, sort, dir, user
         )));
 
-        let mut request = client.get(url_query.to_owned());
+        let mut request = client.get(url.to_owned());
         if let Some(timeout) = nyaa.timeout {
             request = request.timeout(Duration::from_secs(timeout));
         }
@@ -313,7 +312,7 @@ impl Source for NyaaHtmlSource {
         if response.status() != StatusCode::OK {
             // Throw error if response code is not OK
             let code = response.status().as_u16();
-            return Err(format!("{}\nInvalid response code: {}", url_query, code).into());
+            return Err(format!("{}\nInvalid response code: {}", url, code).into());
         }
         let content = response.bytes().await?;
         let doc = Html::parse_document(std::str::from_utf8(&content[..])?);
@@ -380,11 +379,11 @@ impl Source for NyaaHtmlSource {
                 let seeders = as_type(inner(e, seed_sel, "0")).unwrap_or_default();
                 let leechers = as_type(inner(e, leech_sel, "0")).unwrap_or_default();
                 let downloads = as_type(inner(e, dl_sel, "0")).unwrap_or_default();
-                let torrent_link = url
+                let torrent_link = base_url
                     .join(&torrent)
                     .map(Into::into)
                     .unwrap_or("null".to_owned());
-                let post_link = url
+                let post_link = base_url
                     .join(&attr(e, title_sel, "href"))
                     .map(Into::into)
                     .unwrap_or("null".to_owned());

@@ -22,6 +22,7 @@ download_client = "Transmission"
 base_url = "http://localhost:9091/transmission/rpc" # required
 username = "user" # all optional here and below
 password = "pass"
+password_file = "/path/to/password.txt"
 use_magnet = true
 labels = [ # must not contain commas in any of the labels
   "label1",
@@ -32,6 +33,8 @@ peer_limit = 100
 download_dir = "~/Downloads/"
 bandwidth_priority = "Low"
 ```
+
+The password can either be defined in `password_file` (a raw text file containing only the password) or hardcoded in `password`.
 
 ### Bandwidth Priority
 This value can be one of the following: `Low`, `Normal`, `High`

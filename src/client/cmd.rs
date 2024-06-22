@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{app::Context, source::Item, util::cmd::CommandBuilder};
+use crate::{source::Item, util::cmd::CommandBuilder};
 
 use super::{multidownload, ClientConfig, DownloadClient, DownloadError, DownloadResult};
 
@@ -26,9 +26,9 @@ impl Default for CmdConfig {
     }
 }
 
-pub fn load_config(app: &mut Context) {
-    if app.config.client.cmd.is_none() {
-        app.config.client.cmd = Some(CmdConfig::default());
+pub fn load_config(cfg: &mut ClientConfig) {
+    if cfg.cmd.is_none() {
+        cfg.cmd = Some(CmdConfig::default());
     }
 }
 

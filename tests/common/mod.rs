@@ -7,7 +7,7 @@ use nyaa::{
     config::{Config, ConfigManager},
     results::Results,
     source::{Item, SourceResults},
-    sync::EventSync,
+    sync::{EventSync, ReloadType},
 };
 use ratatui::{
     backend::{Backend as _, TestBackend},
@@ -15,6 +15,7 @@ use ratatui::{
     style::Style,
     Terminal,
 };
+use tokio::sync::mpsc::Sender;
 
 #[derive(Clone)]
 pub struct TestSync {
@@ -161,9 +162,7 @@ pub fn print_buffer(buf: &Buffer) {
 impl EventSync for TestSync {
     async fn load_results(
         self,
-        tx_res: tokio::sync::mpsc::Sender<
-            Result<SourceResults, Box<dyn std::error::Error + Send + Sync>>,
-        >,
+        tx_res: Sender<Result<SourceResults, Box<dyn Error + Send + Sync>>>,
         _loadtype: nyaa::app::LoadType,
         _src: nyaa::source::Sources,
         _client: reqwest::Client,
@@ -177,7 +176,7 @@ impl EventSync for TestSync {
             .await;
     }
 
-    async fn read_event_loop(self, tx_evt: tokio::sync::mpsc::Sender<crossterm::event::Event>) {
+    async fn read_event_loop(self, tx_evt: Sender<crossterm::event::Event>) {
         for evt in self.events.into_iter() {
             let _ = tx_evt.send(evt).await;
         }
@@ -186,7 +185,7 @@ impl EventSync for TestSync {
 
     async fn download(
         self,
-        _tx_dl: tokio::sync::mpsc::Sender<DownloadResult>,
+        _tx_dl: Sender<DownloadResult>,
         _batch: bool,
         _items: Vec<Item>,
         _config: ClientConfig,
@@ -194,6 +193,8 @@ impl EventSync for TestSync {
         _client: Client,
     ) {
     }
+
+    async fn watch_config_loop(self, _tx_evt: Sender<ReloadType>) {}
 }
 
 impl ConfigManager for TestConfig {

@@ -115,15 +115,17 @@ pub fn request_client(
     jar: &Arc<Jar>,
     timeout: u64,
     proxy_url: Option<String>,
-) -> Result<reqwest::Client, reqwest::Error> {
+) -> Result<reqwest::Client, Box<dyn Error>> {
     let mut client = reqwest::Client::builder()
         .gzip(true)
         .cookie_provider(jar.clone())
         .timeout(Duration::from_secs(timeout));
     if let Some(proxy_url) = proxy_url {
-        client = client.proxy(Proxy::all(add_protocol(proxy_url, false))?);
+        client = client.proxy(Proxy::all(
+            add_protocol(proxy_url, false).map_err(|e| e.to_string())?,
+        )?);
     }
-    client.build()
+    Ok(client.build()?)
 }
 
 #[derive(Default, Clone, Copy)]

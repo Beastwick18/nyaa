@@ -94,10 +94,10 @@ impl NotificationWidget {
     }
 
     pub fn update(&mut self, deltatime: f64, area: Rect) -> bool {
-        let res = self.notifs.iter_mut().fold(false, |acc, x| {
-            let res = x.update(deltatime, area);
-            res || acc
-        });
+        let res = self
+            .notifs
+            .iter_mut()
+            .fold(false, |acc, x| x.update(deltatime, area) || acc);
         let finished = self
             .notifs
             .iter()
@@ -106,7 +106,7 @@ impl NotificationWidget {
                 false => None,
             })
             .collect::<Vec<(u16, u16)>>();
-        // Offset unfinished notifications by space left from finished notifs
+        // Offset unfinished notifications by gap left from finished notifs
         for (offset, height) in finished.iter() {
             self.notifs.iter_mut().for_each(|n| {
                 if n.is_error() && n.offset() > *offset {
@@ -122,9 +122,7 @@ impl NotificationWidget {
 
 impl Widget for NotificationWidget {
     fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
-        for n in self.notifs.iter_mut() {
-            n.draw(f, ctx, area);
-        }
+        self.notifs.iter_mut().for_each(|n| n.draw(f, ctx, area));
     }
 
     fn handle_event(&mut self, _ctx: &mut Context, _e: &Event) {}

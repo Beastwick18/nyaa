@@ -10,17 +10,26 @@
       '';
     };
     username = lib.mkOption {
-      type = lib.types.str;
-      default = "admin";
+      type = lib.types.nullOr lib.types.str;
+      default = null;
       description = ''
-        The username to login to qBittorrent
+        The username to login to qBittorrent (optional)
       '';
     };
     password = lib.mkOption {
-      type = lib.types.str;
-      default = "adminadmin";
+      type = lib.types.nullOr lib.types.str;
+      default = null;
       description = ''
-        The password to login to qBittorrent
+        The password to login to qBittorrent (optional)
+				Has higher priority than `password_file`
+      '';
+    };
+    password_file = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = ''
+        The path to a file containing the password to login to qBittorrent (optional)
+				Has lower priority than `password`
       '';
     };
     use_magnet = lib.mkOption {

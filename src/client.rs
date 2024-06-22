@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use strum::{Display, VariantArray};
 use tokio::task::JoinSet;
 
-use crate::{app::Context, client::cmd::CmdClient, source::Item};
+use crate::{client::cmd::CmdClient, source::Item};
 
 use self::{
     cmd::CmdConfig,
@@ -256,15 +256,14 @@ impl Client {
         // ctx.batch.retain(|i| !success_ids.contains(&i.id)); // Remove successes from batch
     }
 
-    pub fn load_config(self, ctx: &mut Context) {
+    pub fn load_config(self, cfg: &mut ClientConfig) {
         match self {
-            Self::Cmd => cmd::load_config(ctx),
-            Self::Qbit => qbit::load_config(ctx),
-            Self::Transmission => transmission::load_config(ctx),
-            Self::Rqbit => rqbit::load_config(ctx),
-            Self::DefaultApp => default_app::load_config(ctx),
-            Self::Download => download::load_config(ctx),
+            Self::Cmd => cmd::load_config(cfg),
+            Self::Qbit => qbit::load_config(cfg),
+            Self::Transmission => transmission::load_config(cfg),
+            Self::Rqbit => rqbit::load_config(cfg),
+            Self::DefaultApp => default_app::load_config(cfg),
+            Self::Download => download::load_config(cfg),
         };
-        ctx.config.download_client = self;
     }
 }

@@ -1,10 +1,10 @@
 use std::error::Error;
 
-use reqwest::{Response, StatusCode, Url};
+use reqwest::{Response, StatusCode};
 use serde::{Deserialize, Serialize};
 use urlencoding::encode;
 
-use crate::{app::Context, source::Item, util::conv::add_protocol};
+use crate::{source::Item, util::conv::add_protocol};
 
 use super::{multidownload, ClientConfig, DownloadClient, DownloadError, DownloadResult};
 
@@ -40,9 +40,9 @@ async fn add_torrent(
     conf: &RqbitConfig,
     link: String,
     client: &reqwest::Client,
-) -> Result<Response, Box<dyn Error>> {
-    let base_url = add_protocol(conf.base_url.clone(), false);
-    let mut url = Url::parse(&base_url)?.join("/torrents")?;
+) -> Result<Response, Box<dyn Error + Send + Sync>> {
+    let base_url = add_protocol(conf.base_url.clone(), false)?;
+    let mut url = base_url.join("/torrents")?;
     let mut query: Vec<String> = vec![];
     if let Some(ow) = conf.overwrite {
         query.push(format!("overwrite={}", ow));
@@ -58,9 +58,9 @@ async fn add_torrent(
     }
 }
 
-pub fn load_config(app: &mut Context) {
-    if app.config.client.rqbit.is_none() {
-        app.config.client.rqbit = Some(RqbitConfig::default());
+pub fn load_config(cfg: &mut ClientConfig) {
+    if cfg.rqbit.is_none() {
+        cfg.rqbit = Some(RqbitConfig::default());
     }
 }
 
