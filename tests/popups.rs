@@ -208,7 +208,7 @@ async fn test_themes() {
 async fn test_download_client() {
     let sync = EventBuilder::new()
         .string('d')
-        .string("jjj")
+        .string("jjjj")
         .enter()
         .string('d')
         .quit()
