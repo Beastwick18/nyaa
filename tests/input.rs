@@ -1,3 +1,4 @@
+use crossterm::event::{Event, KeyCode};
 use ratatui::buffer::Buffer;
 
 use crate::common::{reset_buffer, run_app, EventBuilder};
@@ -8,7 +9,11 @@ mod common;
 #[tokio::test]
 async fn test_search() {
     let sync = EventBuilder::new()
-        .string("/one punch man")
+        .string("/one man")
+        .key(KeyCode::Left)
+        .key(KeyCode::Left)
+        .key(KeyCode::Left)
+        .push(Event::Paste("punch ".to_owned()))
         .esc()
         .string('c')
         .quit()

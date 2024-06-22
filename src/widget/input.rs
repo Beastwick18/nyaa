@@ -40,7 +40,7 @@ impl InputWidget {
     }
 
     pub fn set_cursor(&mut self, idx: usize) {
-        self.char_idx = idx.max(self.max_len);
+        self.char_idx = idx.min(self.max_len);
         self.cursor = pos_of_nth_char(&self.input, self.char_idx);
     }
 
