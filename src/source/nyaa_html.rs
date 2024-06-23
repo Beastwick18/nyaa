@@ -368,13 +368,14 @@ impl Source for NyaaHtmlSource {
                     .replace("Bytes", "B");
                 let bytes = to_bytes(&size);
 
+                const DEFAULT_DATE_FORMAT: &str = "%Y-%m-%d %H:%M";
                 let mut date = inner(e, date_sel, "");
-                if let Some(date_format) = date_format.to_owned() {
-                    let naive =
-                        NaiveDateTime::parse_from_str(&date, "%Y-%m-%d %H:%M").unwrap_or_default();
-                    let date_time: DateTime<Local> = Local.from_utc_datetime(&naive);
-                    date = date_time.format(&date_format).to_string();
-                }
+                let naive =
+                    NaiveDateTime::parse_from_str(&date, DEFAULT_DATE_FORMAT).unwrap_or_default();
+                let date_time: DateTime<Local> = Local.from_utc_datetime(&naive);
+                date = date_time
+                    .format(date_format.as_deref().unwrap_or(DEFAULT_DATE_FORMAT))
+                    .to_string();
 
                 let seeders = as_type(inner(e, seed_sel, "0")).unwrap_or_default();
                 let leechers = as_type(inner(e, leech_sel, "0")).unwrap_or_default();
