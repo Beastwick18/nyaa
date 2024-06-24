@@ -21,13 +21,14 @@ use super::{border_block, centered_rect, Corner, VirtualStatefulTable};
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum VisualMode {
     Toggle,
-    Select,
+    Add,
+    Remove,
     None, // TODO: Remove for just Option
 }
 
 pub struct ResultsWidget {
     pub table: VirtualStatefulTable,
-    control_space_toggle: VisualMode,
+    visual_mode: VisualMode,
     visual_anchor: usize,
     // draw_count: u64,
 }
@@ -38,10 +39,18 @@ impl ResultsWidget {
         *self.table.state.offset_mut() = 0;
     }
 
-    fn try_select(&self, ctx: &mut Context, sel: usize) {
+    fn try_select_add(&self, ctx: &mut Context, sel: usize) {
         if let Some(item) = ctx.results.response.items.get(sel) {
             if ctx.batch.iter().position(|s| s.id == item.id).is_none() {
                 ctx.batch.push(item.to_owned());
+            }
+        }
+    }
+
+    fn try_select_remove(&self, ctx: &mut Context, sel: usize) {
+        if let Some(item) = ctx.results.response.items.get(sel) {
+            if let Some(p) = ctx.batch.iter().position(|s| s.id == item.id) {
+                ctx.batch.remove(p);
             }
         }
     }
@@ -63,22 +72,20 @@ impl ResultsWidget {
     }
 
     fn select_on_move(&self, ctx: &mut Context, start: usize, stop: usize) {
-        if start != stop {
-            let sel = match stop <= self.visual_anchor {
-                true => start,
-                false => stop,
-            };
-            match self.control_space_toggle {
-                VisualMode::Toggle => self.try_select_toggle(ctx, sel),
-                //VisualMode::Select => self.try_select(ctx, sel),
-                VisualMode::Select => {
-                    if stop.abs_diff(self.visual_anchor) < start.abs_diff(self.visual_anchor) {
-                        self.try_select_toggle(ctx, start);
-                    }
-                    self.try_select(ctx, stop);
+        if start == stop {
+            return;
+        }
+        match self.visual_mode {
+            VisualMode::None => {}
+            VisualMode::Toggle => {
+                if stop.abs_diff(self.visual_anchor) < start.abs_diff(self.visual_anchor) {
+                    self.try_select_toggle(ctx, start)
+                } else {
+                    self.try_select_toggle(ctx, stop)
                 }
-                _ => {}
             }
+            VisualMode::Add => self.try_select_add(ctx, stop),
+            VisualMode::Remove => self.try_select_remove(ctx, stop),
         }
     }
 }
@@ -87,7 +94,7 @@ impl Default for ResultsWidget {
     fn default() -> Self {
         ResultsWidget {
             table: VirtualStatefulTable::new(),
-            control_space_toggle: VisualMode::None,
+            visual_mode: VisualMode::None,
             visual_anchor: 0,
             // draw_count: 0,
         }
@@ -270,7 +277,7 @@ impl super::Widget for ResultsWidget {
                 (Char('k') | KeyCode::Up, &KeyModifiers::NONE) => {
                     let prev = self.table.selected().unwrap_or(0);
                     let selected = self.table.next(ctx.results.response.items.len(), -1);
-                    self.select_on_move(ctx, selected, prev);
+                    self.select_on_move(ctx, prev, selected);
                     //if self.control_space_toggle.is_some() && prev != selected {
                     //    self.try_select_toggle(
                     //        ctx,
@@ -292,7 +299,7 @@ impl super::Widget for ResultsWidget {
                     let selected = ctx.results.response.items.len().saturating_sub(1);
                     self.table.select(selected);
 
-                    if self.control_space_toggle != VisualMode::None && prev != selected {
+                    if self.visual_mode != VisualMode::None && prev != selected {
                         self.try_select_toggle_range(ctx, prev + 1, selected);
                         //self.try_select_toggle(
                         //    ctx,
@@ -348,32 +355,40 @@ impl super::Widget for ResultsWidget {
                     }
                 }
                 (Char('y'), &KeyModifiers::NONE) => ctx.mode = Mode::KeyCombo("y".to_string()),
-                (Char(' '), &KeyModifiers::CONTROL) | (Char('v'), &KeyModifiers::NONE) => {
-                    self.control_space_toggle = match self.control_space_toggle {
-                        VisualMode::None => VisualMode::Toggle,
-                        _ => VisualMode::None,
-                    };
-                    if self.control_space_toggle != VisualMode::None {
-                        ctx.notify("Entered VISUAL mode");
+                (Char(' '), &KeyModifiers::CONTROL) => {
+                    if self.visual_mode != VisualMode::Toggle {
+                        ctx.notify("Entered VISUAL TOGGLE mode");
                         self.visual_anchor = self.table.selected().unwrap_or(0);
                         self.try_select_toggle(ctx, self.visual_anchor);
+                        self.visual_mode = VisualMode::Toggle;
                     } else {
-                        ctx.notify("Exited VISUAL mode");
+                        ctx.notify("Exited VISUAL TOGGLE mode");
                         self.visual_anchor = 0;
+                        self.visual_mode = VisualMode::None;
+                    }
+                }
+                (Char('v'), &KeyModifiers::NONE) => {
+                    if self.visual_mode != VisualMode::Add {
+                        ctx.notify("Entered VISUAL ADD mode");
+                        self.visual_anchor = self.table.selected().unwrap_or(0);
+                        self.try_select_add(ctx, self.visual_anchor);
+                        self.visual_mode = VisualMode::Add;
+                    } else {
+                        ctx.notify("Exited VISUAL ADD mode");
+                        self.visual_anchor = 0;
+                        self.visual_mode = VisualMode::None;
                     }
                 }
                 (Char('V'), &KeyModifiers::SHIFT) => {
-                    self.control_space_toggle = match self.control_space_toggle {
-                        VisualMode::None => VisualMode::Select,
-                        _ => VisualMode::None,
-                    };
-                    if self.control_space_toggle != VisualMode::None {
-                        ctx.notify("Entered VISUAL mode");
+                    if self.visual_mode != VisualMode::Remove {
+                        ctx.notify("Entered VISUAL REMOVE mode");
                         self.visual_anchor = self.table.selected().unwrap_or(0);
-                        self.try_select_toggle(ctx, self.visual_anchor);
+                        self.try_select_remove(ctx, self.visual_anchor);
+                        self.visual_mode = VisualMode::Remove;
                     } else {
-                        ctx.notify("Exited VISUAL mode");
+                        ctx.notify("Exited VISUAL REMOVE mode");
                         self.visual_anchor = 0;
+                        self.visual_mode = VisualMode::None;
                     }
                 }
                 (Char(' '), &KeyModifiers::NONE) => {
@@ -391,13 +406,14 @@ impl super::Widget for ResultsWidget {
                     ctx.mode = Mode::Batch;
                 }
                 (Esc, &KeyModifiers::NONE) => {
-                    if self.control_space_toggle != VisualMode::None {
-                        ctx.notify("Exited VISUAL mode");
-                        self.visual_anchor = 0;
-                        self.control_space_toggle = VisualMode::None;
-                    } else {
-                        ctx.dismiss_notifications();
+                    match self.visual_mode {
+                        VisualMode::Add => ctx.notify("Exited VISUAL ADD mode"),
+                        VisualMode::Remove => ctx.notify("Exited VISUAL REMOVE mode"),
+                        VisualMode::Toggle => ctx.notify("Exited VISUAL TOGGLE mode"),
+                        VisualMode::None => ctx.dismiss_notifications(),
                     }
+                    self.visual_anchor = 0;
+                    self.visual_mode = VisualMode::None;
                 }
                 _ => {}
             }
@@ -424,7 +440,7 @@ impl super::Widget for ResultsWidget {
                 "Copy torrent/magnet/post link/imdb id/name",
             ),
             ("Space", "Toggle item for batch download"),
-            ("Ctrl-Space", "Multi-line select torrents"),
+            ("v/V/Ctrl-Space", "Enter visual add/remove/toggle mode"),
             ("Tab/Shift-Tab", "Switch to Batches"),
             ("/, i", "Search"),
             ("c", "Categories"),
