@@ -6,6 +6,8 @@ use std::{
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::{
     layout::Rect,
+    style::Stylize,
+    text::Line,
     widgets::{Paragraph, Widget},
     Frame,
 };
@@ -33,10 +35,18 @@ impl InputWidget {
     }
 
     pub fn show_cursor(&self, f: &mut Frame, area: Rect) {
-        f.set_cursor(
-            min(area.x + self.cursor as u16, area.x + area.width.max(1) - 1),
-            area.y,
-        );
+        let width = area.width as usize;
+        let widths: Vec<usize> = self.input.chars().map(|c| c.width().unwrap_or(0)).collect();
+        let visible_width = widths.iter().rfold(0, |sum, x| {
+            sum + (sum + *x < width).then_some(*x).unwrap_or(0)
+        });
+        let total_width: usize = widths.iter().sum();
+        let hidden_width = total_width.saturating_sub(visible_width);
+        let left_over = (total_width > visible_width)
+            .then_some(width.saturating_sub(visible_width))
+            .unwrap_or(0);
+        let cursor = self.cursor.saturating_sub(hidden_width) + left_over;
+        f.set_cursor(min(area.x + cursor as u16, area.x + area.width), area.y);
     }
 
     pub fn set_cursor(&mut self, idx: usize) {
@@ -76,21 +86,45 @@ fn insert_char(s: &String, idx: usize, x: char) -> String {
     vec.into_iter().collect()
 }
 
+fn truncate_ellipsis(s: String, n: usize) -> (Option<String>, String) {
+    let mut sum = 0;
+    // Get all characters that are can fit into n
+    let mut chars = s
+        .chars()
+        .rev()
+        .take_while(|x| {
+            let add = sum + x.width().unwrap_or(0);
+            let res = add < n;
+            if res {
+                sum = add;
+            }
+            res
+        })
+        .collect::<Vec<char>>();
+    // If we cannot fit all characters into the given width, show ellipsis
+    if s.chars().count() > chars.len() {
+        let repeat = n
+            .checked_sub(sum)
+            .unwrap_or_else(|| chars.pop().and_then(|c| c.width()).unwrap_or(0));
+        let ellipsis = ['…'].repeat(repeat).iter().collect::<String>();
+        (Some(ellipsis), chars.into_iter().rev().collect())
+    } else {
+        (None, s)
+    }
+}
+
 impl super::Widget for InputWidget {
-    fn draw(&mut self, f: &mut Frame, _ctx: &Context, area: Rect) {
-        let width = self.input.len();
+    fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
         let fwidth = area.width as usize;
         // Try to insert ellipsis if input is too long (visual only)
-        let visible = if width >= fwidth {
-            let idx = width - fwidth + 2;
-            match self.input.get(idx..) {
-                Some(sub) => format!("…{}", sub),
-                None => self.input.to_owned(),
-            }
-        } else {
-            self.input.to_owned()
+        let (ellipsis, visible) = truncate_ellipsis(self.input.clone(), fwidth);
+        let p = match ellipsis {
+            Some(e) => Paragraph::new(Line::from(vec![
+                e.fg(ctx.theme.border_color),
+                visible.into(),
+            ])),
+            None => Paragraph::new(visible),
         };
-        let p = Paragraph::new(visible);
         p.render(area, f.buffer_mut());
     }
 
