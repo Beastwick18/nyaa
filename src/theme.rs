@@ -129,7 +129,7 @@ impl Default for Theme {
             bg: Color::Reset,
             fg: Color::White,
             border: BorderType::Plain,
-            border_color: Color::White,
+            border_color: Color::Gray,
             border_focused_color: Color::LightCyan,
             hl_bg: Color::DarkGray,
             solid_bg: Color::White,
