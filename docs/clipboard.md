@@ -3,9 +3,9 @@ You can configure the way copying works in nyaa using several options. The confi
 ```toml
 [clipboard]
 osc52 = true
-selection = "..."
-cmd = "..."
-shell_cmd = "..."
+selection = ["..."] # optional
+cmd = "..."         # optional
+shell_cmd = "..."   # optional
 ```
 
 They are prioritized in the order `cmd` $\rightarrow$ `osc52` $\rightarrow$ `selection`
@@ -34,6 +34,7 @@ By default, `cmd` is undefined so nyaa uses [OSC52](https://www.reddit.com/r/vim
 | [windows terminal](https://github.com/microsoft/terminal) | **yes** |
 | [xterm.js](https://xtermjs.org/) (Hyper terminal) | **yes** |
 | [zellij](https://github.com/zellij-org/zellij/) | **yes** |
+
 <sub>Source: [vim-oscyank](https://github.com/ojroques/vim-oscyank)</sub>
 
 If your terminal is not supported, you should disable OSC52 by adding
@@ -47,7 +48,7 @@ to your `config.toml`. This will make nyaa use an alternative method for copying
 For those using X11, you can change the option `x11_selection` to either `Clipboard`, `Primary`, or `Secondary` to change which selection X11 will copy the content into. This would look like:
 ```toml
 [clipboard]
-selection = "Primary"
+selection = "Primary" # can also be a list, like ["Primary", "Clipboard"]
 ```
 
 ## cmd

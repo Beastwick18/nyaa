@@ -17,8 +17,10 @@ theme = "Dracula"               # the theme to use by default
 default_source = "Nyaa"         # the source to use by default
 download_client = "qBittorrent" # the download client to use by default
 timeout = 30                    # request timeout for sources and clients (measured in seconds)
+cursor_padding = 4              # cursor padding for input fields
 scroll_padding = 6              # scroll padding for results table
 save_config_on_change = true    # save config when changing sources/themes
+hot_reload_config = true        # hot-reload config on change
 
 # ...
 ```

@@ -18,9 +18,9 @@ This mode is entered when the results table is focused.
 | P, H | First Page |
 | r | Reload |
 | o | Open in browser |
-| yt, ym, yp, yi | Copy torrent link/magnet link/post link/imdb id |
+| yt, ym, yp, yi, yn | Copy torrent/magnet/post link/imdb id/name |
 | Space | Toggle item for batch download |
-| Ctrl-Space | Multi-line select torrents |
+| v/V/Ctrl-Space | Enter visual add/remove/toggle mode |
 | Tab/Shift-Tab | Switch to Batches|
 | /, i | Search |
 | c | Categories |
