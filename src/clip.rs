@@ -97,7 +97,8 @@ impl ClipboardManager {
     }
 
     fn copy(
-        config: &ClipboardConfig,
+        #[cfg(target_os = "linux")] config: &ClipboardConfig,
+        #[cfg(not(target_os = "linux"))] _config: &ClipboardConfig,
         clipboard: &mut Clipboard,
         content: &String,
     ) -> Result<(), String> {
