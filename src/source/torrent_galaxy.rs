@@ -22,7 +22,7 @@ use crate::{
     sync::SearchQuery,
     theme::Theme,
     util::{
-        conv::{shorten_number, to_bytes},
+        conv::{color_to_tui, shorten_number, to_bytes},
         html::{as_type, attr, inner},
     },
     widget::sort::{SelectedSort, SortDir},

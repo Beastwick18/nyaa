@@ -74,7 +74,7 @@ impl Widget for ThemePopup {
         // Only show scrollbar if content overflows
         if ctx.themes.len() as u16 + 1 >= center.height {
             let sb = super::scrollbar(ctx, ScrollbarOrientation::VerticalRight);
-            let sb_area = center.inner(&Margin {
+            let sb_area = center.inner(Margin {
                 vertical: 1,
                 horizontal: 0,
             });

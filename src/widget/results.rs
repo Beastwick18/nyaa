@@ -130,7 +130,7 @@ impl super::Widget for ResultsWidget {
         };
 
         let sb = super::scrollbar(ctx, ScrollbarOrientation::VerticalRight).begin_symbol(Some(""));
-        let sb_area = area.inner(&Margin {
+        let sb_area = area.inner(Margin {
             vertical: 1,
             horizontal: 0,
         });

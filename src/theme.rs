@@ -5,10 +5,10 @@ use std::{
 };
 
 use indexmap::IndexMap;
-use ratatui::{style::Color, widgets::BorderType};
+use ratatui::{prelude::Color, widgets::BorderType};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use crate::{app::Context, collection, config, source::SourceTheme};
+use crate::{app::Context, collection, config, source::SourceTheme, util::conv::color_to_tui};
 
 pub static THEMES_PATH: &str = "themes";
 

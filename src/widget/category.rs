@@ -144,7 +144,7 @@ impl Widget for CategoryPopup {
             StatefulWidget::render(table, center, f.buffer_mut(), &mut self.table.state);
 
             let sb = super::scrollbar(ctx, ScrollbarOrientation::VerticalRight);
-            let sb_area = center.inner(&Margin {
+            let sb_area = center.inner(Margin {
                 vertical: 1,
                 horizontal: 0,
             });

@@ -39,7 +39,7 @@ impl Widget for PagePopup {
         super::clear(center, buf, ctx.theme.bg);
         indicator.render(center, buf);
 
-        let input_area = center.inner(&Margin {
+        let input_area = center.inner(Margin {
             vertical: 1,
             horizontal: 1,
         });

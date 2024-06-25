@@ -83,7 +83,7 @@ impl super::Widget for BatchWidget {
         StatefulWidget::render(table, area, buf, &mut self.table.state);
         if ctx.batch.len() + 2 > area.height as usize {
             let sb = super::scrollbar(ctx, ScrollbarOrientation::VerticalRight);
-            let sb_area = area.inner(&Margin {
+            let sb_area = area.inner(Margin {
                 vertical: 1,
                 horizontal: 0,
             });

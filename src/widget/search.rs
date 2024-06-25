@@ -35,7 +35,7 @@ impl super::Widget for SearchWidget {
         let block = border_block(&ctx.theme, ctx.mode == Mode::Search).title(title!("Search"));
         Clear.render(area, buf);
         block.render(area, buf);
-        let input_area = area.inner(&Margin {
+        let input_area = area.inner(Margin {
             vertical: 1,
             horizontal: 1,
         });

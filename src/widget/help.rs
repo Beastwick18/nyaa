@@ -92,7 +92,7 @@ impl Widget for HelpPopup {
         if self.table.items.len() as u16 + 2 >= center.height {
             let sb =
                 super::scrollbar(ctx, ScrollbarOrientation::VerticalRight).begin_symbol(Some(""));
-            let sb_area = center.inner(&Margin {
+            let sb_area = center.inner(Margin {
                 vertical: 1,
                 horizontal: 0,
             });

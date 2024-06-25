@@ -156,9 +156,9 @@ pub struct ResultRow {
 }
 
 impl<'a> Stylize<'a, ResultRow> for ResultRow {
-    fn bg(self, color: ratatui::prelude::Color) -> Self {
+    fn bg<S: Into<ratatui::prelude::Color>>(self, color: S) -> Self {
         let mut newself = self;
-        newself.style = newself.style.bg(color);
+        newself.style = newself.style.bg(color.into());
         newself
     }
 
