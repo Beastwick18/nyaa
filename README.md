@@ -201,7 +201,8 @@ By default, nyaa uses [OSC52](https://www.reddit.com/r/vim/comments/k1ydpn/a_gui
 | [windows terminal](https://github.com/microsoft/terminal) | **yes** |
 | [xterm.js](https://xtermjs.org/) (Hyper terminal) | **yes** |
 | [zellij](https://github.com/zellij-org/zellij/) | **yes** |
-<sub>Source: [vim-oscyank](https://github.com/ojroques/vim-oscyank)</sub>
+
+Source: [vim-oscyank](https://github.com/ojroques/vim-oscyank)
 
 If your terminal is not supported, you should disable OSC52 by adding
 ```toml
