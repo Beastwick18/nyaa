@@ -1,4 +1,7 @@
-use arboard::{Clipboard, GetExtLinux, LinuxClipboardKind, SetExtLinux};
+#[cfg(target_os = "linux")]
+use arboard::{GetExtLinux, LinuxClipboardKind, SetExtLinux as _};
+
+use arboard::Clipboard;
 use base64::Engine;
 use serde::{Deserialize, Serialize};
 
@@ -12,6 +15,7 @@ pub enum Selection {
     Secondary,
 }
 
+#[cfg(target_os = "linux")]
 impl Selection {
     fn get_kind(&self) -> LinuxClipboardKind {
         match self {
