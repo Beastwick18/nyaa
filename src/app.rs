@@ -256,8 +256,6 @@ impl App {
                 ctx.failed_config_load = false;
                 if let Err(e) = config.full_apply(config_manager.path(), ctx, &mut self.widgets) {
                     ctx.show_error(e);
-                } else if let Err(e) = ctx.save_config() {
-                    ctx.show_error(e);
                 }
             }
             Err(e) => {
@@ -294,6 +292,7 @@ impl App {
                 if let Err(e) = config_manager.store(&ctx.config) {
                     ctx.show_error(e);
                 }
+                ctx.should_save_config = false;
             }
             if !ctx.notifications.is_empty() {
                 ctx.notifications
