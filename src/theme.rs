@@ -8,7 +8,7 @@ use indexmap::IndexMap;
 use ratatui::{prelude::Color, widgets::BorderType};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use crate::{app::Context, collection, config, source::SourceTheme, util::conv::color_to_tui};
+use crate::{app::Context, collection, config, source::SourceTheme};
 
 pub static THEMES_PATH: &str = "themes";
 

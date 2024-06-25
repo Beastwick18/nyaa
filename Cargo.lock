@@ -212,6 +212,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "color-to-tui"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fbb7fe3c2fe4e88669ff503b2502dffc2f69125f276ae8ecb79439c3dd22f292"
+dependencies = [
+ "ratatui",
+ "serde",
+]
+
+[[package]]
 name = "compact_str"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1136,6 +1146,7 @@ dependencies = [
  "arboard",
  "base64 0.22.1",
  "chrono",
+ "color-to-tui",
  "crossterm",
  "directories",
  "dirs",
@@ -1145,7 +1156,7 @@ dependencies = [
  "lexopt",
  "nix",
  "open",
- "ratatui 0.27.0",
+ "ratatui",
  "ratatui-image",
  "reqwest",
  "rss",
@@ -1532,25 +1543,6 @@ dependencies = [
 
 [[package]]
 name = "ratatui"
-version = "0.26.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f44c9e68fd46eda15c646fbb85e1040b657a58cdc8c98db1d97a55930d991eef"
-dependencies = [
- "bitflags 2.5.0",
- "cassowary",
- "compact_str",
- "itertools 0.12.1",
- "lru",
- "paste",
- "stability",
- "strum",
- "unicode-segmentation",
- "unicode-truncate",
- "unicode-width",
-]
-
-[[package]]
-name = "ratatui"
 version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d16546c5b5962abf8ce6e2881e722b4e0ae3b6f1a08a26ae3573c55853ca68d3"
@@ -1581,7 +1573,7 @@ dependencies = [
  "icy_sixel",
  "image",
  "rand",
- "ratatui 0.26.3",
+ "ratatui",
 ]
 
 [[package]]
@@ -2149,9 +2141,9 @@ dependencies = [
 
 [[package]]
 name = "tinyvec"
-version = "1.6.0"
+version = "1.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "87cc5ceb3875bb20c2890005a4e226a4651264a5c75edb2421b52861a0a0cb50"
+checksum = "c55115c6fbe2d2bef26eb09ad74bde02d8255476fc0c7b515ef09fbb35742d82"
 dependencies = [
  "tinyvec_macros",
 ]

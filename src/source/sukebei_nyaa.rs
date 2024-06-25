@@ -15,7 +15,7 @@ use crate::{
     sync::SearchQuery,
     theme::Theme,
     util::{
-        conv::{color_to_tui, to_bytes},
+        conv::to_bytes,
         html::{attr, inner},
     },
     widget::sort::{SelectedSort, SortDir},
