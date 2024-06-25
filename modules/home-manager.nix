@@ -74,9 +74,17 @@ in {
 
     scroll_padding = lib.mkOption {
       type = lib.types.int;
-      default = "Nyaa";
+      default = 3;
       description = ''
         The amount of padding between the selected item and the bottom of the shown results
+      '';
+    };
+
+    cursor_padding = lib.mkOption {
+      type = lib.types.int;
+      default = 4;
+      description = ''
+        The amount of padding to show in input fields that are truncated
       '';
     };
 
