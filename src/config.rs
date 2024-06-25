@@ -54,6 +54,7 @@ pub struct Config {
     pub request_proxy: Option<String>,
     pub timeout: u64,
     pub scroll_padding: usize,
+    pub cursor_padding: usize,
     pub save_config_on_change: bool,
     pub hot_reload_config: bool,
 
@@ -77,6 +78,7 @@ impl Default for Config {
             request_proxy: None,
             timeout: 30,
             scroll_padding: 3,
+            cursor_padding: 4,
             save_config_on_change: true,
             hot_reload_config: true,
 

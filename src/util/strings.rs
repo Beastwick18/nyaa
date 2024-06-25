@@ -30,18 +30,21 @@ pub fn insert_char(s: &String, idx: usize, x: char) -> String {
 pub fn truncate_ellipsis(
     s: String,
     n: usize,
+    padding: usize,
     cursor: usize,
     offset: &mut usize,
 ) -> (Option<String>, String, Option<String>) {
     let (mut sum, mut before) = (0, 0);
+    let total_width = s.chars().fold(0, |acc, c| acc + c.width().unwrap_or(0));
+    let cursor_pad_right = (cursor + padding).min(total_width);
 
-    if cursor >= *offset + n {
-        *offset = cursor.saturating_sub(n) + 1;
-    } else if cursor <= *offset {
-        *offset = cursor.saturating_sub(1);
+    // ----o------------------c-p-x
+    if cursor_pad_right >= *offset + n {
+        *offset = cursor_pad_right.saturating_sub(n) + 1;
+    } else if cursor.saturating_sub(padding) <= *offset {
+        *offset = cursor.saturating_sub(padding + 1);
     }
 
-    let total_width = s.chars().fold(0, |acc, c| acc + c.width().unwrap_or(0));
     let mut chars = s
         .chars()
         // Skip `offset` number of columns
