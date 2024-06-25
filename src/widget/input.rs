@@ -1,7 +1,4 @@
-use std::{
-    cmp::{max, min},
-    ops::RangeBounds,
-};
+use std::cmp::{max, min};
 
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::{
@@ -11,13 +8,13 @@ use ratatui::{
     widgets::{Paragraph, Widget},
     Frame,
 };
-use unicode_width::UnicodeWidthChar;
 
-use crate::app::Context;
+use crate::{app::Context, util::strings};
 
 pub struct InputWidget {
     pub input: String,
     pub char_idx: usize,
+    pub char_offset: usize,
     pub cursor: usize,
     pub max_len: usize,
     pub validator: Option<fn(&char) -> bool>,
@@ -28,6 +25,7 @@ impl InputWidget {
         InputWidget {
             input: "".to_owned(),
             char_idx: 0,
+            char_offset: 0,
             cursor: 0,
             max_len,
             validator,
@@ -35,23 +33,14 @@ impl InputWidget {
     }
 
     pub fn show_cursor(&self, f: &mut Frame, area: Rect) {
-        let width = area.width as usize;
-        let widths: Vec<usize> = self.input.chars().map(|c| c.width().unwrap_or(0)).collect();
-        let visible_width = widths.iter().rfold(0, |sum, x| {
-            sum + (sum + *x < width).then_some(*x).unwrap_or(0)
-        });
-        let total_width: usize = widths.iter().sum();
-        let hidden_width = total_width.saturating_sub(visible_width);
-        let left_over = (total_width > visible_width)
-            .then_some(width.saturating_sub(visible_width))
-            .unwrap_or(0);
-        let cursor = self.cursor.saturating_sub(hidden_width) + left_over;
+        let cursor = self.get_cursor_pos();
+
         f.set_cursor(min(area.x + cursor as u16, area.x + area.width), area.y);
     }
 
     pub fn set_cursor(&mut self, idx: usize) {
         self.char_idx = idx.min(self.max_len);
-        self.cursor = pos_of_nth_char(&self.input, self.char_idx);
+        self.cursor = strings::pos_of_nth_char(&self.input, self.char_idx);
     }
 
     pub fn clear(&mut self) {
@@ -59,57 +48,9 @@ impl InputWidget {
         self.cursor = 0;
         self.char_idx = 0;
     }
-}
 
-fn pos_of_nth_char(s: &String, idx: usize) -> usize {
-    s.chars()
-        .take(idx)
-        .fold(0, |acc, c| acc + c.width().unwrap_or(0))
-}
-
-fn without_nth_char(s: &String, idx: usize) -> String {
-    s.chars()
-        .enumerate()
-        .filter_map(|(i, c)| if i != idx { Some(c) } else { None })
-        .collect::<String>()
-}
-
-fn without_range(s: &String, range: impl RangeBounds<usize>) -> String {
-    let mut vec = s.chars().collect::<Vec<char>>();
-    vec.drain(range);
-    vec.into_iter().collect()
-}
-
-fn insert_char(s: &String, idx: usize, x: char) -> String {
-    let mut vec = s.chars().collect::<Vec<char>>();
-    vec.insert(idx, x);
-    vec.into_iter().collect()
-}
-
-fn truncate_ellipsis(s: String, n: usize) -> (Option<String>, String) {
-    let mut sum = 0;
-    // Get all characters that are can fit into n
-    let mut chars = s
-        .chars()
-        .rev()
-        .take_while(|x| {
-            let add = sum + x.width().unwrap_or(0);
-            let res = add < n;
-            if res {
-                sum = add;
-            }
-            res
-        })
-        .collect::<Vec<char>>();
-    // If we cannot fit all characters into the given width, show ellipsis
-    if s.chars().count() > chars.len() {
-        let repeat = n
-            .checked_sub(sum)
-            .unwrap_or_else(|| chars.pop().and_then(|c| c.width()).unwrap_or(0));
-        let ellipsis = ['…'].repeat(repeat).iter().collect::<String>();
-        (Some(ellipsis), chars.into_iter().rev().collect())
-    } else {
-        (None, s)
+    fn get_cursor_pos(&self) -> usize {
+        return self.cursor - self.char_offset;
     }
 }
 
@@ -117,15 +58,18 @@ impl super::Widget for InputWidget {
     fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
         let fwidth = area.width as usize;
         // Try to insert ellipsis if input is too long (visual only)
-        let (ellipsis, visible) = truncate_ellipsis(self.input.clone(), fwidth);
-        let p = match ellipsis {
-            Some(e) => Paragraph::new(Line::from(vec![
-                e.fg(ctx.theme.border_color),
-                visible.into(),
-            ])),
-            None => Paragraph::new(visible),
-        };
-        p.render(area, f.buffer_mut());
+        let (ellipsis, visible, ellipsis_back) = strings::truncate_ellipsis(
+            self.input.clone(),
+            fwidth,
+            self.cursor,
+            &mut self.char_offset,
+        );
+        Paragraph::new(Line::from(vec![
+            ellipsis.unwrap_or_default().fg(ctx.theme.border_color),
+            visible.into(),
+            ellipsis_back.unwrap_or_default().fg(ctx.theme.border_color),
+        ]))
+        .render(area, f.buffer_mut());
     }
 
     fn handle_event(&mut self, _ctx: &mut Context, evt: &Event) {
@@ -145,93 +89,34 @@ impl super::Widget for InputWidget {
                         }
                     }
                     if self.input.chars().count() < self.max_len {
-                        self.input = insert_char(&self.input, self.char_idx, *c);
+                        self.input = strings::insert_char(&self.input, self.char_idx, *c);
                         self.char_idx += 1;
                     }
                 }
                 (Char('b') | Left, &KeyModifiers::CONTROL) => {
-                    let cursor = min(self.char_idx, self.input.chars().count());
-                    // Find the first non-space character before the cursor
-                    let non_space = self
-                        .input
-                        .chars()
-                        .take(cursor)
-                        .collect::<Vec<char>>()
-                        .into_iter()
-                        .rposition(|c| c != ' ')
-                        .unwrap_or(0);
-
-                    // Find the first space character before the first non-space character
-                    self.char_idx = self
-                        .input
-                        .chars()
-                        .take(non_space)
-                        .collect::<Vec<char>>()
-                        .into_iter()
-                        .rposition(|c| c == ' ')
-                        .map(|u| u + 1)
-                        .unwrap_or(0);
+                    self.char_idx = strings::back_word(&self.input, self.char_idx);
                 }
                 (Char('w') | Right, &KeyModifiers::CONTROL) => {
-                    let idx = min(self.char_idx + 1, self.input.chars().count());
-
-                    self.char_idx = self
-                        .input
-                        .chars()
-                        .skip(idx)
-                        .collect::<Vec<char>>()
-                        .into_iter()
-                        .position(|c| c == ' ')
-                        .map(|u| self.char_idx + u + 2)
-                        .unwrap_or(self.input.chars().count());
+                    self.char_idx = strings::forward_word(&self.input, self.char_idx);
                 }
                 (Delete, &KeyModifiers::CONTROL | &KeyModifiers::ALT) => {
-                    let idx = min(self.char_idx + 1, self.input.chars().count());
-
-                    let new_cursor = self
-                        .input
-                        .chars()
-                        .skip(idx)
-                        .collect::<Vec<char>>()
-                        .into_iter()
-                        .position(|c| c == ' ')
-                        .map(|u| self.char_idx + u + 2)
-                        .unwrap_or(self.input.chars().count());
-                    self.input = without_range(&self.input, self.char_idx..new_cursor)
+                    let new_cursor = strings::forward_word(&self.input, self.char_idx);
+                    self.input = strings::without_range(&self.input, self.char_idx..new_cursor)
                 }
                 (Backspace, &KeyModifiers::CONTROL | &KeyModifiers::ALT) => {
-                    let cursor = min(self.char_idx, self.input.chars().count());
-                    // Find the first non-space character before the cursor
-                    let non_space = self
-                        .input
-                        .chars()
-                        .take(cursor)
-                        .collect::<Vec<char>>()
-                        .into_iter()
-                        .rposition(|c| c != ' ')
-                        .unwrap_or(0);
-
-                    // Find the first space character before the first non-space character
-                    self.char_idx = self
-                        .input
-                        .chars()
-                        .take(non_space)
-                        .collect::<Vec<char>>()
-                        .into_iter()
-                        .rposition(|c| c == ' ')
-                        .map(|u| u + 1)
-                        .unwrap_or(0);
-                    self.input = without_range(&self.input, self.char_idx..cursor)
+                    let new_cursor = strings::back_word(&self.input, self.char_idx);
+                    self.input = strings::without_range(&self.input, new_cursor..self.char_idx);
+                    self.char_idx = new_cursor;
                 }
                 (Backspace, &KeyModifiers::NONE) => {
                     if !self.input.is_empty() && self.char_idx > 0 {
                         self.char_idx -= 1;
-                        self.input = without_nth_char(&self.input, self.char_idx);
+                        self.input = strings::without_nth_char(&self.input, self.char_idx);
                     }
                 }
                 (Delete, &KeyModifiers::NONE) => {
                     if !self.input.is_empty() && self.char_idx < self.input.chars().count() {
-                        self.input = without_nth_char(&self.input, self.char_idx);
+                        self.input = strings::without_nth_char(&self.input, self.char_idx);
                     }
                 }
                 (Left, &KeyModifiers::NONE)
@@ -254,7 +139,7 @@ impl super::Widget for InputWidget {
                 }
                 _ => {}
             };
-            self.cursor = pos_of_nth_char(&self.input, self.char_idx);
+            self.cursor = strings::pos_of_nth_char(&self.input, self.char_idx);
         }
         if let Event::Paste(p) = evt.to_owned() {
             let space_left = self.max_len - self.input.chars().count();
@@ -269,7 +154,7 @@ impl super::Widget for InputWidget {
             self.input = format!("{before}{p}{after}");
             self.char_idx = min(self.char_idx + p.chars().count(), self.max_len);
 
-            self.cursor = pos_of_nth_char(&self.input, self.char_idx);
+            self.cursor = strings::pos_of_nth_char(&self.input, self.char_idx);
         }
     }
 
