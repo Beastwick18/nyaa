@@ -178,6 +178,7 @@ pub struct Context {
     should_quit: bool,
     should_dismiss_notifications: bool,
     should_save_config: bool,
+    skip_reload: bool,
 }
 
 impl Context {
@@ -195,6 +196,7 @@ impl Context {
 
     pub fn save_config(&mut self) -> Result<(), Box<dyn Error>> {
         self.should_save_config = true;
+        self.skip_reload = true;
         Ok(())
     }
 
@@ -226,6 +228,7 @@ impl Default for Context {
             should_quit: false,
             should_dismiss_notifications: false,
             should_save_config: false,
+            skip_reload: false,
         }
     }
 }
@@ -461,6 +464,10 @@ impl App {
                         break;
                     }
                     Some(notif) = rx_cfg.recv() => {
+                        if ctx.skip_reload {
+                            ctx.skip_reload = false;
+                            continue;
+                        }
                         match notif {
                             ReloadType::Config => {
                                 match config_manager.load() {
@@ -478,33 +485,9 @@ impl App {
                                 Err(e) => ctx.show_error(e)
                             },
                         }
-                        //match config_manager.load() {
-                        //    Ok(config) => {
-                        //        ctx.failed_config_load = false;
-                        //        if let Err(e) = config.apply::<C>(&config_manager, ctx, &mut self.widgets) {
-                        //            ctx.show_error(e);
-                        //        } else {
-                        //            ctx.notify(match notif {
-                        //                ReloadType::Config => "Reloaded config".to_owned(),
-                        //                ReloadType::Theme(theme) => format!("Reloaded theme \"{theme}\""),
-                        //            });
-                        //        }
-                        //    }
-                        //    Err(e) => {
-                        //        ctx.show_error(format!("Failed to load config:\n{}", e));
-                        //        if let Err(e) =
-                        //            ctx.config
-                        //                .clone()
-                        //                .apply::<C>(&config_manager, ctx, &mut self.widgets)
-                        //        {
-                        //            ctx.show_error(e);
-                        //        }
-                        //    }
-                        //}
 
                         break;
                     },
-                    // _ = async{}, if matches!(terminal.size().map(|s| self.widgets.notification.update(last_time.map(|l| (Instant::now() - l).as_secs_f64()).unwrap_or(0.), s)), Ok(true)) => {
                     else => {
                         return Err("All channels closed".into());
                     }
