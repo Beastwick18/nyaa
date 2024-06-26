@@ -61,7 +61,9 @@ impl super::Widget for InputWidget {
         let (ellipsis, visible, ellipsis_back) = strings::truncate_ellipsis(
             self.input.clone(),
             fwidth,
-            ctx.config.cursor_padding,
+            ctx.config
+                .cursor_padding
+                .min((fwidth / 2).saturating_sub(1)),
             self.cursor,
             &mut self.char_offset,
         );
