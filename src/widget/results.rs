@@ -150,12 +150,13 @@ impl super::Widget for ResultsWidget {
             )))
             .highlight_style(Style::default().bg(ctx.theme.hl_bg));
 
+        let visible_height = area.height.saturating_sub(3) as usize;
         super::scroll_padding(
             self.table.selected().unwrap_or(0),
             area.height as usize,
             3,
             num_items,
-            ctx.config.scroll_padding,
+            ctx.config.scroll_padding.min(visible_height / 2),
             self.table.state.offset_mut(),
         );
 
@@ -173,7 +174,12 @@ impl super::Widget for ResultsWidget {
         }
 
         if area.height >= 3 {
-            if let Some(visible_items) = ctx.results.response.items.get(self.table.state.offset()..)
+            let offset = self.table.state.offset();
+            if let Some(visible_items) = ctx
+                .results
+                .response
+                .items
+                .get(offset..(offset + visible_height))
             {
                 let selected_ids: Vec<String> =
                     ctx.batch.clone().into_iter().map(|i| i.id).collect();
@@ -181,13 +187,10 @@ impl super::Widget for ResultsWidget {
                 let lines = visible_items
                     .iter()
                     .map(|i| {
-                        Line::from(
-                            match selected_ids.contains(&i.id) {
-                                true => symbols::border::QUADRANT_BLOCK,
-                                false => vert_left,
-                            }
-                            .to_owned(),
-                        )
+                        Line::from(match selected_ids.contains(&i.id) {
+                            true => symbols::border::QUADRANT_BLOCK,
+                            false => vert_left,
+                        })
                     })
                     .collect::<Vec<Line>>();
                 let para = Paragraph::new(lines);
