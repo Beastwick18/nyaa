@@ -36,16 +36,13 @@ gh:
 
 changelog:
 	@echo "Adds:"
-	@git log $(shell git describe --tags --abbrev=0)..HEAD --oneline | sed -n 's/^.\+feat:\s\+/- /p'
+	@git log $(shell git describe --tags --abbrev=0)..HEAD --oneline | sed -n 's/^.\+feat(\(.\+\))\?:\s\+/- /p'
 	@echo
 	@echo "Fixes:"
-	@git log $(shell git describe --tags --abbrev=0)..HEAD --oneline | sed -n 's/^.\+fix:\s\+/- /p'
+	@git log $(shell git describe --tags --abbrev=0)..HEAD --oneline | sed -n 's/^.\+fix(\(.\+\))\?:\s\+/- /p'
 
 tty:
 	vhs ./scripts/tty.tape
-
-tgx:
-	vhs ./scripts/tgx.tape
 
 publish:
 	@echo -n "Publish v$(VERSION) to crates.io? [y/N] " && read ans && [ $${ans:-N} = y ]
