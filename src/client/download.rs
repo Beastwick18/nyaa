@@ -62,7 +62,7 @@ async fn download_torrent(
     if !overwrite && filepath.exists() {
         return Err(format!(
             "{} already exists.\nEnable \"overwrite\" to overwrite files",
-            filepath.to_string_lossy().to_string()
+            filepath.to_string_lossy()
         )
         .into());
     }

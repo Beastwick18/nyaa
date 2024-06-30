@@ -92,10 +92,10 @@ impl Default for Config {
 
 impl ConfigManager for AppConfig {
     fn load(&self) -> Result<Config, Box<dyn Error>> {
-        load_path(&self.config_path.join(CONFIG_FILE))
+        load_path(self.config_path.join(CONFIG_FILE))
     }
     fn store(&self, cfg: &Config) -> Result<(), Box<dyn Error>> {
-        store_path(&self.config_path.join(CONFIG_FILE), cfg)
+        store_path(self.config_path.join(CONFIG_FILE), cfg)
     }
     fn path(&self) -> PathBuf {
         self.config_path.clone()

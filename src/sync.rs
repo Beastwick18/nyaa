@@ -155,7 +155,7 @@ impl EventSync for AppSync {
             let theme_files = fs::read_dir(&themes_path).ok().and_then(|v| {
                 v.filter_map(Result::ok)
                     .map(|v| v.path())
-                    .find(|p| watch(&p, last_modified))
+                    .find(|p| watch(p, last_modified))
             });
             if let Some(theme) = theme_files {
                 last_modified = SystemTime::now();

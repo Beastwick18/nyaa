@@ -23,14 +23,13 @@ enum VisualMode {
     Toggle,
     Add,
     Remove,
-    None, // TODO: Remove for just Option
+    None,
 }
 
 pub struct ResultsWidget {
     pub table: VirtualStatefulTable,
     visual_mode: VisualMode,
     visual_anchor: usize,
-    // draw_count: u64,
 }
 
 impl ResultsWidget {
@@ -41,7 +40,7 @@ impl ResultsWidget {
 
     fn try_select_add(&self, ctx: &mut Context, sel: usize) {
         if let Some(item) = ctx.results.response.items.get(sel) {
-            if ctx.batch.iter().position(|s| s.id == item.id).is_none() {
+            if ctx.batch.iter().any(|s| s.id == item.id) {
                 ctx.batch.push(item.to_owned());
             }
         }
@@ -96,7 +95,6 @@ impl Default for ResultsWidget {
             table: VirtualStatefulTable::new(),
             visual_mode: VisualMode::None,
             visual_anchor: 0,
-            // draw_count: 0,
         }
     }
 }
@@ -214,13 +212,6 @@ impl super::Widget for ResultsWidget {
                 f.render_widget(br, area);
             }
         }
-
-        // if let Some((bl, area)) =
-        //     Corner::BottomLeft.try_title(format!("{} draws", self.draw_count), area, false)
-        // {
-        //     f.render_widget(bl, area);
-        //     self.draw_count += 1;
-        // }
     }
 
     fn handle_event(&mut self, ctx: &mut Context, e: &Event) {

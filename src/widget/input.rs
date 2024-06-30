@@ -50,7 +50,7 @@ impl InputWidget {
     }
 
     fn get_cursor_pos(&self) -> usize {
-        return self.cursor - self.char_offset;
+        self.cursor - self.char_offset
     }
 }
 

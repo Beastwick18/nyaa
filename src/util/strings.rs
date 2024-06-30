@@ -2,26 +2,26 @@ use std::{collections::VecDeque, ops::RangeBounds};
 
 use unicode_width::UnicodeWidthChar as _;
 
-pub fn pos_of_nth_char(s: &String, idx: usize) -> usize {
+pub fn pos_of_nth_char(s: &str, idx: usize) -> usize {
     s.chars()
         .take(idx)
         .fold(0, |acc, c| acc + c.width().unwrap_or(0))
 }
 
-pub fn without_nth_char(s: &String, idx: usize) -> String {
+pub fn without_nth_char(s: &str, idx: usize) -> String {
     s.chars()
         .enumerate()
         .filter_map(|(i, c)| if i != idx { Some(c) } else { None })
         .collect::<String>()
 }
 
-pub fn without_range(s: &String, range: impl RangeBounds<usize>) -> String {
+pub fn without_range(s: &str, range: impl RangeBounds<usize>) -> String {
     let mut vec = s.chars().collect::<Vec<char>>();
     vec.drain(range);
     vec.into_iter().collect()
 }
 
-pub fn insert_char(s: &String, idx: usize, x: char) -> String {
+pub fn insert_char(s: &str, idx: usize, x: char) -> String {
     let mut vec = s.chars().collect::<Vec<char>>();
     vec.insert(idx, x);
     vec.into_iter().collect()
@@ -98,7 +98,7 @@ pub fn truncate_ellipsis(
     return (el, chars.iter().collect::<String>(), er);
 }
 
-pub fn back_word(input: &String, start: usize) -> usize {
+pub fn back_word(input: &str, start: usize) -> usize {
     let cursor = start.min(input.chars().count());
     // Find the first non-space character before the cursor
     let first_non_space = input
@@ -120,7 +120,7 @@ pub fn back_word(input: &String, start: usize) -> usize {
         .unwrap_or(0)
 }
 
-pub fn forward_word(input: &String, start: usize) -> usize {
+pub fn forward_word(input: &str, start: usize) -> usize {
     let idx = start.min(input.chars().count());
 
     // Skip all non-whitespace
