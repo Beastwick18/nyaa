@@ -13,7 +13,7 @@ release: linux
 	@git log $(shell git describe --tags --abbrev=0)..HEAD --oneline
 
 win:
-	cargo build --target $(WINDOWS_TARGET) --release
+	cargo build --target $(WINDOWS_TARGET) --profile=github
 
 linux:
 	cargo build --target $(LINUX_TARGET) --profile=github
