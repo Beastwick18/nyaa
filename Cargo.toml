@@ -12,8 +12,8 @@ license = "GPL-3.0-or-later"
 
 [profile.release]
 debug = 0
+lto = 0
 strip = "debuginfo"
-lto = "none"
 
 [profile.github]
 inherits = "release"
