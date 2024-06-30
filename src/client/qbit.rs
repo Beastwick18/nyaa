@@ -218,10 +218,15 @@ impl DownloadClient for QbitClient {
             }
         };
         if res.status() != StatusCode::OK {
-            return DownloadResult::error(DownloadError(format!(
-                "qBittorrent returned status code {}",
-                res.status().as_u16()
-            )));
+            let mut msg = format!(
+                "qBittorrent returned status code {} {}",
+                res.status().as_u16(),
+                res.status().canonical_reason().unwrap_or("")
+            );
+            if res.status() == StatusCode::FORBIDDEN {
+                msg.push_str("\n\nLikely incorrect username/password");
+            }
+            return DownloadResult::error(DownloadError(msg));
         }
 
         let _ = logout(&qbit, &client).await;
