@@ -27,7 +27,7 @@
 - [Proxies](#-proxies)
 - [Configuration](#%EF%B8%8F-configuration)
   - [Download Client Integration](#download-client-integration)
-- [Clipboard]()
+- [Clipboard](#-clipboard)
 - [Custom Themes](#-custom-themes)
 - [Planned Features](#%EF%B8%8F-planned-features)
 
@@ -72,6 +72,7 @@ imports = [
 ]
 programs.nyaa.enable = true;
 ```
+Check the [wiki](https://github.com/Beastwick18/nyaa/wiki/Home%E2%80%90manager) for more information
 
 ### Windows/Linux Binaries
 

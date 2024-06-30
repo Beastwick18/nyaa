@@ -1,3 +1,31 @@
+# v0.9.1
+## Adds:
+- Adds [OSC52](https://www.reddit.com/r/vim/comments/k1ydpn/a_guide_on_how_to_copy_text_from_anywhere/) support for copying
+    - This is the new default. See [wiki](./docs/clipboard.md) for more information
+- Allow copying into multiple X11/Wayland selections
+- Adds `home-manager` modules for configuring with nix (see wiki)
+- Adds command line options
+    - `-v/-V/--version` = print version
+    - `--config=/path/to/config/folder` = change path to config folder
+- Adds `password_file` option to qBittorrent and transmission for loading password from disk
+- Preview selected theme in theme popup
+- Seperate visual mode for add/remove/toggle
+    - Keybinds `v/V/Ctrl-Space` for add/remove/toggle
+- Truncate input when too long using ellipsis in input fields
+- Allow for moving through input fields that are long
+- Adds `cursor_padding` config option to modify amount of padding when navigating input fields
+## Fixes:
+- Fix timezone conversion (#22)
+- Replaces `cli-clipboard` crate with `arboard` to fix clipboard on X11
+- Improves build time in release mode by disabling LTO
+- No longer uses proxy for download clients
+    - Would often break authentication
+- Fixes qBittorrent not reading cookies (#23)
+- Other notifications will move to fill in gaps left by dismissed notifications
+- Shows accurate cursor position when wide unicode characters present in input fields
+- No longer panics when deleting wide unicode characters
+
+
 # v0.9.0
 ## Adds:
 - Ability to interact with application while searching or downloading
