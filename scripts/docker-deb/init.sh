@@ -14,7 +14,7 @@ cargo install cargo-deb
 pushd ~/nyaa
 
 # Build .deb package in github mode
-cargo deb --profile github
+cargo deb -- --profile github
 
 # Export it to shared directory
 cp ~/nyaa/target/debian/nyaa_${VERSION}-1_amd64.deb ~/docker/nyaa-${VERSION}-x86_64.deb
