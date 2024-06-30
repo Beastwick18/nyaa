@@ -26,7 +26,7 @@ impl Default for CaptchaPopup {
 
 impl Widget for CaptchaPopup {
     fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
-        let center = area.inner(&Margin {
+        let center = area.inner(Margin {
             horizontal: 4,
             vertical: 4,
         });
@@ -42,7 +42,7 @@ impl Widget for CaptchaPopup {
                 layout[0],
             );
             StatefulImage::new(None).render(
-                layout[0].inner(&Margin {
+                layout[0].inner(Margin {
                     horizontal: 1,
                     vertical: 1,
                 }),
@@ -55,7 +55,7 @@ impl Widget for CaptchaPopup {
             layout[1],
         );
 
-        let input_area = layout[1].inner(&Margin {
+        let input_area = layout[1].inner(Margin {
             horizontal: 1,
             vertical: 1,
         });
