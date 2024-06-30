@@ -151,6 +151,7 @@ impl super::Widget for InputWidget {
                 Some(v) => p.chars().filter(v).collect(),
                 None => p,
             };
+            let p = strings::replace_non_space_whitespace(&p);
             let p: String = p.chars().take(space_left).collect();
             let before: String = self.input.chars().take(self.char_idx).collect();
             let after: String = self.input.chars().skip(self.char_idx).collect();

@@ -27,6 +27,18 @@ pub fn insert_char(s: &str, idx: usize, x: char) -> String {
     vec.into_iter().collect()
 }
 
+pub fn replace_non_space_whitespace(s: &str) -> String {
+    s.chars()
+        .map(|c| {
+            if c.is_whitespace() && c != ' ' {
+                ' '
+            } else {
+                c
+            }
+        })
+        .collect()
+}
+
 pub fn truncate_ellipsis(
     s: String,
     n: usize,
