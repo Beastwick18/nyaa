@@ -8,8 +8,8 @@ none:
 
 release: linux
 	@mkdir -p "release/$(VERSION)"
-	cp "target/$(LINUX_TARGET)/release/nyaa" "release/$(VERSION)/nyaa-$(VERSION)-$(LINUX_TARGET)"
-	@echo "\nCommits since last tag:"
+	cp "target/$(LINUX_TARGET)/github/nyaa" "release/$(VERSION)/nyaa-$(VERSION)-$(LINUX_TARGET)"
+	@echo "Commits since last tag:"
 	@git log $(shell git describe --tags --abbrev=0)..HEAD --oneline
 
 win:
@@ -18,9 +18,12 @@ win:
 linux:
 	cargo build --target $(LINUX_TARGET) --profile=github
 
-fedora:
+github:
+	cargo build --profile=github
+
+fedora: github
 	@mkdir -p "release/$(VERSION)"
-	cargo generate-rpm
+	cargo generate-rpm --profile github
 	cp target/generate-rpm/nyaa-$(VERSION)*.rpm "release/$(VERSION)/"
 
 deb:
