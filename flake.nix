@@ -32,7 +32,7 @@
 
     devShells = forAllSystems (system: {
 			default = pkgs.mkShell {
-				nativeBuildInputs = with pkgs; [ rust.packages.stable.rustPlatform.rustcSrc rustc cargo rustPackages.clippy ];
+				nativeBuildInputs = with pkgs; [ rust.packages.stable.rustPlatform.rustcSrc rustc cargo rustPackages.clippy docker ];
 			};
     });
 
