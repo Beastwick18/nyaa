@@ -60,8 +60,9 @@ impl AnimateState {
         }
     }
 
-    pub fn ease_out(
+    pub fn translate(
         &mut self,
+        func: fn(f64) -> f64,
         start_pos: (i32, i32),
         stop_pos: (i32, i32),
         rate: f64,
@@ -71,13 +72,23 @@ impl AnimateState {
             self.done = true;
         }
         let pos = (
-            ((Self::_ease_out(self.time) * (stop_pos.0 - start_pos.0) as f64) + start_pos.0 as f64)
-                .round() as i32,
-            ((Self::_ease_out(self.time) * (stop_pos.1 - start_pos.1) as f64) + start_pos.1 as f64)
-                .round() as i32,
+            ((func(self.time) * (stop_pos.0 - start_pos.0) as f64) + start_pos.0 as f64).round()
+                as i32,
+            ((func(self.time) * (stop_pos.1 - start_pos.1) as f64) + start_pos.1 as f64).round()
+                as i32,
         );
         self.time = 1.0_f64.min(self.time + rate * deltatime);
         pos
+    }
+
+    pub fn ease_out(
+        &mut self,
+        start_pos: (i32, i32),
+        stop_pos: (i32, i32),
+        rate: f64,
+        deltatime: f64,
+    ) -> (i32, i32) {
+        self.translate(Self::_ease_out, start_pos, stop_pos, rate, deltatime)
     }
 
     pub fn ease_in(
@@ -87,17 +98,7 @@ impl AnimateState {
         rate: f64,
         deltatime: f64,
     ) -> (i32, i32) {
-        if self.time >= 1.0 {
-            self.done = true;
-        }
-        let pos = (
-            ((Self::_ease_in(self.time) * (stop_pos.0 - start_pos.0) as f64) + start_pos.0 as f64)
-                .round() as i32,
-            ((Self::_ease_in(self.time) * (stop_pos.1 - start_pos.1) as f64) + start_pos.1 as f64)
-                .round() as i32,
-        );
-        self.time = 1.0_f64.min(self.time + rate * deltatime);
-        pos
+        self.translate(Self::_ease_in, start_pos, stop_pos, rate, deltatime)
     }
 
     fn _ease_out(x: f64) -> f64 {
