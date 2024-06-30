@@ -12,7 +12,7 @@ license = "GPL-3.0-or-later"
 
 [profile.release]
 debug = 0
-lto = 0
+lto = "none"
 strip = "debuginfo"
 
 [profile.github]
