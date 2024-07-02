@@ -2,6 +2,7 @@ use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::{
     layout::{Margin, Rect},
     style::Stylize,
+    text::Line,
     widgets::{Clear, Widget},
     Frame,
 };
@@ -14,7 +15,6 @@ use crate::{
 use super::{
     border_block,
     input::{self, InputWidget},
-    Corner,
 };
 
 pub struct SearchWidget {
@@ -32,14 +32,6 @@ impl Default for SearchWidget {
 impl super::Widget for SearchWidget {
     fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
         let buf = f.buffer_mut();
-        let block = border_block(&ctx.theme, ctx.mode == Mode::Search).title(title!("Search"));
-        Clear.render(area, buf);
-        block.render(area, buf);
-        let input_area = area.inner(Margin {
-            vertical: 1,
-            horizontal: 1,
-        });
-
         let help_title = title!(
             "Press ".into();
             "F1".bold();
@@ -47,9 +39,15 @@ impl super::Widget for SearchWidget {
             "?".bold();
             " for help".into();
         );
-        if let Some((tr, area)) = Corner::TopRight.try_title(help_title, area, true) {
-            tr.render(area, buf);
-        }
+        let block = border_block(&ctx.theme, ctx.mode == Mode::Search)
+            .title(title!("Search"))
+            .title_top(Line::from(help_title).right_aligned());
+        Clear.render(area, buf);
+        block.render(area, buf);
+        let input_area = area.inner(Margin {
+            vertical: 1,
+            horizontal: 1,
+        });
 
         self.input.draw(f, ctx, input_area);
         if ctx.mode == Mode::Search {

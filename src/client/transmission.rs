@@ -8,7 +8,9 @@ use transmission_rpc::{
 
 use crate::{source::Item, util::conv::add_protocol};
 
-use super::{multidownload, ClientConfig, DownloadClient, DownloadError, DownloadResult};
+use super::{
+    multidownload, BatchDownloadResult, ClientConfig, DownloadClient, SingleDownloadResult,
+};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(i8)]
@@ -99,27 +101,23 @@ async fn add_torrent(
     Ok(())
 }
 
-pub fn load_config(cfg: &mut ClientConfig) {
-    if cfg.transmission.is_none() {
-        cfg.transmission = Some(TransmissionConfig::default());
-    }
-}
-
 impl DownloadClient for TransmissionClient {
-    async fn download(item: Item, conf: ClientConfig, client: reqwest::Client) -> DownloadResult {
+    async fn download(
+        item: Item,
+        conf: ClientConfig,
+        client: reqwest::Client,
+    ) -> SingleDownloadResult {
         let Some(conf) = conf.transmission.clone() else {
-            return DownloadResult::error(DownloadError(
-                "Failed to get configuration for transmission".to_owned(),
-            ));
+            return SingleDownloadResult::error("Failed to get configuration for transmission");
         };
 
         if let Some(labels) = conf.labels.clone() {
             if let Some(bad) = labels.iter().find(|l| l.contains(',')) {
                 let bad = format!("\"{}\"", bad);
-                return DownloadResult::error(DownloadError(format!(
+                return SingleDownloadResult::error(format!(
                     "Transmission labels must not contain commas:\n{}",
                     bad
-                )));
+                ));
             }
         }
 
@@ -128,21 +126,16 @@ impl DownloadClient for TransmissionClient {
             Some(false) => item.torrent_link.to_owned(),
         };
         if let Err(e) = add_torrent(&conf, link, client).await {
-            return DownloadResult::error(DownloadError(e.to_string()));
+            return SingleDownloadResult::error(e);
         }
-        DownloadResult::new(
-            "Successfully sent torrent to Transmission".to_owned(),
-            vec![item.id],
-            vec![],
-            false,
-        )
+        SingleDownloadResult::success("Successfully sent torrent to Transmission", item.id)
     }
 
     async fn batch_download(
         items: Vec<Item>,
         conf: ClientConfig,
         client: reqwest::Client,
-    ) -> DownloadResult {
+    ) -> BatchDownloadResult {
         multidownload::<TransmissionClient, _>(
             |s| format!("Successfully sent {} torrents to Transmission", s),
             &items,
@@ -150,5 +143,11 @@ impl DownloadClient for TransmissionClient {
             &client,
         )
         .await
+    }
+
+    fn load_config(cfg: &mut ClientConfig) {
+        if cfg.transmission.is_none() {
+            cfg.transmission = Some(TransmissionConfig::default());
+        }
     }
 }

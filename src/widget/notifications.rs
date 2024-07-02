@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crossterm::event::Event;
 use ratatui::{layout::Rect, Frame};
 use serde::{Deserialize, Serialize};
@@ -7,6 +9,50 @@ use crate::app::Context;
 use super::{notify_box::NotifyBox, Corner, Widget};
 
 static MAX_NOTIFS: usize = 100;
+
+#[derive(Clone, Copy, PartialEq)]
+pub enum NotificationType {
+    Info,
+    Warning,
+    Error,
+    Success,
+}
+
+#[derive(Clone)]
+pub struct Notification {
+    pub content: String,
+    pub notif_type: NotificationType,
+}
+
+impl Notification {
+    pub fn info<S: Display>(content: S) -> Self {
+        Self {
+            content: content.to_string(),
+            notif_type: NotificationType::Info,
+        }
+    }
+
+    pub fn warning<S: Display>(content: S) -> Self {
+        Self {
+            content: content.to_string(),
+            notif_type: NotificationType::Warning,
+        }
+    }
+
+    pub fn error<S: Display>(content: S) -> Self {
+        Self {
+            content: content.to_string(),
+            notif_type: NotificationType::Error,
+        }
+    }
+
+    pub fn success<S: Display>(content: S) -> Self {
+        Self {
+            content: content.to_string(),
+            notif_type: NotificationType::Success,
+        }
+    }
+}
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct NotificationConfig {
@@ -48,31 +94,17 @@ impl NotificationWidget {
         !self.notifs.is_empty()
     }
 
-    pub fn add_notification(&mut self, notif: String) {
-        let new_notif = NotifyBox::new(
+    pub fn add(&mut self, notif: Notification) {
+        let persist = matches!(notif.notif_type, NotificationType::Error);
+        let notif = NotifyBox::new(
             notif,
             self.duration,
             self.position,
             self.animation_speed,
             self.max_width,
-            false,
+            persist,
         );
-        self.add(new_notif);
-    }
 
-    pub fn add_error(&mut self, error: String) {
-        let new_notif = NotifyBox::new(
-            error,
-            0.0,
-            self.position,
-            self.animation_speed,
-            self.max_width,
-            true,
-        );
-        self.add(new_notif);
-    }
-
-    fn add(&mut self, notif: NotifyBox) {
         self.notifs
             .iter_mut()
             .for_each(|n| n.add_offset(notif.height()));
@@ -109,7 +141,7 @@ impl NotificationWidget {
         // Offset unfinished notifications by gap left from finished notifs
         for (offset, height) in finished.iter() {
             self.notifs.iter_mut().for_each(|n| {
-                if n.is_error() && n.offset() > *offset {
+                if n.get_type() == NotificationType::Error && n.offset() > *offset {
                     n.add_offset(-(*height as i32));
                 }
             })

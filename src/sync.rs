@@ -10,7 +10,7 @@ use tokio::sync::mpsc;
 
 use crate::{
     app::LoadType,
-    client::{Client, ClientConfig, DownloadResult},
+    client::{Client, ClientConfig, DownloadClientResult},
     config::CONFIG_FILE,
     results::Results,
     source::{Item, SourceConfig, SourceResponse, SourceResults, Sources},
@@ -33,7 +33,7 @@ pub trait EventSync {
     ) -> impl std::future::Future<Output = ()> + std::marker::Send + 'static;
     fn download(
         self,
-        tx_dl: mpsc::Sender<DownloadResult>,
+        tx_dl: mpsc::Sender<DownloadClientResult>,
         batch: bool,
         items: Vec<Item>,
         config: ClientConfig,
@@ -118,7 +118,7 @@ impl EventSync for AppSync {
 
     async fn download(
         self,
-        tx_dl: mpsc::Sender<DownloadResult>,
+        tx_dl: mpsc::Sender<DownloadClientResult>,
         batch: bool,
         items: Vec<Item>,
         config: ClientConfig,
@@ -126,8 +126,12 @@ impl EventSync for AppSync {
         client: Client,
     ) {
         let res = match batch {
-            true => client.batch_download(items, config, rq_client).await,
-            false => client.download(items[0].clone(), config, rq_client).await,
+            true => {
+                DownloadClientResult::Batch(client.batch_download(items, config, rq_client).await)
+            }
+            false => DownloadClientResult::Single(
+                client.download(items[0].clone(), config, rq_client).await,
+            ),
         };
         let _ = tx_dl.send(res).await;
     }

@@ -164,7 +164,7 @@ impl Widget for CategoryPopup {
                     if let Some(cat) = ctx.src_info.cats.get(self.major) {
                         if let Some(item) = cat.entries.get(self.minor) {
                             self.selected = item.id;
-                            ctx.notify(format!("Category \"{}\"", item.name));
+                            ctx.notify_info(format!("Category \"{}\"", item.name));
                         }
                     }
                     ctx.mode = Mode::Loading(LoadType::Categorizing);

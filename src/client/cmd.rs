@@ -2,7 +2,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::{source::Item, util::cmd::CommandBuilder};
 
-use super::{multidownload, ClientConfig, DownloadClient, DownloadError, DownloadResult};
+use super::{
+    multidownload, BatchDownloadResult, ClientConfig, DownloadClient, SingleDownloadResult,
+};
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(default)]
@@ -26,18 +28,12 @@ impl Default for CmdConfig {
     }
 }
 
-pub fn load_config(cfg: &mut ClientConfig) {
-    if cfg.cmd.is_none() {
-        cfg.cmd = Some(CmdConfig::default());
-    }
-}
-
 impl DownloadClient for CmdClient {
-    async fn download(item: Item, conf: ClientConfig, _: reqwest::Client) -> DownloadResult {
+    async fn download(item: Item, conf: ClientConfig, _: reqwest::Client) -> SingleDownloadResult {
         let cmd = match conf.cmd.to_owned() {
             Some(c) => c,
             None => {
-                return DownloadResult::error(DownloadError("Failed to get cmd config".to_owned()));
+                return SingleDownloadResult::error("Failed to get cmd config");
             }
         };
         let res = CommandBuilder::new(cmd.cmd)
@@ -46,25 +42,19 @@ impl DownloadClient for CmdClient {
             .sub("{title}", &item.title)
             .sub("{file}", &item.file_name)
             .run(cmd.shell_cmd)
-            .map_err(|e| DownloadError(e.to_string()));
+            .map_err(|e| e.to_string());
 
-        let (success_ids, errors) = match res {
-            Ok(()) => (vec![item.id], vec![]),
-            Err(e) => (vec![], vec![DownloadError(e.to_string())]),
-        };
-        DownloadResult::new(
-            "Successfully ran command".to_owned(),
-            success_ids,
-            errors,
-            false,
-        )
+        match res {
+            Ok(()) => SingleDownloadResult::success("Successfully ran command", item.id),
+            Err(e) => SingleDownloadResult::error(e),
+        }
     }
 
     async fn batch_download(
         items: Vec<Item>,
         conf: ClientConfig,
         client: reqwest::Client,
-    ) -> DownloadResult {
+    ) -> BatchDownloadResult {
         multidownload::<CmdClient, _>(
             |s| format!("Successfully ran command on {} torrents", s),
             &items,
@@ -72,5 +62,11 @@ impl DownloadClient for CmdClient {
             &client,
         )
         .await
+    }
+
+    fn load_config(cfg: &mut ClientConfig) {
+        if cfg.cmd.is_none() {
+            cfg.cmd = Some(CmdConfig::default());
+        }
     }
 }

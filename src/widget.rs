@@ -5,7 +5,6 @@ use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Stylize as _},
-    text::Line,
     widgets::{
         Block, Borders, Clear, Scrollbar, ScrollbarOrientation, ScrollbarState, TableState,
         Widget as _,
@@ -55,27 +54,27 @@ pub enum Corner {
 }
 
 impl Corner {
-    pub fn try_title<'a, L: Into<Line<'a>>>(
-        self,
-        text: L,
-        area: Rect,
-        hide_if_too_small: bool,
-    ) -> Option<(Line<'a>, Rect)> {
-        let line: Line = text.into();
-        let line_width = min(area.width, line.width() as u16);
-        if hide_if_too_small && area.width < line.width() as u16 + 2 {
-            // Too small
-            return None;
-        }
-        let (left, y) = match self {
-            Corner::TopLeft => (area.left() + 1, area.top()),
-            Corner::TopRight => (area.right() - 1 - line_width, area.top()),
-            Corner::BottomLeft => (area.left() + 1, area.bottom() - 1),
-            Corner::BottomRight => (area.right() - 1 - line_width, area.bottom() - 1),
-        };
-        let right = Rect::new(left, y, line_width, 1);
-        Some((line, right))
-    }
+    //pub fn try_title<'a, L: Into<Line<'a>>>(
+    //    self,
+    //    text: L,
+    //    area: Rect,
+    //    hide_if_too_small: bool,
+    //) -> Option<(Line<'a>, Rect)> {
+    //    let line: Line = text.into();
+    //    let line_width = min(area.width, line.width() as u16);
+    //    if hide_if_too_small && area.width < line.width() as u16 + 2 {
+    //        // Too small
+    //        return None;
+    //    }
+    //    let (left, y) = match self {
+    //        Corner::TopLeft => (area.left() + 1, area.top()),
+    //        Corner::TopRight => (area.right() - 1 - line_width, area.top()),
+    //        Corner::BottomLeft => (area.left() + 1, area.bottom() - 1),
+    //        Corner::BottomRight => (area.right() - 1 - line_width, area.bottom() - 1),
+    //    };
+    //    let right = Rect::new(left, y, line_width, 1);
+    //    Some((line, right))
+    //}
 }
 
 pub fn scroll_padding(

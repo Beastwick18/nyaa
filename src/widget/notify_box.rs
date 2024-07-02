@@ -7,7 +7,10 @@ use ratatui::{
 
 use crate::{app::Context, style};
 
-use super::Corner;
+use super::{
+    notifications::{Notification, NotificationType},
+    Corner,
+};
 
 impl Corner {
     fn is_top(&self) -> bool {
@@ -120,7 +123,7 @@ impl AnimateState {
 }
 
 pub struct NotifyBox {
-    raw_content: String,
+    notif: Notification,
     pub time: f64,
     pub duration: f64,
     animation_speed: f64,
@@ -133,26 +136,26 @@ pub struct NotifyBox {
     enter_state: AnimateState,
     leave_state: AnimateState,
     pub pos: Option<(i32, i32)>,
-    error: bool,
+    persist: bool,
 }
 
 impl NotifyBox {
     pub fn new(
-        content: String,
+        notif: Notification,
         duration: f64,
         position: Corner,
         animation_speed: f64,
         max_width: u16,
-        error: bool,
+        persist: bool,
     ) -> Self {
-        let raw_content = content.clone();
-        let lines = textwrap::wrap(&content, max_width as usize);
+        //let raw_content = notif.content.clone();
+        let lines = textwrap::wrap(&notif.content, max_width as usize);
         let actual_width = lines.iter().fold(0, |acc, x| acc.max(x.len())) as u16 + 2;
         let height = lines.len() as u16 + 2;
         NotifyBox {
             width: actual_width,
             height,
-            raw_content,
+            notif,
             position,
             animation_speed,
             max_width,
@@ -163,7 +166,7 @@ impl NotifyBox {
             enter_state: AnimateState::new(),
             leave_state: AnimateState::new(),
             pos: None,
-            error,
+            persist,
         }
     }
 
@@ -187,8 +190,8 @@ impl NotifyBox {
         self.time >= 1.0
     }
 
-    pub fn is_error(&self) -> bool {
-        self.error
+    pub fn get_type(&self) -> NotificationType {
+        self.notif.notif_type
     }
 
     pub fn add_offset<I: Into<i32> + Copy>(&mut self, offset: I) {
@@ -199,11 +202,11 @@ impl NotifyBox {
     }
 
     pub fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
-        let max_width = match self.error {
-            true => (area.width / 3).max(self.max_width),
-            false => area.width.min(self.max_width),
+        let max_width = match self.notif.notif_type {
+            NotificationType::Error => (area.width / 3).max(self.max_width),
+            _ => area.width.min(self.max_width),
         } as usize;
-        let lines = textwrap::wrap(&self.raw_content, max_width);
+        let lines = textwrap::wrap(&self.notif.content, max_width);
         self.width = lines.iter().fold(0, |acc, x| acc.max(x.len())) as u16 + 2;
         self.height = lines.len() as u16 + 2;
         let content = lines.join("\n");
@@ -240,29 +243,53 @@ impl NotifyBox {
         }
         let scroll_x = (pos.0 + 1).min(0).unsigned_abs() as u16;
         let scroll_y = (pos.1 + 1).min(0).unsigned_abs() as u16;
-        let block = match self.error {
-            false => Block::new()
-                .border_style(style!(fg:ctx.theme.border_focused_color))
-                .bg(ctx.theme.bg)
-                .fg(ctx.theme.fg)
-                .borders(border)
-                .border_type(ctx.theme.border),
-            true => {
-                let mut block = Block::new()
-                    .border_style(style!(fg:ctx.theme.error))
-                    .bg(ctx.theme.bg)
-                    .fg(ctx.theme.error)
-                    .borders(border)
-                    .border_type(ctx.theme.border);
-                if border.contains(Borders::TOP) {
-                    let title = "Error: Press ESC to dismiss...";
-                    if let Some(sub) = title.get((scroll_x as usize)..) {
-                        block = block.title(sub);
-                    }
-                }
-                block
-            }
+        let (title, border_color, fg_color) = match self.notif.notif_type {
+            NotificationType::Info => (None, ctx.theme.info, ctx.theme.fg),
+            NotificationType::Warning => (Some("Warning"), ctx.theme.warning, ctx.theme.warning),
+            NotificationType::Error => (
+                Some("Error: Press ESC to dismiss..."),
+                ctx.theme.error,
+                ctx.theme.error,
+            ),
+            NotificationType::Success => (Some("Success"), ctx.theme.success, ctx.theme.fg),
         };
+        let block = {
+            let mut block = Block::new()
+                .border_style(style!(fg:border_color))
+                .bg(ctx.theme.bg)
+                .fg(fg_color)
+                .borders(border)
+                .border_type(ctx.theme.border);
+            if border.contains(Borders::TOP) {
+                if let Some(sub) = title.and_then(|t| t.get((scroll_x as usize)..)) {
+                    block = block.title(sub)
+                }
+            }
+            block
+        };
+        //let block = match self.notif_type {
+        //    Notification::Error => {
+        //        let mut block = Block::new()
+        //            .border_style(style!(fg:ctx.theme.error))
+        //            .bg(ctx.theme.bg)
+        //            .fg(ctx.theme.error)
+        //            .borders(border)
+        //            .border_type(ctx.theme.border);
+        //        if border.contains(Borders::TOP) {
+        //            let title = "Error: Press ESC to dismiss...";
+        //            if let Some(sub) = title.get((scroll_x as usize)..) {
+        //                block = block.title(sub);
+        //            }
+        //        }
+        //        block
+        //    }
+        //    _ => Block::new()
+        //        .border_style(style!(fg:ctx.theme.border_focused_color))
+        //        .bg(ctx.theme.bg)
+        //        .fg(ctx.theme.fg)
+        //        .borders(border)
+        //        .border_type(ctx.theme.border),
+        //};
 
         super::clear(rect, f.buffer_mut(), ctx.theme.bg);
         Paragraph::new(content)
@@ -293,7 +320,7 @@ impl NotifyBox {
         self.pos = Some(self.next_pos(deltatime, area));
 
         // Dont automatically dismiss errors
-        if self.enter_state.is_done() && !self.error {
+        if self.enter_state.is_done() && !self.persist {
             self.time = 1.0_f64.min(self.time + deltatime / self.duration);
         }
         last_pos != self.pos

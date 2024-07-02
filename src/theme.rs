@@ -34,10 +34,14 @@ pub struct Theme {
     pub solid_bg: Color,
     #[serde(with = "color_to_tui")]
     pub solid_fg: Color,
-    #[serde(with = "color_to_tui", alias = "trusted")]
-    pub success: Color,
+    #[serde(with = "color_to_tui", alias = "remake")]
+    pub info: Color,
+    #[serde(with = "color_to_tui", alias = "remake")]
+    pub warning: Color,
     #[serde(with = "color_to_tui", alias = "remake")]
     pub error: Color,
+    #[serde(with = "color_to_tui", alias = "trusted")]
+    pub success: Color,
 
     #[serde(default)]
     pub source: SourceTheme,
@@ -62,14 +66,14 @@ pub fn load_user_themes(ctx: &mut Context, config_path: PathBuf) -> Result<(), S
             let f = match f {
                 Ok(f) => f,
                 Err(e) => {
-                    ctx.show_error(format!("Failed to get theme file path :\n{}", e));
+                    ctx.notify_error(format!("Failed to get theme file path :\n{}", e));
                     return None;
                 }
             };
             let res = match Theme::from_path(f.path()) {
                 Ok(t) => t,
                 Err(e) => {
-                    ctx.show_error(format!(
+                    ctx.notify_error(format!(
                         "Failed to parse theme \"{}\":\n{}",
                         f.file_name().to_string_lossy(),
                         e
@@ -134,6 +138,8 @@ impl Default for Theme {
             hl_bg: Color::DarkGray,
             solid_bg: Color::White,
             solid_fg: Color::Black,
+            info: Color::LightCyan,
+            warning: Color::Yellow,
             success: Color::Green,
             error: Color::Red,
             source: Default::default(),
@@ -160,6 +166,8 @@ pub fn default_themes() -> IndexMap<String, Theme> {
             hl_bg: Color::Rgb(98, 114, 164),
             solid_fg: Color::Rgb(40, 42, 54),
             solid_bg: Color::Rgb(139, 233, 253),
+            info: Color::Rgb(189, 147, 249),
+            warning: Color::Rgb(241, 250, 140),
             success: Color::Rgb(80, 250, 123),
             error: Color::Rgb(255, 85, 85),
             source: Default::default(),
@@ -174,6 +182,8 @@ pub fn default_themes() -> IndexMap<String, Theme> {
             hl_bg: Color::Rgb(80, 73, 69),
             solid_bg: Color::Rgb(69, 133, 136),
             solid_fg: Color::Rgb(235, 219, 178),
+            info: Color::Rgb(214, 93, 14),
+            warning: Color::Rgb(250, 189, 47),
             success: Color::Rgb(152, 151, 26),
             error: Color::Rgb(204, 36, 29),
             source: Default::default(),
@@ -188,6 +198,8 @@ pub fn default_themes() -> IndexMap<String, Theme> {
             hl_bg: Color::Rgb(110, 115, 141),
             solid_bg: Color::Rgb(166, 218, 149),
             solid_fg: Color::Rgb(24, 25, 38),
+            info: Color::Rgb(125, 196, 228),
+            warning: Color::Rgb(238, 212, 159),
             success: Color::Rgb(166, 218, 149),
             error: Color::Rgb(237, 135, 150),
             source: Default::default(),

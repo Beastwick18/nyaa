@@ -74,8 +74,8 @@ impl Widget for SourcesPopup {
                             ctx.mode = Mode::Loading(LoadType::Sourcing);
                             src.load_config(&mut ctx.config.sources);
                             match ctx.save_config() {
-                                Ok(_) => ctx.notify(format!("Updated source to \"{}\"", src)),
-                                Err(e) => ctx.show_error(format!(
+                                Ok(_) => ctx.notify_info(format!("Updated source to \"{}\"", src)),
+                                Err(e) => ctx.notify_error(format!(
                                     "Failed to update default source in config file:\n{}",
                                     e
                                 )),

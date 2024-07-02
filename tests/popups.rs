@@ -172,6 +172,7 @@ async fn test_themes() {
         .string('t')
         .string("jjj")
         .enter()
+        .string('t')
         .quit()
         .build();
 
@@ -199,7 +200,7 @@ async fn test_themes() {
             r#"│                                                          │"#,
             r#"│                                                          │"#,
             r#"│                                                          │"#,
-            r#"╰──────────────────────────────────────────────────────<CR>╯"#,
+            r#"╰─────────────────────────────────────────────────────────t╯"#,
         ])
     );
 }
@@ -259,7 +260,7 @@ async fn test_source() {
             r#"┌Search───────────────────────│Updated source to "Sukebei"│┐"#,
             r#"│                             └───────────────────────────┘│"#,
             r#"└──────────────────────────────────────────────────────────┘"#,
-            r#"┌Results 1-0 (0 total): Page 1dl: Run Command, src: Sukebei┐"#,
+            r#"┌Results 1-0 (0 total): Page 1/0: Run Command, src: Sukebei┐"#,
             r#"│                                                          │"#,
             r#"│                                                          │"#,
             r#"│                                                          │"#,

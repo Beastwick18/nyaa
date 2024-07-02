@@ -17,8 +17,9 @@ use tokio::{sync::mpsc, task::AbortHandle};
 
 #[cfg(feature = "captcha")]
 use crate::widget::captcha::CaptchaPopup;
+
 use crate::{
-    client::{Client, DownloadResult},
+    client::{Client, DownloadClientResult, SingleDownloadResult},
     clip::ClipboardManager,
     config::{Config, ConfigManager},
     results::Results,
@@ -34,7 +35,7 @@ use crate::{
         clients::ClientsPopup,
         filter::FilterPopup,
         help::HelpPopup,
-        notifications::NotificationWidget,
+        notifications::{Notification, NotificationWidget},
         page::PagePopup,
         results::ResultsWidget,
         search::SearchWidget,
@@ -172,8 +173,8 @@ pub struct Context {
     pub last_key: String,
     pub results: Results,
     pub deltatime: f64,
-    errors: Vec<String>,
-    notifications: Vec<String>,
+    //errors: Vec<String>,
+    notifications: Vec<Notification>,
     failed_config_load: bool,
     should_quit: bool,
     should_dismiss_notifications: bool,
@@ -182,12 +183,24 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn show_error<S: Display>(&mut self, error: S) {
-        self.errors.push(error.to_string());
+    pub fn notify_error<S: Display>(&mut self, msg: S) {
+        self.notify(Notification::error(msg));
     }
 
-    pub fn notify<S: Display>(&mut self, msg: S) {
-        self.notifications.push(msg.to_string());
+    pub fn notify_info<S: Display>(&mut self, msg: S) {
+        self.notify(Notification::info(msg));
+    }
+
+    pub fn notify_warn<S: Display>(&mut self, msg: S) {
+        self.notify(Notification::warning(msg));
+    }
+
+    pub fn notify_success<S: Display>(&mut self, msg: S) {
+        self.notify(Notification::success(msg));
+    }
+
+    pub fn notify(&mut self, notif: Notification) {
+        self.notifications.push(notif);
     }
 
     pub fn dismiss_notifications(&mut self) {
@@ -214,7 +227,6 @@ impl Default for Context {
             src_info: NyaaHtmlSource::info(),
             theme: Theme::default(),
             config: Config::default(),
-            errors: Vec::new(),
             notifications: Vec::new(),
             page: 1,
             user: None,
@@ -248,7 +260,7 @@ impl App {
         let (tx_res, mut rx_res) =
             mpsc::channel::<Result<SourceResults, Box<dyn Error + Send + Sync>>>(32);
         let (tx_evt, mut rx_evt) = mpsc::channel::<Event>(100);
-        let (tx_dl, mut rx_dl) = mpsc::channel::<DownloadResult>(100);
+        let (tx_dl, mut rx_dl) = mpsc::channel::<DownloadClientResult>(100);
         let (tx_cfg, mut rx_cfg) = mpsc::channel::<ReloadType>(1);
 
         tokio::task::spawn(sync.clone().read_event_loop(tx_evt));
@@ -258,17 +270,17 @@ impl App {
             Ok(config) => {
                 ctx.failed_config_load = false;
                 if let Err(e) = config.full_apply(config_manager.path(), ctx, &mut self.widgets) {
-                    ctx.show_error(e);
+                    ctx.notify_error(e);
                 }
             }
             Err(e) => {
-                ctx.show_error(format!("Failed to load config:\n{}", e));
+                ctx.notify_error(format!("Failed to load config:\n{}", e));
                 if let Err(e) =
                     ctx.config
                         .clone()
                         .full_apply(config_manager.path(), ctx, &mut self.widgets)
                 {
-                    ctx.show_error(e);
+                    ctx.notify_error(e);
                 }
             }
         }
@@ -287,13 +299,13 @@ impl App {
             ClipboardManager::new(ctx.config.clipboard.clone().unwrap_or_default())
         };
         if let Some(err) = err {
-            ctx.show_error(err);
+            ctx.notify_error(err);
         }
 
         while !ctx.should_quit {
             if ctx.should_save_config && ctx.config.save_config_on_change {
                 if let Err(e) = config_manager.store(&ctx.config) {
-                    ctx.show_error(e);
+                    ctx.notify_error(e);
                 }
                 ctx.should_save_config = false;
             }
@@ -301,19 +313,19 @@ impl App {
                 ctx.notifications
                     .clone()
                     .into_iter()
-                    .for_each(|n| self.widgets.notification.add_notification(n));
+                    .for_each(|n| self.widgets.notification.add(n));
                 ctx.notifications.clear();
             }
-            if !ctx.errors.is_empty() {
-                if TEST {
-                    return Err(ctx.errors.join("\n\n").into());
-                }
-                ctx.errors
-                    .clone()
-                    .into_iter()
-                    .for_each(|n| self.widgets.notification.add_error(n));
-                ctx.errors.clear();
-            }
+            //if !ctx.errors.is_empty() {
+            //    if TEST {
+            //        return Err(ctx.errors.join("\n\n").into());
+            //    }
+            //    ctx.errors
+            //        .clone()
+            //        .into_iter()
+            //        .for_each(|n| self.widgets.notification.add(Notification::Error, n));
+            //    ctx.errors.clear();
+            //}
             if ctx.should_dismiss_notifications {
                 self.widgets.notification.dismiss_all();
                 ctx.should_dismiss_notifications = false;
@@ -343,7 +355,7 @@ impl App {
                                 client_rqclient.clone(),
                                 ctx.client,
                             ));
-                            ctx.notify(format!("Downloading torrent with {}", ctx.client));
+                            ctx.notify_info(format!("Downloading torrent with {}", ctx.client));
                         }
                         continue;
                     }
@@ -356,7 +368,7 @@ impl App {
                             client_rqclient.clone(),
                             ctx.client,
                         ));
-                        ctx.notify(format!(
+                        ctx.notify_info(format!(
                             "Downloading {} torrents with {}",
                             ctx.batch.len(),
                             ctx.client
@@ -440,7 +452,7 @@ impl App {
                             Err(e) => {
                                 // Clear results on error
                                 ctx.results = Results::default();
-                                ctx.show_error(e);
+                                ctx.notify_error(e);
                             },
                         }
                         ctx.load_type = None;
@@ -448,18 +460,38 @@ impl App {
                         break;
                     },
                     Some(dl) = rx_dl.recv() => {
-                        if dl.batch {
-                            for id in dl.success_ids.iter() {
-                                ctx.batch.retain(|i| i.id.ne(id));
+                        //if dl.batch {
+                        //    for id in dl.success_ids.iter() {
+                        //        ctx.batch.retain(|i| i.id.ne(id));
+                        //    }
+                        //}
+                        //if !dl.success_ids.is_empty() {
+                        //    if let Some(notif) = dl.success_msg {
+                        //        if let Some(notif_type) = dl.success_msg {
+                        //            ctx.notify(notif_type, notif);
+                        //        }
+                        //    }
+                        //}
+                        //for e in dl.errors.iter() {
+                        //    ctx.notify_error(e)
+                        //}
+                        match dl {
+                            DownloadClientResult::Single(sr) => {
+                                match sr {
+                                    SingleDownloadResult::Success(suc) => {
+                                        ctx.notify(suc.msg);
+                                    },
+                                    SingleDownloadResult::Error(err) => {
+                                        ctx.notify(err.msg);
+                                    },
+                                };
                             }
-                        }
-                        if !dl.success_ids.is_empty() {
-                            if let Some(notif) = dl.success_msg {
-                                ctx.notify(notif);
+                            DownloadClientResult::Batch(br) => {
+                                if !br.ids.is_empty() {
+                                    ctx.notify(br.msg);
+                                }
+                                br.errors.into_iter().for_each(|e| ctx.notify(e));
                             }
-                        }
-                        for e in dl.errors.iter() {
-                            ctx.show_error(e)
                         }
                         break;
                     }
@@ -473,16 +505,16 @@ impl App {
                                 match config_manager.load() {
                                     Ok(config) => {
                                         match config.partial_apply(ctx, &mut self.widgets) {
-                                            Ok(()) => ctx.notify("Reloaded config".to_owned()),
-                                            Err(e) => ctx.show_error(e),
+                                            Ok(()) => ctx.notify_info("Reloaded config".to_owned()),
+                                            Err(e) => ctx.notify_error(e),
                                         }
                                     }
-                                    Err(e) => ctx.show_error(e),
+                                    Err(e) => ctx.notify_error(e),
                                 }
                             },
                             ReloadType::Theme(t) => match theme::load_user_themes(ctx, config_manager.path()) {
-                                Ok(()) => ctx.notify(format!("Reloaded theme \"{t}\"")),
-                                Err(e) => ctx.show_error(e)
+                                Ok(()) => ctx.notify_info(format!("Reloaded theme \"{t}\"")),
+                                Err(e) => ctx.notify_error(e)
                             },
                         }
 
@@ -549,7 +581,7 @@ impl App {
             #[cfg(unix)]
             if let (KeyCode::Char('z'), &KeyModifiers::CONTROL) = (code, modifiers) {
                 if let Err(e) = term::suspend_self(terminal) {
-                    ctx.show_error(format!("Failed to suspend:\n{}", e));
+                    ctx.notify_error(format!("Failed to suspend:\n{}", e));
                 }
                 // If we fail to continue the process, panic
                 if let Err(e) = term::continue_self(terminal) {
@@ -638,18 +670,20 @@ impl App {
                             'p' => item.post_link,
                             'i' => match item.extra.get("imdb").cloned() {
                                 Some(imdb) => imdb,
-                                None => return ctx.show_error("No imdb ID found for this item."),
+                                None => return ctx.notify_error("No imdb ID found for this item."),
                             },
                             'n' => item.title,
                             _ => return,
                         };
                         match clipboard.try_copy(&link) {
-                            Ok(()) => ctx.notify(format!("Copied \"{}\" to clipboard", link)),
-                            Err(e) => ctx.show_error(e),
+                            Ok(()) => {
+                                ctx.notify_success(format!("Copied \"{}\" to clipboard", link))
+                            }
+                            Err(e) => ctx.notify_error(e),
                         }
                     }
                     None if ['t', 'm', 'p', 'i', 'n'].contains(&c) => {
-                        ctx.show_error("Failed to copy:\nFailed to get item")
+                        ctx.notify_error("Failed to copy:\nFailed to get item")
                     }
                     None => {}
                 }

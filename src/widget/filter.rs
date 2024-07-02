@@ -74,7 +74,7 @@ impl Widget for FilterPopup {
                         self.selected = i;
                         ctx.mode = Mode::Loading(LoadType::Filtering);
                         if let Some(f) = ctx.src_info.filters.get(i) {
-                            ctx.notify(format!("Filter by \"{}\"", f));
+                            ctx.notify_info(format!("Filter by \"{}\"", f));
                         }
                     }
                 }

@@ -3,9 +3,9 @@ use std::{collections::HashMap, error::Error, fs};
 use reqwest::{Response, StatusCode};
 use serde::{Deserialize, Serialize};
 
-use crate::{source::Item, util::conv::add_protocol};
+use crate::{source::Item, util::conv::add_protocol, widget::notifications::Notification};
 
-use super::{ClientConfig, DownloadClient, DownloadError, DownloadResult};
+use super::{BatchDownloadResult, ClientConfig, DownloadClient, SingleDownloadResult};
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(default)]
@@ -160,82 +160,98 @@ async fn add_torrent(
     Ok(client.post(url).form(&qbit.to_form(links)).send().await?)
 }
 
-pub fn load_config(cfg: &mut ClientConfig) {
-    if cfg.qbit.is_none() {
-        cfg.qbit = Some(QbitConfig::default());
+async fn download_some(
+    items: Vec<Item>,
+    conf: ClientConfig,
+    client: reqwest::Client,
+) -> Result<(), String> {
+    let Some(qbit) = conf.qbit.to_owned() else {
+        return Err("Failed to get qBittorrent config".to_owned());
+    };
+    if let Some(labels) = qbit.tags.clone() {
+        if let Some(bad) = labels.iter().find(|l| l.contains(',')) {
+            let bad = format!("\"{}\"", bad);
+            return Err(format!(
+                "qBittorrent tags must not contain commas:\n{}",
+                bad
+            ));
+        }
     }
+    if let Err(e) = login(&qbit, &client).await {
+        return Err(format!("Failed to get SID:\n{}", e));
+    }
+    let links = match qbit.use_magnet.unwrap_or(true) {
+        true => items
+            .iter()
+            .map(|i| i.magnet_link.to_owned())
+            .collect::<Vec<String>>()
+            .join("\n"),
+        false => items
+            .iter()
+            .map(|i| i.torrent_link.to_owned())
+            .collect::<Vec<String>>()
+            .join("\n"),
+    };
+    let res = match add_torrent(&qbit, links, &client).await {
+        Ok(res) => res,
+        Err(e) => return Err(format!("Failed to get response:\n{}", e)),
+    };
+    if res.status() != StatusCode::OK {
+        let mut msg = format!(
+            "qBittorrent returned status code {} {}",
+            res.status().as_u16(),
+            res.status().canonical_reason().unwrap_or("")
+        );
+        if res.status() == StatusCode::FORBIDDEN {
+            msg.push_str("\n\nLikely incorrect username/password");
+        }
+        return Err(msg);
+    }
+
+    let _ = logout(&qbit, &client).await;
+    Ok(())
 }
 
 impl DownloadClient for QbitClient {
-    async fn download(item: Item, conf: ClientConfig, client: reqwest::Client) -> DownloadResult {
-        let mut res = Self::batch_download(vec![item], conf, client).await;
-        res.success_msg = Some("Successfully sent torrent to qBittorrent".to_string());
-        res.batch = false;
-        res
+    async fn download(
+        item: Item,
+        conf: ClientConfig,
+        client: reqwest::Client,
+    ) -> SingleDownloadResult {
+        let id = item.id.clone();
+        match download_some(vec![item], conf, client).await {
+            Ok(()) => SingleDownloadResult::success("Successfully sent torrent to qBittorrent", id),
+            Err(e) => SingleDownloadResult::error(e),
+        }
     }
 
     async fn batch_download(
         items: Vec<Item>,
         conf: ClientConfig,
         client: reqwest::Client,
-    ) -> DownloadResult {
-        // return DownloadResult::error(DownloadError("Failed to login :\\"));
-        let Some(qbit) = conf.qbit.to_owned() else {
-            return DownloadResult::error(DownloadError(
-                "Failed to get qBittorrent config".to_owned(),
-            ));
-        };
-        if let Some(labels) = qbit.tags.clone() {
-            if let Some(bad) = labels.iter().find(|l| l.contains(',')) {
-                let bad = format!("\"{}\"", bad);
-                return DownloadResult::error(DownloadError(
-                    format!("qBittorrent tags must not contain commas:\n{}", bad).to_owned(),
-                ));
-            }
+    ) -> BatchDownloadResult {
+        let ids = items.iter().map(|i| i.id.clone()).collect();
+        let num_items = items.len();
+        match download_some(items, conf, client).await {
+            Ok(()) => BatchDownloadResult {
+                msg: Notification::success("Successfully sent {} torrents to qBittorrent"),
+                ids,
+                errors: vec![],
+            },
+            Err(e) => BatchDownloadResult {
+                msg: Notification::error(format!(
+                    "Failed to send {} torrents to qBittorrent",
+                    num_items
+                )),
+                errors: vec![Notification::error(e)],
+                ids: vec![],
+            },
         }
-        if let Err(e) = login(&qbit, &client).await {
-            return DownloadResult::error(DownloadError(format!("Failed to get SID:\n{}", e)));
-        }
-        let links = match qbit.use_magnet.unwrap_or(true) {
-            true => items
-                .iter()
-                .map(|i| i.magnet_link.to_owned())
-                .collect::<Vec<String>>()
-                .join("\n"),
-            false => items
-                .iter()
-                .map(|i| i.torrent_link.to_owned())
-                .collect::<Vec<String>>()
-                .join("\n"),
-        };
-        let res = match add_torrent(&qbit, links, &client).await {
-            Ok(res) => res,
-            Err(e) => {
-                return DownloadResult::error(DownloadError(format!(
-                    "Failed to get response:\n{}",
-                    e
-                )))
-            }
-        };
-        if res.status() != StatusCode::OK {
-            let mut msg = format!(
-                "qBittorrent returned status code {} {}",
-                res.status().as_u16(),
-                res.status().canonical_reason().unwrap_or("")
-            );
-            if res.status() == StatusCode::FORBIDDEN {
-                msg.push_str("\n\nLikely incorrect username/password");
-            }
-            return DownloadResult::error(DownloadError(msg));
-        }
+    }
 
-        let _ = logout(&qbit, &client).await;
-
-        DownloadResult::new(
-            format!("Successfully sent {} torrents to qBittorrent", items.len()),
-            items.into_iter().map(|i| i.id).collect(),
-            vec![],
-            true,
-        )
+    fn load_config(cfg: &mut ClientConfig) {
+        if cfg.qbit.is_none() {
+            cfg.qbit = Some(QbitConfig::default());
+        }
     }
 }

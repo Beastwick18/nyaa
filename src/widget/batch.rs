@@ -3,6 +3,7 @@ use human_bytes::human_bytes;
 use ratatui::{
     layout::{Constraint, Margin, Rect},
     style::{Style, Stylize},
+    text::Line,
     widgets::{Clear, Row, ScrollbarOrientation, StatefulWidget, Table, Widget},
     Frame,
 };
@@ -13,7 +14,7 @@ use crate::{
     title,
 };
 
-use super::{border_block, Corner, VirtualStatefulTable};
+use super::{border_block, VirtualStatefulTable};
 
 pub struct BatchWidget {
     table: VirtualStatefulTable,
@@ -30,7 +31,13 @@ impl Default for BatchWidget {
 impl super::Widget for BatchWidget {
     fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {
         let buf = f.buffer_mut();
-        let block = border_block(&ctx.theme, ctx.mode == Mode::Batch).title(title!("Batch"));
+
+        let size = human_bytes(ctx.batch.iter().fold(0, |acc, i| acc + i.bytes) as f64);
+        let right_str = title!("Size({}): {}", ctx.batch.len(), size);
+        let block = border_block(&ctx.theme, ctx.mode == Mode::Batch)
+            .title(title!("Batch"))
+            .title_top(Line::from(right_str).right_aligned());
+
         let focus_color = match ctx.mode {
             Mode::Batch => ctx.theme.border_focused_color,
             _ => ctx.theme.border_color,
@@ -93,12 +100,6 @@ impl super::Widget for BatchWidget {
                 buf,
                 &mut self.table.scrollbar_state.content_length(rows.len()),
             );
-        }
-
-        let size = human_bytes(ctx.batch.iter().fold(0, |acc, i| acc + i.bytes) as f64);
-        let right_str = title!("Size({}): {}", ctx.batch.len(), size);
-        if let Some((tr, area)) = Corner::TopRight.try_title(right_str, area, true) {
-            tr.render(area, buf);
         }
     }
 

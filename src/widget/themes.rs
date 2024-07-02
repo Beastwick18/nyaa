@@ -131,13 +131,16 @@ impl Widget for ThemePopup {
                             &ctx.theme,
                         );
                         match ctx.save_config() {
-                            Ok(_) => ctx.notify(format!("Updated theme to \"{}\"", theme_name)),
-                            Err(e) => ctx.show_error(format!(
+                            Ok(_) => {
+                                ctx.notify_info(format!("Updated theme to \"{}\"", theme_name))
+                            }
+                            Err(e) => ctx.notify_error(format!(
                                 "Failed to update default theme in config file:\n{}",
                                 e
                             )),
                         }
                     }
+                    ctx.mode = Mode::Normal;
                 }
                 _ => {}
             }

@@ -6,7 +6,10 @@ use urlencoding::encode;
 
 use crate::{source::Item, util::conv::add_protocol};
 
-use super::{multidownload, ClientConfig, DownloadClient, DownloadError, DownloadResult};
+use super::{
+    multidownload, BatchDownloadResult, ClientConfig, DownloadClient, DownloadError,
+    SingleDownloadResult,
+};
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(default)]
@@ -58,18 +61,16 @@ async fn add_torrent(
     }
 }
 
-pub fn load_config(cfg: &mut ClientConfig) {
-    if cfg.rqbit.is_none() {
-        cfg.rqbit = Some(RqbitConfig::default());
-    }
-}
-
 impl DownloadClient for RqbitClient {
-    async fn download(item: Item, conf: ClientConfig, client: reqwest::Client) -> DownloadResult {
+    async fn download(
+        item: Item,
+        conf: ClientConfig,
+        client: reqwest::Client,
+    ) -> SingleDownloadResult {
         let conf = match conf.rqbit.clone() {
             Some(q) => q,
             None => {
-                return DownloadResult::error(DownloadError("Failed to get rqbit config".into()));
+                return SingleDownloadResult::error("Failed to get rqbit config");
             }
         };
         let link = match conf.use_magnet.unwrap_or(true) {
@@ -79,32 +80,27 @@ impl DownloadClient for RqbitClient {
         let res = match add_torrent(&conf, link, &client).await {
             Ok(r) => r,
             Err(e) => {
-                return DownloadResult::error(DownloadError(format!(
+                return SingleDownloadResult::error(DownloadError(format!(
                     "Failed to get response from rqbit\n{}",
                     e
                 )));
             }
         };
         if res.status() != StatusCode::OK {
-            return DownloadResult::error(DownloadError(format!(
+            return SingleDownloadResult::error(DownloadError(format!(
                 "rqbit returned status code {}",
                 res.status().as_u16()
             )));
         }
 
-        DownloadResult::new(
-            "Successfully sent torrent to rqbit".to_owned(),
-            vec![item.id],
-            vec![],
-            false,
-        )
+        SingleDownloadResult::success("Successfully sent torrent to rqbit".to_owned(), item.id)
     }
 
     async fn batch_download(
         items: Vec<Item>,
         conf: ClientConfig,
         client: reqwest::Client,
-    ) -> DownloadResult {
+    ) -> BatchDownloadResult {
         multidownload::<RqbitClient, _>(
             |s| format!("Successfully sent {} torrents to rqbit", s),
             &items,
@@ -112,5 +108,11 @@ impl DownloadClient for RqbitClient {
             &client,
         )
         .await
+    }
+
+    fn load_config(cfg: &mut ClientConfig) {
+        if cfg.rqbit.is_none() {
+            cfg.rqbit = Some(RqbitConfig::default());
+        }
     }
 }

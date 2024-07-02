@@ -16,7 +16,7 @@ use crate::{
     widget::sort::SortDir,
 };
 
-use super::{border_block, centered_rect, Corner, VirtualStatefulTable};
+use super::{border_block, centered_rect, VirtualStatefulTable};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum VisualMode {
@@ -38,53 +38,64 @@ impl ResultsWidget {
         *self.table.state.offset_mut() = 0;
     }
 
-    fn try_select_add(&self, ctx: &mut Context, sel: usize) {
-        if let Some(item) = ctx.results.response.items.get(sel) {
-            if ctx.batch.iter().any(|s| s.id == item.id) {
-                ctx.batch.push(item.to_owned());
-            }
+    fn try_select_add(&self, ctx: &mut Context, start: usize, stop: usize) {
+        if let Some(item) = ctx.results.response.items.get(start..stop) {
+            item.iter().for_each(|i| {
+                if !ctx.batch.iter().any(|s| s.id == i.id) {
+                    ctx.batch.push(i.to_owned());
+                }
+            });
         }
     }
 
-    fn try_select_remove(&self, ctx: &mut Context, sel: usize) {
-        if let Some(item) = ctx.results.response.items.get(sel) {
-            if let Some(p) = ctx.batch.iter().position(|s| s.id == item.id) {
-                ctx.batch.remove(p);
-            }
+    fn try_select_remove(&self, ctx: &mut Context, start: usize, stop: usize) {
+        if let Some(item) = ctx.results.response.items.get(start..stop) {
+            item.iter().for_each(|i| {
+                if let Some(p) = ctx.batch.iter().position(|s| s.id == i.id) {
+                    ctx.batch.remove(p);
+                }
+            })
         }
     }
 
-    fn try_select_toggle(&self, ctx: &mut Context, sel: usize) {
-        if let Some(item) = ctx.results.response.items.get(sel) {
-            if let Some(p) = ctx.batch.iter().position(|s| s.id == item.id) {
-                ctx.batch.remove(p);
-            } else {
-                ctx.batch.push(item.to_owned());
-            }
+    fn try_select_toggle(&self, ctx: &mut Context, start: usize, stop: usize) {
+        if let Some(item) = ctx.results.response.items.get(start..stop) {
+            item.iter().for_each(|i| {
+                if let Some(p) = ctx.batch.iter().position(|s| s.id == i.id) {
+                    ctx.batch.remove(p);
+                } else {
+                    ctx.batch.push(i.to_owned());
+                }
+            })
         }
     }
 
-    fn try_select_toggle_range(&self, ctx: &mut Context, start: usize, stop: usize) {
-        for i in start..=stop {
-            self.try_select_toggle(ctx, i);
-        }
-    }
-
-    fn select_on_move(&self, ctx: &mut Context, start: usize, stop: usize) {
-        if start == stop {
+    fn select_on_move(
+        &self,
+        ctx: &mut Context,
+        prev: usize,
+        range_start: usize,
+        range_stop: usize,
+    ) {
+        if prev == range_stop {
             return;
         }
         match self.visual_mode {
             VisualMode::None => {}
             VisualMode::Toggle => {
-                if stop.abs_diff(self.visual_anchor) < start.abs_diff(self.visual_anchor) {
-                    self.try_select_toggle(ctx, start)
+                if range_stop.abs_diff(self.visual_anchor) < prev.abs_diff(self.visual_anchor) {
+                    let dir = (prev as isize - range_stop as isize).signum();
+                    self.try_select_toggle(
+                        ctx,
+                        range_start.saturating_add_signed(dir),
+                        range_stop.saturating_add_signed(dir) + 1,
+                    )
                 } else {
-                    self.try_select_toggle(ctx, stop)
+                    self.try_select_toggle(ctx, range_start, range_stop + 1)
                 }
             }
-            VisualMode::Add => self.try_select_add(ctx, stop),
-            VisualMode::Remove => self.try_select_remove(ctx, stop),
+            VisualMode::Add => self.try_select_add(ctx, range_start, range_stop + 1),
+            VisualMode::Remove => self.try_select_remove(ctx, range_start, range_stop + 1),
         }
     }
 }
@@ -136,16 +147,32 @@ impl super::Widget for ResultsWidget {
         let num_items = items.len();
         let first_item = (ctx.page - 1) * 75;
         let focused = matches!(ctx.mode, Mode::Normal | Mode::KeyCombo(_));
+
+        let dl_src = title!(
+            "dl: {}, src: {}",
+            ctx.client.to_string(),
+            ctx.src.to_string()
+        );
+
+        let title = title!(
+            "Results {}-{} ({} total): Page {}/{}",
+            first_item + 1,
+            num_items + first_item,
+            ctx.results.response.total_results,
+            ctx.page,
+            ctx.results.response.last_page,
+        );
+        let mut block = border_block(&ctx.theme, focused)
+            .title(title)
+            .title_top(Line::from(dl_src).right_aligned());
+        if !ctx.last_key.is_empty() {
+            let key_str = title!(ctx.last_key);
+            block = block.title_bottom(Line::from(key_str).right_aligned());
+        }
+
         let table = Table::new(items, ctx.results.table.binding.to_owned())
             .header(header)
-            .block(border_block(&ctx.theme, focused).title(title!(
-                "Results {}-{} ({} total): Page {}/{}",
-                first_item + 1,
-                num_items + first_item,
-                ctx.results.response.total_results,
-                ctx.page,
-                ctx.results.response.last_page,
-            )))
+            .block(block)
             .highlight_style(Style::default().bg(ctx.theme.hl_bg));
 
         let visible_height = area.height.saturating_sub(3) as usize;
@@ -194,22 +221,6 @@ impl super::Widget for ResultsWidget {
                 let para = Paragraph::new(lines);
                 let para_area = Rect::new(area.x, area.y + 2, 1, area.height - 3);
                 para.render(para_area, buf);
-            }
-        }
-
-        let dl_src = title!(
-            "dl: {}, src: {}",
-            ctx.client.to_string(),
-            ctx.src.to_string()
-        );
-        if let Some((tr, area)) = Corner::TopRight.try_title(dl_src, area, true) {
-            f.render_widget(tr, area);
-        }
-
-        if !ctx.last_key.is_empty() {
-            let key_str = title!(ctx.last_key);
-            if let Some((br, area)) = Corner::BottomRight.try_title(key_str, area, true) {
-                f.render_widget(br, area);
             }
         }
     }
@@ -266,12 +277,12 @@ impl super::Widget for ResultsWidget {
                 (Char('j') | KeyCode::Down, &KeyModifiers::NONE) => {
                     let prev = self.table.selected().unwrap_or(0);
                     let selected = self.table.next(ctx.results.response.items.len(), 1);
-                    self.select_on_move(ctx, prev, selected);
+                    self.select_on_move(ctx, prev, selected, selected);
                 }
                 (Char('k') | KeyCode::Up, &KeyModifiers::NONE) => {
                     let prev = self.table.selected().unwrap_or(0);
                     let selected = self.table.next(ctx.results.response.items.len(), -1);
-                    self.select_on_move(ctx, prev, selected);
+                    self.select_on_move(ctx, prev, selected, selected);
                     //if self.control_space_toggle.is_some() && prev != selected {
                     //    self.try_select_toggle(
                     //        ctx,
@@ -283,10 +294,14 @@ impl super::Widget for ResultsWidget {
                     //}
                 }
                 (Char('J'), &KeyModifiers::SHIFT) => {
-                    self.table.next(ctx.results.response.items.len(), 4);
+                    let prev = self.table.selected().unwrap_or(0);
+                    let selected = self.table.next(ctx.results.response.items.len(), 4);
+                    self.select_on_move(ctx, prev, prev + 1, selected);
                 }
                 (Char('K'), &KeyModifiers::SHIFT) => {
-                    self.table.next(ctx.results.response.items.len(), -4);
+                    let prev = self.table.selected().unwrap_or(0);
+                    let selected = self.table.next(ctx.results.response.items.len(), -4);
+                    self.select_on_move(ctx, prev, selected, prev.saturating_sub(1));
                 }
                 (Char('G'), &KeyModifiers::SHIFT) => {
                     let prev = self.table.selected().unwrap_or(0);
@@ -294,18 +309,13 @@ impl super::Widget for ResultsWidget {
                     self.table.select(selected);
 
                     if self.visual_mode != VisualMode::None && prev != selected {
-                        self.try_select_toggle_range(ctx, prev + 1, selected);
-                        //self.try_select_toggle(
-                        //    ctx,
-                        //    match selected <= self.visual_anchor {
-                        //        true => prev,
-                        //        false => selected,
-                        //    },
-                        //);
+                        self.select_on_move(ctx, prev, prev + 1, selected);
                     }
                 }
                 (Char('g'), &KeyModifiers::NONE) => {
+                    let prev = self.table.selected().unwrap_or(0);
                     self.table.select(0);
+                    self.select_on_move(ctx, prev, 0, prev.saturating_sub(1));
                 }
                 (Char('H') | Char('P'), &KeyModifiers::SHIFT) => {
                     if ctx.page != 1 {
@@ -343,44 +353,44 @@ impl super::Widget for ResultsWidget {
                         .unwrap_or("https://nyaa.si".to_owned());
                     let res = open::that_detached(link.clone());
                     if let Err(e) = res {
-                        ctx.show_error(format!("Failed to open {}:\n{}", link, e));
+                        ctx.notify_error(format!("Failed to open {}:\n{}", link, e));
                     } else {
-                        ctx.notify(format!("Opened {}", link));
+                        ctx.notify_info(format!("Opened {}", link));
                     }
                 }
                 (Char('y'), &KeyModifiers::NONE) => ctx.mode = Mode::KeyCombo("y".to_string()),
                 (Char(' '), &KeyModifiers::CONTROL) => {
                     if self.visual_mode != VisualMode::Toggle {
-                        ctx.notify("Entered VISUAL TOGGLE mode");
+                        ctx.notify_info("Entered VISUAL TOGGLE mode");
                         self.visual_anchor = self.table.selected().unwrap_or(0);
-                        self.try_select_toggle(ctx, self.visual_anchor);
+                        self.try_select_toggle(ctx, self.visual_anchor, self.visual_anchor + 1);
                         self.visual_mode = VisualMode::Toggle;
                     } else {
-                        ctx.notify("Exited VISUAL TOGGLE mode");
+                        ctx.notify_info("Exited VISUAL TOGGLE mode");
                         self.visual_anchor = 0;
                         self.visual_mode = VisualMode::None;
                     }
                 }
                 (Char('v'), &KeyModifiers::NONE) => {
                     if self.visual_mode != VisualMode::Add {
-                        ctx.notify("Entered VISUAL ADD mode");
+                        ctx.notify_info("Entered VISUAL ADD mode");
                         self.visual_anchor = self.table.selected().unwrap_or(0);
-                        self.try_select_add(ctx, self.visual_anchor);
+                        self.try_select_add(ctx, self.visual_anchor, self.visual_anchor + 1);
                         self.visual_mode = VisualMode::Add;
                     } else {
-                        ctx.notify("Exited VISUAL ADD mode");
+                        ctx.notify_info("Exited VISUAL ADD mode");
                         self.visual_anchor = 0;
                         self.visual_mode = VisualMode::None;
                     }
                 }
                 (Char('V'), &KeyModifiers::SHIFT) => {
                     if self.visual_mode != VisualMode::Remove {
-                        ctx.notify("Entered VISUAL REMOVE mode");
+                        ctx.notify_info("Entered VISUAL REMOVE mode");
                         self.visual_anchor = self.table.selected().unwrap_or(0);
-                        self.try_select_remove(ctx, self.visual_anchor);
+                        self.try_select_remove(ctx, self.visual_anchor, self.visual_anchor + 1);
                         self.visual_mode = VisualMode::Remove;
                     } else {
-                        ctx.notify("Exited VISUAL REMOVE mode");
+                        ctx.notify_info("Exited VISUAL REMOVE mode");
                         self.visual_anchor = 0;
                         self.visual_mode = VisualMode::None;
                     }
@@ -401,9 +411,9 @@ impl super::Widget for ResultsWidget {
                 }
                 (Esc, &KeyModifiers::NONE) => {
                     match self.visual_mode {
-                        VisualMode::Add => ctx.notify("Exited VISUAL ADD mode"),
-                        VisualMode::Remove => ctx.notify("Exited VISUAL REMOVE mode"),
-                        VisualMode::Toggle => ctx.notify("Exited VISUAL TOGGLE mode"),
+                        VisualMode::Add => ctx.notify_info("Exited VISUAL ADD mode"),
+                        VisualMode::Remove => ctx.notify_info("Exited VISUAL REMOVE mode"),
+                        VisualMode::Toggle => ctx.notify_info("Exited VISUAL TOGGLE mode"),
                         VisualMode::None => ctx.dismiss_notifications(),
                     }
                     self.visual_anchor = 0;

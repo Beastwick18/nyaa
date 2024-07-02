@@ -3,7 +3,7 @@ use std::{error::Error, path::PathBuf};
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 use nyaa::{
     app::App,
-    client::{Client, ClientConfig, DownloadResult},
+    client::{Client, ClientConfig, DownloadClientResult},
     config::{Config, ConfigManager},
     results::Results,
     source::{Item, SourceResults},
@@ -162,7 +162,7 @@ pub fn print_buffer(buf: &Buffer) {
 impl EventSync for TestSync {
     async fn load_results(
         self,
-        tx_res: Sender<Result<SourceResults, Box<dyn Error + Send + Sync>>>,
+        _tx_res: Sender<Result<SourceResults, Box<dyn Error + Send + Sync>>>,
         _loadtype: nyaa::app::LoadType,
         _src: nyaa::source::Sources,
         _client: reqwest::Client,
@@ -171,9 +171,9 @@ impl EventSync for TestSync {
         _theme: nyaa::theme::Theme,
         _date_format: Option<String>,
     ) {
-        let _ = tx_res
-            .send(Ok(SourceResults::Results(Results::default())))
-            .await;
+        //let _ = tx_res
+        //    .send(Ok(SourceResults::Results(Results::default())))
+        //    .await;
     }
 
     async fn read_event_loop(self, tx_evt: Sender<crossterm::event::Event>) {
@@ -185,7 +185,7 @@ impl EventSync for TestSync {
 
     async fn download(
         self,
-        _tx_dl: Sender<DownloadResult>,
+        _tx_dl: Sender<DownloadClientResult>,
         _batch: bool,
         _items: Vec<Item>,
         _config: ClientConfig,

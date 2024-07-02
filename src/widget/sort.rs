@@ -129,7 +129,7 @@ impl Widget for SortPopup {
                         };
                         ctx.mode = Mode::Loading(LoadType::Sorting);
                         if let Some(s) = ctx.src_info.sorts.get(i) {
-                            ctx.notify(format!("Sort by \"{}\" {}", s, self.selected.dir));
+                            ctx.notify_info(format!("Sort by \"{}\" {}", s, self.selected.dir));
                         }
                     }
                 }

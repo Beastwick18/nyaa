@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use strum::{Display, VariantArray};
 use tokio::task::JoinSet;
 
-use crate::{client::cmd::CmdClient, source::Item};
+use crate::{client::cmd::CmdClient, source::Item, widget::notifications::Notification};
 
 use self::{
     cmd::CmdConfig,
@@ -24,17 +24,30 @@ pub mod transmission;
 
 pub struct DownloadError(String);
 
+impl From<String> for DownloadError {
+    fn from(value: String) -> Self {
+        Self(value)
+    }
+}
+
+impl From<&str> for DownloadError {
+    fn from(value: &str) -> Self {
+        Self(value.to_owned())
+    }
+}
+
 pub trait DownloadClient {
     fn download(
         item: Item,
         conf: ClientConfig,
         client: reqwest::Client,
-    ) -> impl std::future::Future<Output = DownloadResult> + std::marker::Send + 'static;
+    ) -> impl std::future::Future<Output = SingleDownloadResult> + std::marker::Send + 'static;
     fn batch_download(
         items: Vec<Item>,
         conf: ClientConfig,
         client: reqwest::Client,
-    ) -> impl std::future::Future<Output = DownloadResult> + std::marker::Send + 'static;
+    ) -> impl std::future::Future<Output = BatchDownloadResult> + std::marker::Send + 'static;
+    fn load_config(cfg: &mut ClientConfig);
 }
 
 impl Display for DownloadError {
@@ -43,35 +56,51 @@ impl Display for DownloadError {
     }
 }
 
-pub struct DownloadResult {
-    pub success_msg: Option<String>,
-    pub success_ids: Vec<String>,
-    pub batch: bool,
-    pub errors: Vec<DownloadError>,
+pub struct DownloadSuccessResult {
+    pub msg: Notification,
+    pub id: String,
 }
 
-impl DownloadResult {
-    pub fn new<S: Into<Option<String>>>(
-        success_msg: S,
-        success_ids: Vec<String>,
-        errors: Vec<DownloadError>,
-        batch: bool,
-    ) -> Self {
-        DownloadResult {
-            success_msg: success_msg.into(),
-            success_ids,
-            batch,
-            errors,
-        }
+pub struct DownloadErrorResult {
+    pub msg: Notification,
+}
+
+pub enum SingleDownloadResult {
+    Success(DownloadSuccessResult),
+    Error(DownloadErrorResult),
+}
+
+pub struct BatchDownloadResult {
+    pub msg: Notification,
+    pub errors: Vec<Notification>,
+    pub ids: Vec<String>,
+}
+
+pub enum DownloadClientResult {
+    Single(SingleDownloadResult),
+    Batch(BatchDownloadResult),
+}
+
+impl SingleDownloadResult {
+    pub fn success<S: Display>(msg: S, id: String) -> Self {
+        Self::Success(DownloadSuccessResult {
+            msg: Notification::success(msg),
+            id,
+        })
     }
 
-    pub fn error(error: DownloadError) -> Self {
-        DownloadResult {
-            success_msg: None,
-            success_ids: vec![],
-            batch: false,
-            errors: vec![error],
-        }
+    pub fn error<S: Display>(msg: S) -> Self {
+        Self::Error(DownloadErrorResult {
+            msg: Notification::error(msg),
+        })
+    }
+
+    pub fn is_success(&self) -> bool {
+        matches!(self, Self::Success(_))
+    }
+
+    pub fn is_error(&self) -> bool {
+        matches!(self, Self::Error(_))
     }
 }
 
@@ -123,7 +152,7 @@ pub async fn multidownload<C: DownloadClient, F>(
     items: &[Item],
     conf: &ClientConfig,
     client: &reqwest::Client,
-) -> DownloadResult
+) -> BatchDownloadResult
 where
     F: Fn(usize) -> String,
 {
@@ -132,62 +161,37 @@ where
         let item = item.to_owned();
         set.spawn(C::download(item.clone(), conf.clone(), client.clone()));
     }
-    let mut results: Vec<DownloadResult> = vec![];
+
+    let mut success_ids: Vec<String> = vec![];
+    let mut errors: Vec<Notification> = vec![];
     while let Some(res) = set.join_next().await {
-        let res = match res {
-            Ok(res) => res,
-            Err(e) => {
-                results.push(DownloadResult::error(DownloadError(e.to_string())));
-                continue;
-            }
-        };
-        results.push(res);
+        match res.unwrap_or_else(|e| SingleDownloadResult::error(e)) {
+            SingleDownloadResult::Success(sr) => success_ids.push(sr.id),
+            SingleDownloadResult::Error(er) => errors.push(er.msg),
+        }
     }
 
-    let (success, failure): (Vec<DownloadResult>, Vec<DownloadResult>) =
-        results.into_iter().partition(|d| d.errors.is_empty());
-    let success_ids = success.into_iter().fold(vec![], |acc, s| {
-        acc.into_iter().chain(s.success_ids).collect()
-    });
-    let errors = failure
-        .into_iter()
-        .fold(vec![], |acc, s| acc.into_iter().chain(s.errors).collect());
-
-    DownloadResult::new(success_msg(success_ids.len()), success_ids, errors, true)
+    BatchDownloadResult {
+        msg: Notification::success(success_msg(success_ids.len())),
+        errors,
+        ids: success_ids,
+    }
 }
 
 impl Client {
-    // pub async fn download(&self, item: Item, ctx: &mut Context) {
-    //     let conf = ctx.config.client.to_owned();
-    //     let timeout = ctx.config.timeout;
-    //     let item = item.clone();
-    //     let result = match self {
-    //         Self::Cmd => cmd::download(item, conf).await,
-    //         Self::Qbit => qbit::download(item, conf, timeout).await,
-    //         Self::Transmission => transmission::download(item, conf, timeout).await,
-    //         Self::Rqbit => rqbit::download(item, conf, timeout).await,
-    //         Self::DefaultApp => default_app::download(item, conf).await,
-    //         Self::Download => download::download(item, conf, timeout).await,
-    //     };
-    //     match result {
-    //         Ok(o) => ctx.notify(o),
-    //         Err(e) => ctx.show_error(e),
-    //     }
-    // }
-
     pub async fn download(
         self,
         item: Item,
         conf: ClientConfig,
         client: reqwest::Client,
-    ) -> DownloadResult {
+    ) -> SingleDownloadResult {
         match self {
             Self::Cmd => CmdClient::download(item, conf, client).await,
-            Self::Qbit => QbitClient::download(item, conf, client).await,
-            Self::Transmission => TransmissionClient::download(item, conf, client).await,
-            Self::Rqbit => RqbitClient::download(item, conf, client).await,
             Self::DefaultApp => DefaultAppClient::download(item, conf, client).await,
             Self::Download => DownloadFileClient::download(item, conf, client).await,
+            Self::Qbit => QbitClient::download(item, conf, client).await,
+            Self::Rqbit => RqbitClient::download(item, conf, client).await,
+            Self::Transmission => TransmissionClient::download(item, conf, client).await,
         }
     }
 
@@ -196,74 +200,25 @@ impl Client {
         items: Vec<Item>,
         conf: ClientConfig,
         client: reqwest::Client,
-    ) -> DownloadResult {
+    ) -> BatchDownloadResult {
         match self {
-            Client::Cmd => CmdClient::batch_download(items, conf, client).await,
-            Client::DefaultApp => DefaultAppClient::batch_download(items, conf, client).await,
-            Client::Download => DownloadFileClient::batch_download(items, conf, client).await,
-            Client::Rqbit => RqbitClient::batch_download(items, conf, client).await,
-            Client::Qbit => QbitClient::batch_download(items, conf, client).await,
-            Client::Transmission => TransmissionClient::batch_download(items, conf, client).await,
+            Self::Cmd => CmdClient::batch_download(items, conf, client).await,
+            Self::DefaultApp => DefaultAppClient::batch_download(items, conf, client).await,
+            Self::Download => DownloadFileClient::batch_download(items, conf, client).await,
+            Self::Qbit => QbitClient::batch_download(items, conf, client).await,
+            Self::Rqbit => RqbitClient::batch_download(items, conf, client).await,
+            Self::Transmission => TransmissionClient::batch_download(items, conf, client).await,
         }
-        // let conf = ctx.config.client.to_owned();
-        // let timeout = ctx.config.timeout;
-
-        // if let Some(res) = self
-        //     .try_batch_download(items.to_owned(), conf.to_owned(), timeout)
-        //     .await
-        // {
-        //     return match res {
-        //         Ok(o) => items
-        //             .iter()
-        //             .map(|i| DownloadResult::Success(i.title.to_owned(), o))
-        //             .collect(),
-        //         Err(e) => items
-        //             .iter()
-        //             .map(|i| DownloadResult::Failure(i.title.to_owned(), DownloadError(e.clone())))
-        //             .collect(),
-        //     };
-        // }
-        //
-        // let mut set = JoinSet::new();
-        // for item in items.iter() {
-        //     let item = item.to_owned();
-        //     set.spawn(self.download_async(item.to_owned(), conf.to_owned(), timeout));
-        // }
-        // let mut success_ids = vec![];
-        // while let Some(res) = set.join_next().await {
-        //     let res = match res {
-        //         Ok(res) => res,
-        //         Err(e) => {
-        //             // ctx.show_error(format!("Failed to join download thread:\n{}", e));
-        //             continue;
-        //         }
-        //     };
-        //     match res {
-        //         Ok(o) => {
-        //             success_ids.push(o);
-        //         }
-        //         Err(e) => {
-        //             // ctx.show_error(e);
-        //         }
-        //     }
-        // }
-        // vec![]
-        // ctx.notify(format!(
-        //     "Successfully downloaded {} torrents with {}",
-        //     success_ids.len(),
-        //     self,
-        // ));
-        // ctx.batch.retain(|i| !success_ids.contains(&i.id)); // Remove successes from batch
     }
 
     pub fn load_config(self, cfg: &mut ClientConfig) {
         match self {
-            Self::Cmd => cmd::load_config(cfg),
-            Self::Qbit => qbit::load_config(cfg),
-            Self::Transmission => transmission::load_config(cfg),
-            Self::Rqbit => rqbit::load_config(cfg),
-            Self::DefaultApp => default_app::load_config(cfg),
-            Self::Download => download::load_config(cfg),
+            Self::Cmd => CmdClient::load_config(cfg),
+            Self::DefaultApp => DefaultAppClient::load_config(cfg),
+            Self::Download => DownloadFileClient::load_config(cfg),
+            Self::Rqbit => RqbitClient::load_config(cfg),
+            Self::Qbit => QbitClient::load_config(cfg),
+            Self::Transmission => TransmissionClient::load_config(cfg),
         };
     }
 }
