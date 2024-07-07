@@ -1,21 +1,21 @@
 {
-  description = "A nyaa.si tui tool for browsing and downloading torrents";
-  inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+	description = "A nyaa.si tui tool for browsing and downloading torrents";
+	inputs = {
+		nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
 		naersk.url = "github:nix-community/naersk";
-  };
-  outputs = {
-    self,
-    nixpkgs,
+	};
+	outputs = {
+		self,
+		nixpkgs,
 		naersk,
-  }@inputs: let
-    supportedSystems = ["x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin"];
-    forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
+	}@inputs: let
+		supportedSystems = ["x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin"];
+		forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
 		system = "x86_64-linux";
 		pkgs = nixpkgs.legacyPackages.${system};
 		naersk' = pkgs.callPackage naersk {};
-  in {
-    packages = forAllSystems (system: {
+	in {
+		packages = forAllSystems (system: {
 			default = naersk'.buildPackage {
 				name = "nyaa";
 				version =
@@ -26,9 +26,9 @@
 					.version;
 				src = pkgs.lib.cleanSource ./.;
 			};
-    });
+		});
 
-    devShells = forAllSystems (system: {
+		devShells = forAllSystems (system: {
 			default = pkgs.mkShell {
 				nativeBuildInputs = with pkgs; [
 					rust.packages.stable.rustPlatform.rustcSrc
@@ -40,8 +40,8 @@
 					cargo-bloat
 				];
 			};
-    });
+		});
 
-    homeManagerModule = import ./modules/home-manager.nix inputs;
-  };
+		homeManagerModule = import ./modules/home-manager.nix inputs;
+	};
 }
