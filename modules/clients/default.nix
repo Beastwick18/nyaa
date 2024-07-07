@@ -1,8 +1,8 @@
 {
-	imports = [
-		./qBittorrent.nix
-		./transmission.nix
-		./rqbit.nix
-		./other.nix
-	];
+  imports = [
+    ./qBittorrent.nix
+    ./transmission.nix
+    ./rqbit.nix
+    ./other.nix
+  ];
 }

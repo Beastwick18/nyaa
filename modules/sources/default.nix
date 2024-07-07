@@ -1,7 +1,7 @@
 {
-	imports = [
-		./nyaa.nix
-		./sukebei.nix
-		./torrentgalaxy.nix
-	];
+  imports = [
+    ./nyaa.nix
+    ./sukebei.nix
+    ./torrentgalaxy.nix
+  ];
 }
