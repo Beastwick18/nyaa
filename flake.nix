@@ -12,9 +12,7 @@
     supportedSystems = ["x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin"];
     forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
 		system = "x86_64-linux";
-		pkgs = import nixpkgs {
-			inherit system;
-		};
+		pkgs = nixpkgs.legacyPackages.${system};
 		naersk' = pkgs.callPackage naersk {};
   in {
     packages = forAllSystems (system: {
