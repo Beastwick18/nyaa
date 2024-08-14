@@ -3,40 +3,34 @@ use std::io::{self, stdout};
 use crossterm::{
     cursor::SetCursorStyle,
     event::{DisableBracketedPaste, EnableBracketedPaste},
-    terminal::{disable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand as _,
 };
 
 #[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos"))]
-use crossterm::terminal::enable_raw_mode;
+use crossterm::terminal::{disable_raw_mode, enable_raw_mode};
 
 #[cfg(unix)]
 use nix::{
     sys::signal::{self, Signal},
     unistd::Pid,
 };
-#[cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos")))]
-use ratatui::termion::raw::IntoRawMode;
 #[cfg(unix)]
 use ratatui::{backend::Backend, Terminal};
 #[cfg(unix)]
 use std::error::Error;
 
 pub fn setup_terminal() -> io::Result<()> {
-    #[cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos")))]
-    let out = &mut stdout().into_raw_mode()?;
     #[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos"))]
-    let out = {
-        enable_raw_mode()?;
-        &mut stdout()
-    };
-    out.execute(EnableBracketedPaste)?;
-    out.execute(EnterAlternateScreen)?;
-    out.execute(SetCursorStyle::SteadyBar)?;
+    enable_raw_mode()?;
+    stdout().execute(EnableBracketedPaste)?;
+    stdout().execute(EnterAlternateScreen)?;
+    stdout().execute(SetCursorStyle::SteadyBar)?;
     Ok(())
 }
 
 pub fn reset_terminal() -> io::Result<()> {
+    #[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos"))]
     disable_raw_mode()?;
     stdout().execute(SetCursorStyle::DefaultUserShape)?;
     stdout().execute(LeaveAlternateScreen)?;
