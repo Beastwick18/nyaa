@@ -27,12 +27,23 @@ impl Selection {
     }
 }
 
-#[derive(Clone, Default, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct ClipboardConfig {
     pub cmd: Option<String>,
     pub shell_cmd: Option<String>,
     pub osc52: bool,
     pub selection: Option<OneOrMany<Selection>>,
+}
+
+impl Default for ClipboardConfig {
+    fn default() -> Self {
+        Self {
+            cmd: None,
+            shell_cmd: None,
+            osc52: true,
+            selection: None,
+        }
+    }
 }
 
 pub struct ClipboardManager {
@@ -115,7 +126,10 @@ impl ClipboardManager {
             None => Err("The clipboard is not loaded".to_owned()),
         }
         #[cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos")))]
-        Err("The clipboard is not loaded".to_owned())
+        Err(
+            "There is no native clipboard support on android\nEnable osc52 for clipboard support"
+                .to_owned(),
+        )
     }
 
     #[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos"))]
