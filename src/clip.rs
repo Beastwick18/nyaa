@@ -1,6 +1,7 @@
 #[cfg(target_os = "linux")]
 use arboard::{GetExtLinux, LinuxClipboardKind, SetExtLinux as _};
 
+#[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos"))]
 use arboard::Clipboard;
 use base64::Engine;
 use serde::{Deserialize, Serialize};
@@ -35,6 +36,7 @@ pub struct ClipboardConfig {
 }
 
 pub struct ClipboardManager {
+    #[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos"))]
     clipboard: Option<Clipboard>,
     config: ClipboardConfig,
 }
@@ -43,6 +45,7 @@ impl ClipboardManager {
     pub fn new(conf: ClipboardConfig) -> (ClipboardManager, Option<String>) {
         // Dont worry about connecting to OS clipboard if using command
         if conf.cmd.is_some() {
+            #[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos"))]
             return (
                 Self {
                     clipboard: None,
@@ -50,28 +53,44 @@ impl ClipboardManager {
                 },
                 None,
             );
+            #[cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos")))]
+            return (Self { config: conf }, None);
         }
 
-        let clipboard = Clipboard::new();
-        let err = clipboard.as_ref().err().map(|x| x.to_string());
-        let cb = clipboard.ok();
-        (
-            Self {
-                clipboard: cb,
-                config: conf,
-            },
-            err,
-        )
+        #[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos"))]
+        {
+            let clipboard = Clipboard::new();
+            let err = clipboard.as_ref().err().map(|x| x.to_string());
+            let cb = clipboard.ok();
+            (
+                Self {
+                    clipboard: cb,
+                    config: conf,
+                },
+                err,
+            )
+        }
+        #[cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos")))]
+        {
+            (Self { config: conf }, None)
+        }
     }
 
     pub fn empty(conf: ClipboardConfig) -> (ClipboardManager, Option<String>) {
-        (
-            Self {
-                clipboard: None,
-                config: conf,
-            },
-            None,
-        )
+        #[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos"))]
+        {
+            (
+                Self {
+                    clipboard: None,
+                    config: conf,
+                },
+                None,
+            )
+        }
+        #[cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos")))]
+        {
+            (Self { config: conf }, None)
+        }
     }
 
     pub fn try_copy(&mut self, content: &String) -> Result<(), String> {
@@ -89,13 +108,17 @@ impl ClipboardManager {
 
             return Ok(());
         }
+        #[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos"))]
         match &mut self.clipboard {
             // Some(cb) => Ok(cb.set_text(content)?),
             Some(cb) => Self::copy(&self.config, cb, content).map_err(|e| e.to_string()),
             None => Err("The clipboard is not loaded".to_owned()),
         }
+        #[cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos")))]
+        Err("The clipboard is not loaded".to_owned())
     }
 
+    #[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos"))]
     fn copy(
         #[cfg(target_os = "linux")] config: &ClipboardConfig,
         #[cfg(not(target_os = "linux"))] _config: &ClipboardConfig,
