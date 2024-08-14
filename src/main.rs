@@ -79,11 +79,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     app.run_app::<_, _, AppConfig, false>(&mut terminal, sync, config)
         .await?;
 
-    #[cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos")))]
-    drop(terminal); // Drop terminal to leave raw mode and alternate screen
-
     util::term::reset_terminal()?;
     terminal.show_cursor()?;
+
+    #[cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos")))]
+    drop(terminal); // Drop terminal to leave raw mode and alternate screen
 
     std::process::exit(0);
 }
