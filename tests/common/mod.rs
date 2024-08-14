@@ -12,6 +12,7 @@ use nyaa::{
 use ratatui::{
     backend::{Backend as _, TestBackend},
     buffer::Buffer,
+    layout::Position,
     style::Style,
     Terminal,
 };
@@ -140,7 +141,7 @@ pub async fn run_app<S: EventSync + Clone>(
 pub fn reset_buffer(terminal: &Terminal<TestBackend>) -> Buffer {
     let area = terminal.size().unwrap();
     let mut buf = terminal.backend().buffer().clone();
-    buf.set_style(area, Style::reset());
+    buf.set_style((Position::ORIGIN, area).into(), Style::reset());
     buf
 }
 

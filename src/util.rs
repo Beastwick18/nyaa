@@ -1,4 +1,5 @@
 pub mod cmd;
+pub mod colors;
 pub mod conv;
 pub mod html;
 pub mod strings;

@@ -18,6 +18,7 @@ use crate::{
     sync::SearchQuery,
     theme::Theme,
     util::{
+        colors::color_to_tui,
         conv::{shorten_number, to_bytes},
         html::{as_type, attr, inner},
     },

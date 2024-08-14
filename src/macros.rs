@@ -38,7 +38,7 @@ macro_rules! widgets {
                 match ctx.mode {
                     $(
                         $(#[$docs])*
-                        $($pmode => self.$pwidget.draw(f, ctx, f.size()),)?
+                        $($pmode => self.$pwidget.draw(f, ctx, f.area()),)?
                     )+
                     _ => {}
                 }

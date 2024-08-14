@@ -98,18 +98,19 @@ pub fn scroll_padding(
 pub fn dim_buffer(area: Rect, buf: &mut Buffer, amt: f32) {
     for r in area.top()..area.bottom() {
         for c in area.left()..area.right() {
-            let cell = buf.get_mut(c, r);
-            if let Color::Rgb(r, g, b) = cell.fg {
-                let r = (r as f32 * amt) as u8;
-                let g = (g as f32 * amt) as u8;
-                let b = (b as f32 * amt) as u8;
-                cell.fg = Color::Rgb(r, g, b);
-            }
-            if let Color::Rgb(r, g, b) = cell.bg {
-                let r = (r as f32 * amt) as u8;
-                let g = (g as f32 * amt) as u8;
-                let b = (b as f32 * amt) as u8;
-                cell.bg = Color::Rgb(r, g, b);
+            if let Some(cell) = buf.cell_mut((c, r)) {
+                if let Color::Rgb(r, g, b) = cell.fg {
+                    let r = (r as f32 * amt) as u8;
+                    let g = (g as f32 * amt) as u8;
+                    let b = (b as f32 * amt) as u8;
+                    cell.fg = Color::Rgb(r, g, b);
+                }
+                if let Color::Rgb(r, g, b) = cell.bg {
+                    let r = (r as f32 * amt) as u8;
+                    let g = (g as f32 * amt) as u8;
+                    let b = (b as f32 * amt) as u8;
+                    cell.bg = Color::Rgb(r, g, b);
+                }
             }
         }
     }
@@ -170,9 +171,10 @@ pub fn clear(area: Rect, buf: &mut Buffer, fill: Color) {
     // Deal with wide chars which might extend too far
     if area.left() > 0 && buf.area.contains((area.left() - 1, area.top()).into()) {
         for i in area.top()..area.bottom() {
-            let c = buf.get_mut(area.left() - 1, i);
-            if c.symbol().width() > 1 {
-                c.set_char(' ');
+            if let Some(c) = buf.cell_mut((area.left() - 1, i)) {
+                if c.symbol().width() > 1 {
+                    c.set_char(' ');
+                }
             }
         }
     }

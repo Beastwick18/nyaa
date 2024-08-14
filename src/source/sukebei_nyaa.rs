@@ -15,6 +15,7 @@ use crate::{
     sync::SearchQuery,
     theme::Theme,
     util::{
+        colors::color_to_tui,
         conv::to_bytes,
         html::{attr, inner},
     },

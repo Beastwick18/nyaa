@@ -37,7 +37,7 @@ pub fn reset_terminal() -> io::Result<()> {
 pub fn suspend_self<B: Backend>(terminal: &mut Terminal<B>) -> Result<(), Box<dyn Error>> {
     // Make sure cursor is drawn
 
-    terminal.draw(|f| f.set_cursor(0, 0))?;
+    terminal.draw(|f| f.set_cursor_position((0, 0)))?;
 
     reset_terminal()?;
 

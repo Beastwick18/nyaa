@@ -9,7 +9,7 @@ use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use indexmap::IndexMap;
 use ratatui::{
     backend::Backend,
-    layout::{Constraint, Direction, Layout},
+    layout::{Constraint, Direction, Layout, Position},
     Frame, Terminal,
 };
 use reqwest::cookie::Jar;
@@ -431,7 +431,7 @@ impl App {
                             ctx.deltatime = last_time.map(|l| (now - l).as_secs_f64()).unwrap_or(0.0);
                             last_time = Some(now);
 
-                            if self.widgets.notification.update(ctx.deltatime, size) {
+                            if self.widgets.notification.update(ctx.deltatime, (Position::ORIGIN, size).into()) {
                                 break;
                             }
                         } else {
@@ -524,7 +524,7 @@ impl App {
             Direction::Vertical,
             [Constraint::Length(3), Constraint::Min(1)],
         )
-        .split(f.size());
+        .split(f.area());
 
         self.widgets.search.draw(f, ctx, layout_vertical[0]);
         // Dont draw batch pane if empty
@@ -543,7 +543,7 @@ impl App {
             self.widgets.batch.draw(f, ctx, layout_horizontal[1]);
         }
         self.widgets.draw_popups(ctx, f);
-        self.widgets.notification.draw(f, ctx, f.size());
+        self.widgets.notification.draw(f, ctx, f.area());
     }
 
     fn on<B: Backend, const TEST: bool>(
