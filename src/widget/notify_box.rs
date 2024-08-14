@@ -194,11 +194,11 @@ impl NotifyBox {
         self.notif.notif_type
     }
 
-    pub fn add_offset<I: Into<i32> + Copy>(&mut self, offset: I) {
+    pub fn add_offset(&mut self, offset: i32) {
         self.enter_state.reset();
 
         self.start_offset = self.stop_offset + self.height;
-        self.stop_offset = (self.stop_offset as i32 + Into::<i32>::into(offset)).max(0) as u16;
+        self.stop_offset = (self.stop_offset as i32 + offset).max(0) as u16;
     }
 
     pub fn draw(&mut self, f: &mut Frame, ctx: &Context, area: Rect) {

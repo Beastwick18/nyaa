@@ -2,7 +2,7 @@ use std::{error::Error, fs};
 
 use serde::{Deserialize, Serialize};
 use transmission_rpc::{
-    types::{BasicAuth, TorrentAddArgs},
+    types::{BasicAuth, Priority, TorrentAddArgs},
     TransClient,
 };
 
@@ -11,14 +11,6 @@ use crate::{source::Item, util::conv::add_protocol};
 use super::{
     multidownload, BatchDownloadResult, ClientConfig, DownloadClient, SingleDownloadResult,
 };
-
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(i8)]
-pub enum Priority {
-    Low = -1,
-    Normal = 0,
-    High = 1,
-}
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(default)]
@@ -55,21 +47,21 @@ impl Default for TransmissionConfig {
 }
 
 impl TransmissionConfig {
-    fn to_form(&self, link: String) -> TorrentAddArgs {
+    fn form(self, link: String) -> TorrentAddArgs {
         TorrentAddArgs {
             filename: Some(link),
-            labels: self.labels.to_owned(),
+            labels: self.labels,
             paused: self.paused,
             peer_limit: self.peer_limit,
-            download_dir: self.download_dir.to_owned(),
-            bandwidth_priority: self.bandwidth_priority.map(|r| r as i64),
+            download_dir: self.download_dir,
+            bandwidth_priority: self.bandwidth_priority,
             ..Default::default()
         }
     }
 }
 
 async fn add_torrent(
-    conf: &TransmissionConfig,
+    conf: TransmissionConfig,
     link: String,
     client: reqwest::Client,
 ) -> Result<(), Box<dyn Error + Send + Sync>> {
@@ -77,7 +69,7 @@ async fn add_torrent(
     let mut client = TransClient::new_with_client(base_url, client);
 
     let pass = match conf.password.as_ref() {
-        Some(pass) => Some(pass.to_owned()),
+        Some(pass) => Some(pass.clone()),
         None => match conf.password_file.as_ref() {
             Some(file) => {
                 let contents = fs::read_to_string(file)?;
@@ -87,13 +79,13 @@ async fn add_torrent(
             None => None,
         },
     };
-    if let (Some(user), Some(password)) = (conf.username.as_ref(), pass) {
+    if let (Some(user), Some(password)) = (conf.username.as_ref(), pass.as_ref()) {
         client.set_auth(BasicAuth {
             user: user.clone(),
             password: password.clone(),
         });
     }
-    let add = conf.clone().to_form(link);
+    let add = conf.form(link);
     client
         .torrent_add(add)
         .await
@@ -125,7 +117,7 @@ impl DownloadClient for TransmissionClient {
             None | Some(true) => item.magnet_link.to_owned(),
             Some(false) => item.torrent_link.to_owned(),
         };
-        if let Err(e) = add_torrent(&conf, link, client).await {
+        if let Err(e) = add_torrent(conf, link, client).await {
             return SingleDownloadResult::error(e);
         }
         SingleDownloadResult::success("Successfully sent torrent to Transmission", item.id)

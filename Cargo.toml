@@ -22,7 +22,7 @@ strip = "none"
 lto = true
 
 [dependencies]
-reqwest = { version = "0.11.27", features = ["cookies", "gzip"], default-features = false }
+reqwest = { version = "0.12.5", features = ["cookies", "gzip"], default-features = false }
 tokio = { version = "1.38.0", features = ["macros", "rt-multi-thread"] }
 urlencoding = "2.1.3"
 ratatui = { version = "0.27.0", default-features = false, features = ["crossterm"] }
@@ -35,7 +35,7 @@ serde = { version = "1.0.203", default-features = false }
 scraper = { version = "0.19.0", default-features = false }
 rss = { version = "2.0.8", default-features = false }
 chrono = { version = "0.4.38", features = ["clock"], default-features = false }
-transmission-rpc = { version = "0.4.2" }
+transmission-rpc = { version = "0.4.3" }
 open = "5.1.4"
 arboard = { version = "3.4", default-features = false }
 dirs = "5.0.1"

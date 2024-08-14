@@ -39,7 +39,7 @@ impl ResultsWidget {
     }
 
     fn try_select_add(&self, ctx: &mut Context, start: usize, stop: usize) {
-        if let Some(item) = ctx.results.response.items.get(start..stop) {
+        if let Some(item) = ctx.results.response.items.get(start..=stop) {
             item.iter().for_each(|i| {
                 if !ctx.batch.iter().any(|s| s.id == i.id) {
                     ctx.batch.push(i.to_owned());
@@ -49,7 +49,7 @@ impl ResultsWidget {
     }
 
     fn try_select_remove(&self, ctx: &mut Context, start: usize, stop: usize) {
-        if let Some(item) = ctx.results.response.items.get(start..stop) {
+        if let Some(item) = ctx.results.response.items.get(start..=stop) {
             item.iter().for_each(|i| {
                 if let Some(p) = ctx.batch.iter().position(|s| s.id == i.id) {
                     ctx.batch.remove(p);
@@ -59,7 +59,7 @@ impl ResultsWidget {
     }
 
     fn try_select_toggle(&self, ctx: &mut Context, start: usize, stop: usize) {
-        if let Some(item) = ctx.results.response.items.get(start..stop) {
+        if let Some(item) = ctx.results.response.items.get(start..=stop) {
             item.iter().for_each(|i| {
                 if let Some(p) = ctx.batch.iter().position(|s| s.id == i.id) {
                     ctx.batch.remove(p);
@@ -88,14 +88,14 @@ impl ResultsWidget {
                     self.try_select_toggle(
                         ctx,
                         range_start.saturating_add_signed(dir),
-                        range_stop.saturating_add_signed(dir) + 1,
+                        range_stop.saturating_add_signed(dir),
                     )
                 } else {
-                    self.try_select_toggle(ctx, range_start, range_stop + 1)
+                    self.try_select_toggle(ctx, range_start, range_stop)
                 }
             }
-            VisualMode::Add => self.try_select_add(ctx, range_start, range_stop + 1),
-            VisualMode::Remove => self.try_select_remove(ctx, range_start, range_stop + 1),
+            VisualMode::Add => self.try_select_add(ctx, range_start, range_stop),
+            VisualMode::Remove => self.try_select_remove(ctx, range_start, range_stop),
         }
     }
 }
@@ -283,15 +283,6 @@ impl super::Widget for ResultsWidget {
                     let prev = self.table.selected().unwrap_or(0);
                     let selected = self.table.next(ctx.results.response.items.len(), -1);
                     self.select_on_move(ctx, prev, selected, selected);
-                    //if self.control_space_toggle.is_some() && prev != selected {
-                    //    self.try_select_toggle(
-                    //        ctx,
-                    //        match selected >= self.visual_anchor {
-                    //            true => prev,
-                    //            false => selected,
-                    //        },
-                    //    );
-                    //}
                 }
                 (Char('J'), &KeyModifiers::SHIFT) => {
                     let prev = self.table.selected().unwrap_or(0);
@@ -351,7 +342,7 @@ impl super::Widget for ResultsWidget {
                         .get(self.table.state.selected().unwrap_or(0))
                         .map(|item| item.post_link.clone())
                         .unwrap_or("https://nyaa.si".to_owned());
-                    let res = open::that_detached(link.clone());
+                    let res = open::that_detached(&link);
                     if let Err(e) = res {
                         ctx.notify_error(format!("Failed to open {}:\n{}", link, e));
                     } else {
@@ -363,7 +354,7 @@ impl super::Widget for ResultsWidget {
                     if self.visual_mode != VisualMode::Toggle {
                         ctx.notify_info("Entered VISUAL TOGGLE mode");
                         self.visual_anchor = self.table.selected().unwrap_or(0);
-                        self.try_select_toggle(ctx, self.visual_anchor, self.visual_anchor + 1);
+                        self.try_select_toggle(ctx, self.visual_anchor, self.visual_anchor);
                         self.visual_mode = VisualMode::Toggle;
                     } else {
                         ctx.notify_info("Exited VISUAL TOGGLE mode");
@@ -375,7 +366,7 @@ impl super::Widget for ResultsWidget {
                     if self.visual_mode != VisualMode::Add {
                         ctx.notify_info("Entered VISUAL ADD mode");
                         self.visual_anchor = self.table.selected().unwrap_or(0);
-                        self.try_select_add(ctx, self.visual_anchor, self.visual_anchor + 1);
+                        self.try_select_add(ctx, self.visual_anchor, self.visual_anchor);
                         self.visual_mode = VisualMode::Add;
                     } else {
                         ctx.notify_info("Exited VISUAL ADD mode");
@@ -387,7 +378,7 @@ impl super::Widget for ResultsWidget {
                     if self.visual_mode != VisualMode::Remove {
                         ctx.notify_info("Entered VISUAL REMOVE mode");
                         self.visual_anchor = self.table.selected().unwrap_or(0);
-                        self.try_select_remove(ctx, self.visual_anchor, self.visual_anchor + 1);
+                        self.try_select_remove(ctx, self.visual_anchor, self.visual_anchor);
                         self.visual_mode = VisualMode::Remove;
                     } else {
                         ctx.notify_info("Exited VISUAL REMOVE mode");

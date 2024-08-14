@@ -89,6 +89,7 @@ pub enum Mode {
     Page,
     User,
     Help,
+    #[cfg(feature = "captcha")]
     Captcha,
 }
 
@@ -145,6 +146,7 @@ impl Display for Mode {
             Mode::Page => "Page",
             Mode::User => "User",
             Mode::Help => "Help",
+            #[cfg(feature = "captcha")]
             Mode::Captcha => "Captcha",
         }
         .to_owned();
@@ -460,21 +462,6 @@ impl App {
                         break;
                     },
                     Some(dl) = rx_dl.recv() => {
-                        //if dl.batch {
-                        //    for id in dl.success_ids.iter() {
-                        //        ctx.batch.retain(|i| i.id.ne(id));
-                        //    }
-                        //}
-                        //if !dl.success_ids.is_empty() {
-                        //    if let Some(notif) = dl.success_msg {
-                        //        if let Some(notif_type) = dl.success_msg {
-                        //            ctx.notify(notif_type, notif);
-                        //        }
-                        //    }
-                        //}
-                        //for e in dl.errors.iter() {
-                        //    ctx.notify_error(e)
-                        //}
                         match dl {
                             DownloadClientResult::Single(sr) => {
                                 match sr {

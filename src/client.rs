@@ -165,7 +165,7 @@ where
     let mut success_ids: Vec<String> = vec![];
     let mut errors: Vec<Notification> = vec![];
     while let Some(res) = set.join_next().await {
-        match res.unwrap_or_else(|e| SingleDownloadResult::error(e)) {
+        match res.unwrap_or_else(SingleDownloadResult::error) {
             SingleDownloadResult::Success(sr) => success_ids.push(sr.id),
             SingleDownloadResult::Error(er) => errors.push(er.msg),
         }

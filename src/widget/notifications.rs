@@ -107,7 +107,7 @@ impl NotificationWidget {
 
         self.notifs
             .iter_mut()
-            .for_each(|n| n.add_offset(notif.height()));
+            .for_each(|n| n.add_offset(notif.height() as i32));
 
         self.dismiss_oldest();
 
