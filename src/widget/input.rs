@@ -35,7 +35,7 @@ impl InputWidget {
     pub fn show_cursor(&self, f: &mut Frame, area: Rect) {
         let cursor = self.get_cursor_pos();
 
-        f.set_cursor(min(area.x + cursor as u16, area.x + area.width), area.y);
+        f.set_cursor_position((min(area.x + cursor as u16, area.x + area.width), area.y));
     }
 
     pub fn set_cursor(&mut self, idx: usize) {
