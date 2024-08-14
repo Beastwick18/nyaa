@@ -6,7 +6,9 @@ use ratatui::{backend::CrosstermBackend, Terminal};
 use sync::AppSync;
 
 #[cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos")))]
-use ratatui::termion::raw::IntoRawMode;
+use ratatui::{
+    backend::TermionBackend, termion::raw::IntoRawMode, termion::screen::IntoAlternateScreen,
+};
 
 pub mod app;
 pub mod client;
@@ -65,7 +67,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos"))]
     let backend = CrosstermBackend::new(stdout());
     #[cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos")))]
-    let backend = CrosstermBackend::new(stdout().into_raw_mode()?);
+    let (backend, backend_termion) = (
+        CrosstermBackend::new(stdout().into_raw_mode()?.into_alternate_screen()?),
+        TermionBackend::new(stdout().into_raw_mode()?.into_alternate_screen()?),
+    );
 
     let mut terminal = Terminal::new(backend)?;
 
@@ -78,6 +83,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     app.run_app::<_, _, AppConfig, false>(&mut terminal, sync, config)
         .await?;
+
+    #[cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos")))]
+    drop(backend_termion);
 
     util::term::reset_terminal()?;
     terminal.show_cursor()?;
