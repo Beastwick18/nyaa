@@ -5,6 +5,9 @@ use config::{AppConfig, ConfigManager};
 use ratatui::{backend::CrosstermBackend, Terminal};
 use sync::AppSync;
 
+#[cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos")))]
+use ratatui::termion::raw::IntoRawMode;
+
 pub mod app;
 pub mod client;
 pub mod clip;
@@ -58,7 +61,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let args = parse_args()?;
     util::term::setup_terminal()?;
+
+    #[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos"))]
     let backend = CrosstermBackend::new(stdout());
+    #[cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos")))]
+    let backend = CrosstermBackend::new(stdout().into_raw_mode()?);
+
     let mut terminal = Terminal::new(backend)?;
 
     let mut app = App::default();

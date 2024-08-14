@@ -63,6 +63,9 @@ nix = { version = "0.29.0", features = ["signal"] }
 [target.'cfg(any(target_os = "linux", target_os = "windows", target_os = "macos"))'.dependencies]
 arboard = { version = "3.4", default-features = false }
 
+[target.'cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos")))'.dependencies]
+ratatui = { version = "0.28.0", default-features = false, features = ["termion"] }
+
 [package.metadata.deb]
 maintainer = "Steven Culwell <bradculwell@pm.me>"
 copyright = "2024, Steven Culwell <bradculwell@pm.me>"
