@@ -127,7 +127,7 @@ impl ClipboardManager {
         }
         #[cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos")))]
         Err(
-            "There is no native clipboard support on android\nEnable osc52 for clipboard support"
+            "There is no native clipboard support\nTry enabling osc52 for clipboard support"
                 .to_owned(),
         )
     }
