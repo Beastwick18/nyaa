@@ -73,29 +73,27 @@ Possible values for `default_filter` for Sukebei are:
 
 # Categories
 Possible values for `default_category` for Sukebei are:
-
 ## All Categories
 | Value           | Description    |
 | --------------- | -------------- |
-| `AllCategories` | All categories |
+| `AllCategories` | All Categories |
 
 ## Art
-| Value       | Description |
-| ----------- | ----------- |
-| `All Art`   | All Art     |
-| `Anime`     | Anime Art   |
-| `Doujinshi` | Doujinshi   |
-| `Games`     | Game Art    |
-| `Manga`     | Manga       |
-| `Pictures`  | Pictures    |
+| Value           | Description    |
+| --------------- | -------------- |
+| `AllArt`        | All Art        |
+| `ArtAnime`      | Anime          |
+| `ArtDoujinshi`  | Doujinshi      |
+| `ArtGames`      | Games          |
+| `ArtManga`      | Manga          |
+| `ArtPictures`   | Pictures       |
 
 ## Real Life
-| Value                     | Description                       |
-| ------------------------- | --------------------------------- |
-| `All Real Life`           | All Real Life                     |
-| `Photobooks and Pictures` | Real Life Photobooks and Pictures |
-| `Videos`                  | Real Life Videos                  |
-
+| Value           | Description             |
+| --------------- | ----------------------- |
+| `AllReal`       | All Real Life           |
+| `RealPhotos`    | Photobooks and Pictures |
+| `RealVideos`    | Videos                  |
 
 # Category Theme
 For user themes, you can change the default colors of categories for this source. Below is the table you would need to add to you user-theme to change them:

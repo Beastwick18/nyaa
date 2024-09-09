@@ -70,84 +70,83 @@ Possible values for `default_category` for Torrent Galaxy are:
 ## All Categories
 | Value           | Description    |
 | --------------- | -------------- |
-| `AllCategories` | All categories |
+| `AllCategories` | All Categories |
 
 ## Movies
-| Value           | Description      |
-| --------------- | ---------------- |
-| `4K UHD Movies` | 4K UHD Movies    |
-| `Bollywood`     | Bollywood Movies |
-| `Cam/TS`        | Cam/TS Movies    |
-| `HD Movies`     | HD Movies        |
-| `Movie Packs`   | Movie Packs      |
-| `SD Movies`     | SD Movies        |
+| Value             | Description   |
+| ----------------- | ------------- |
+| `4kMovies`        | 4K UHD Movies |
+| `BollywoodMovies` | Bollywood     |
+| `CamMovies`       | Cam/TS        |
+| `HdMovies`        | HD Movies     |
+| `PackMovies`      | Movie Packs   |
+| `SdMovies`        | SD Movies     |
 
 ## TV
 | Value      | Description |
 | ---------- | ----------- |
-| `TV HD`    | TV HD       |
-| `TV SD`    | TV SD       |
-| `TV 4k`    | TV 4k       |
-| `TV Packs` | TV Packs    |
-| `Sports`   | Sports      |
+| `HdTV`     | TV HD       |
+| `SdTV`     | TV SD       |
+| `4kTV`     | TV 4k       |
+| `PacksTV`  | TV Packs    |
+| `SportsTV` | Sports      |
 
 ## Anime
-| Value     | Description |
-| --------- | ----------- |
-| `All Anime` | All Anime   |
+| Value   | Description |
+| ------- | ----------- |
+| `Anime` | All Anime   |
 
 ## Apps
-| Value          | Description  |
-| -------------- | ------------ |
-| `Mobile Apps`  | Mobile Apps  |
-| `Other Apps`   | Other Apps   |
-| `Windows Apps` | Windows Apps |
+| Value         | Description  |
+| ------------- | ------------ |
+| `AppsMobile`  | Mobile Apps  |
+| `AppsOther`   | Other Apps   |
+| `AppsWindows` | Windows Apps |
 
 ## Books
-| Value         | Description       |
-| ------------- | ----------------- |
-| `Audiobooks`  | Audiobooks        |
-| `Comics`      | Comics            |
-| `Ebooks`      | Ebooks            |
-| `Educational` | Educational Books |
-| `Magazines`   | Magazines         |
+| Value         | Description |
+| ------------- | ----------- |
+| `Audiobooks`  | Audiobooks  |
+| `Comics`      | Comics      |
+| `Ebooks`      | Ebooks      |
+| `Educational` | Educational |
+| `Magazines`   | Magazines   |
 
 ## Documentaries
-| Value               | Description       |
-| ------------------- | ----------------- |
-| `All Documentaries` | All Documentaries |
-
-## Games
 | Value           | Description       |
 | --------------- | ----------------- |
-| `Windows Games` | Windows Games     |
-| `Other Games`   | Other Games       |
+| `Documentaries` | All Documentaries |
+
+## Games
+| Value          | Description   |
+| -------------- | ------------- |
+| `WindowsGames` | Windows Games |
+| `OtherGames`   | Other Games   |
 
 ## Music
-| Value               | Description       |
-| ------------------- | ----------------- |
-| `Music Albums`      | Music Albums      |
-| `Music Discography` | Music Discography |
-| `Music Lossless`    | Music Lossless    |
-| `Music Video`       | Music Video       |
-| `Music Singles`     | Music Singles     |
+| Value              | Description       |
+| ------------------ | ----------------- |
+| `AlbumsMusic`      | Music Albums      |
+| `DiscographyMusic` | Music Discography |
+| `LosslessMusic`    | Music Lossless    |
+| `MusicVideo`       | Music Video       |
+| `SinglesMusic`     | Music Singles     |
 
 ## Other
-| Value            | Description       |
-| ---------------- | ----------------- |
-| `Other Audio`    | Other Audio       |
-| `Other Pictures` | Other Pictures    |
-| `Other Training` | Other Training    |
-| `Other`          | Other             |
+| Value           | Description    |
+| --------------- | -------------- |
+| `AudioOther`    | Other Audio    |
+| `PicturesOther` | Other Pictures |
+| `TrainingOther` | Other Training |
+| `Other`         | Other          |
 
 ## XXX
-| Value      | Description |
-| ---------- | ----------- |
-| `XXX 4k`   | XXX 4k      |
-| `XXX HD`   | XXX HD      |
-| `XXX Misc` | XXX Misc    |
-| `XXX SD`   | XXX SD      |
-
+| Value     | Description |
+| --------- | ----------- |
+| `4kXXX`   | XXX 4k      |
+| `HdXXX`   | XXX HD      |
+| `MiscXXX` | XXX Misc    |
+| `SdXXX`   | XXX SD      |
 
 # Category Theme
 For user themes, you can change the default colors of categories for this source. Below is the table you would need to add to you user-theme to change them:
