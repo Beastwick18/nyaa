@@ -1,3 +1,4 @@
+use std::fmt::Write;
 use std::{cmp::max, error::Error, time::Duration};
 
 use chrono::{DateTime, Local, NaiveDateTime, TimeZone};
@@ -11,6 +12,7 @@ use serde::{Deserialize, Serialize};
 use strum::{Display, FromRepr, VariantArray};
 use urlencoding::encode;
 
+use crate::util;
 use crate::{
     cats, cond_vec,
     results::{ResultColumn, ResultHeader, ResultResponse, ResultRow, ResultTable},
@@ -26,7 +28,8 @@ use crate::{
 };
 
 use super::{
-    add_protocol, nyaa_rss, Item, ItemType, Source, SourceConfig, SourceInfo, SourceResponse,
+    add_protocol, nyaa_rss, Item, ItemType, Source, SourceConfig, SourceExtraConfig, SourceInfo,
+    SourceResponse,
 };
 
 #[derive(Serialize, Deserialize, Clone, Copy, Default)]
@@ -273,7 +276,7 @@ impl Source for NyaaHtmlSource {
         client: &reqwest::Client,
         search: &SearchQuery,
         config: &SourceConfig,
-        date_format: Option<String>,
+        extra: &SourceExtraConfig,
     ) -> Result<SourceResponse, Box<dyn Error + Send + Sync>> {
         let nyaa = config.nyaa.to_owned().unwrap_or_default();
         if nyaa.rss {
@@ -282,7 +285,7 @@ impl Source for NyaaHtmlSource {
                 nyaa.timeout,
                 client,
                 search,
-                date_format,
+                extra,
             )
             .await;
         }
@@ -370,13 +373,24 @@ impl Source for NyaaHtmlSource {
                 let bytes = to_bytes(&size);
 
                 const DEFAULT_DATE_FORMAT: &str = "%Y-%m-%d %H:%M";
-                let mut date = inner(e, date_sel, "");
-                let naive =
-                    NaiveDateTime::parse_from_str(&date, DEFAULT_DATE_FORMAT).unwrap_or_default();
+                let date_raw = inner(e, date_sel, "");
+                let naive = NaiveDateTime::parse_from_str(&date_raw, DEFAULT_DATE_FORMAT)
+                    .unwrap_or_default();
                 let date_time: DateTime<Local> = Local.from_utc_datetime(&naive);
-                date = date_time
-                    .format(date_format.as_deref().unwrap_or(DEFAULT_DATE_FORMAT))
-                    .to_string();
+                let date_format = extra.date_format.as_deref().unwrap_or(DEFAULT_DATE_FORMAT);
+
+                let date = if extra.relative_date.unwrap_or(false) {
+                    util::conv::to_relative_date(
+                        date_time,
+                        extra.relative_date_short.unwrap_or(false),
+                    )
+                } else {
+                    let mut newstr = String::new();
+                    if write!(newstr, "{}", date_time.format(date_format)).is_err() {
+                        newstr = format!("Invalid format string: `{}`", date_format);
+                    }
+                    newstr
+                };
 
                 let seeders = as_type(inner(e, seed_sel, "0")).unwrap_or_default();
                 let leechers = as_type(inner(e, leech_sel, "0")).unwrap_or_default();
@@ -429,11 +443,11 @@ impl Source for NyaaHtmlSource {
         client: &reqwest::Client,
         search: &SearchQuery,
         config: &SourceConfig,
-        date_format: Option<String>,
+        extra: &SourceExtraConfig,
     ) -> Result<SourceResponse, Box<dyn Error + Send + Sync>> {
         let nyaa = config.nyaa.to_owned().unwrap_or_default();
         let sort = search.sort;
-        let mut res = NyaaHtmlSource::search(client, search, config, date_format).await;
+        let mut res = NyaaHtmlSource::search(client, search, config, extra).await;
 
         if nyaa.rss {
             if let Ok(SourceResponse::Results(res)) = &mut res {
@@ -446,26 +460,26 @@ impl Source for NyaaHtmlSource {
         client: &reqwest::Client,
         search: &SearchQuery,
         config: &SourceConfig,
-        date_format: Option<String>,
+        extra: &SourceExtraConfig,
     ) -> Result<SourceResponse, Box<dyn Error + Send + Sync>> {
-        NyaaHtmlSource::search(client, search, config, date_format).await
+        NyaaHtmlSource::search(client, search, config, extra).await
     }
     async fn categorize(
         client: &reqwest::Client,
         search: &SearchQuery,
         config: &SourceConfig,
-        date_format: Option<String>,
+        extra: &SourceExtraConfig,
     ) -> Result<SourceResponse, Box<dyn Error + Send + Sync>> {
-        NyaaHtmlSource::search(client, search, config, date_format).await
+        NyaaHtmlSource::search(client, search, config, extra).await
     }
     async fn solve(
         _solution: String,
         client: &reqwest::Client,
         search: &SearchQuery,
         config: &SourceConfig,
-        date_format: Option<String>,
+        extra: &SourceExtraConfig,
     ) -> Result<SourceResponse, Box<dyn Error + Send + Sync>> {
-        NyaaHtmlSource::search(client, search, config, date_format).await
+        NyaaHtmlSource::search(client, search, config, extra).await
     }
 
     fn info() -> SourceInfo {

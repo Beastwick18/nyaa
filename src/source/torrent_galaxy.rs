@@ -29,7 +29,10 @@ use crate::{
     widget::sort::{SelectedSort, SortDir},
 };
 
-use super::{add_protocol, Item, ItemType, Source, SourceConfig, SourceInfo, SourceResponse};
+use super::{
+    add_protocol, Item, ItemType, Source, SourceConfig, SourceExtraConfig, SourceInfo,
+    SourceResponse,
+};
 
 #[derive(Serialize, Deserialize, Clone, Copy, Default)]
 #[serde(default)]
@@ -367,32 +370,32 @@ impl Source for TorrentGalaxyHtmlSource {
         client: &reqwest::Client,
         search: &SearchQuery,
         config: &SourceConfig,
-        date_format: Option<String>,
+        extra: &SourceExtraConfig,
     ) -> Result<SourceResponse, Box<dyn Error + Send + Sync>> {
-        TorrentGalaxyHtmlSource::search(client, search, config, date_format).await
+        TorrentGalaxyHtmlSource::search(client, search, config, extra).await
     }
     async fn categorize(
         client: &reqwest::Client,
         search: &SearchQuery,
         config: &SourceConfig,
-        date_format: Option<String>,
+        extra: &SourceExtraConfig,
     ) -> Result<SourceResponse, Box<dyn Error + Send + Sync>> {
-        TorrentGalaxyHtmlSource::search(client, search, config, date_format).await
+        TorrentGalaxyHtmlSource::search(client, search, config, extra).await
     }
     async fn sort(
         client: &reqwest::Client,
         search: &SearchQuery,
         config: &SourceConfig,
-        date_format: Option<String>,
+        extra: &SourceExtraConfig,
     ) -> Result<SourceResponse, Box<dyn Error + Send + Sync>> {
-        TorrentGalaxyHtmlSource::search(client, search, config, date_format).await
+        TorrentGalaxyHtmlSource::search(client, search, config, extra).await
     }
 
     async fn search(
         client: &reqwest::Client,
         search: &SearchQuery,
         config: &SourceConfig,
-        _date_format: Option<String>,
+        _extra: &SourceExtraConfig,
     ) -> Result<SourceResponse, Box<dyn Error + Send + Sync>> {
         let tgx = config.tgx.to_owned().unwrap_or_default();
         let (base_url, url) = get_url(tgx.base_url.clone(), search)?;
@@ -594,7 +597,7 @@ impl Source for TorrentGalaxyHtmlSource {
         client: &reqwest::Client,
         search: &SearchQuery,
         config: &SourceConfig,
-        date_format: Option<String>,
+        extra: &SourceExtraConfig,
     ) -> Result<SourceResponse, Box<dyn Error + Send + Sync>> {
         let tgx = config.tgx.to_owned().unwrap_or_default();
         let time = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis();
@@ -645,7 +648,7 @@ impl Source for TorrentGalaxyHtmlSource {
             .into());
         }
 
-        TorrentGalaxyHtmlSource::search(client, search, config, date_format).await
+        TorrentGalaxyHtmlSource::search(client, search, config, extra).await
     }
 
     fn info() -> SourceInfo {

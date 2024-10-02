@@ -13,7 +13,7 @@ use crate::{
     client::{Client, ClientConfig, DownloadClientResult},
     config::CONFIG_FILE,
     results::Results,
-    source::{Item, SourceConfig, SourceResponse, SourceResults, Sources},
+    source::{Item, SourceConfig, SourceExtraConfig, SourceResponse, SourceResults, Sources},
     theme::{Theme, THEMES_PATH},
     widget::sort::SelectedSort,
 };
@@ -29,7 +29,7 @@ pub trait EventSync {
         search: SearchQuery,
         config: SourceConfig,
         theme: Theme,
-        date_format: Option<String>,
+        extra: SourceExtraConfig,
     ) -> impl std::future::Future<Output = ()> + std::marker::Send + 'static;
     fn download(
         self,
@@ -98,11 +98,9 @@ impl EventSync for AppSync {
         search: SearchQuery,
         config: SourceConfig,
         theme: Theme,
-        date_format: Option<String>,
+        extra: SourceExtraConfig,
     ) {
-        let res = src
-            .load(load_type, &client, &search, &config, date_format)
-            .await;
+        let res = src.load(load_type, &client, &search, &config, &extra).await;
         let fmt = match res {
             Ok(SourceResponse::Results(res)) => Ok(SourceResults::Results(Results::new(
                 search.clone(),

@@ -9,6 +9,7 @@ use torrent_galaxy::TgxTheme;
 
 use crate::{
     app::{Context, LoadType, Widgets},
+    config::Config,
     results::{ResultResponse, ResultTable, Results},
     sync::SearchQuery,
     theme::Theme,
@@ -65,6 +66,22 @@ pub struct SourceConfig {
     pub sukebei: Option<SukebeiNyaaConfig>,
     #[serde(rename = "torrentgalaxy")]
     pub tgx: Option<TgxConfig>,
+}
+
+pub struct SourceExtraConfig {
+    pub date_format: Option<String>,
+    pub relative_date: Option<bool>,
+    pub relative_date_short: Option<bool>,
+}
+
+impl From<Config> for SourceExtraConfig {
+    fn from(c: Config) -> Self {
+        SourceExtraConfig {
+            date_format: c.date_format,
+            relative_date: c.relative_date,
+            relative_date_short: c.relative_date_short,
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -171,32 +188,32 @@ pub trait Source {
         client: &reqwest::Client,
         search: &SearchQuery,
         config: &SourceConfig,
-        date_format: Option<String>,
+        extra: &SourceExtraConfig,
     ) -> impl std::future::Future<Output = Result<SourceResponse, Box<dyn Error + Send + Sync>>> + Send;
     fn sort(
         client: &reqwest::Client,
         search: &SearchQuery,
         config: &SourceConfig,
-        date_format: Option<String>,
+        extra: &SourceExtraConfig,
     ) -> impl std::future::Future<Output = Result<SourceResponse, Box<dyn Error + Send + Sync>>> + Send;
     fn filter(
         client: &reqwest::Client,
         search: &SearchQuery,
         config: &SourceConfig,
-        date_format: Option<String>,
+        extra: &SourceExtraConfig,
     ) -> impl std::future::Future<Output = Result<SourceResponse, Box<dyn Error + Send + Sync>>> + Send;
     fn categorize(
         client: &reqwest::Client,
         search: &SearchQuery,
         config: &SourceConfig,
-        date_format: Option<String>,
+        extra: &SourceExtraConfig,
     ) -> impl std::future::Future<Output = Result<SourceResponse, Box<dyn Error + Send + Sync>>> + Send;
     fn solve(
         solution: String,
         client: &reqwest::Client,
         search: &SearchQuery,
         config: &SourceConfig,
-        date_format: Option<String>,
+        extra: &SourceExtraConfig,
     ) -> impl std::future::Future<Output = Result<SourceResponse, Box<dyn Error + Send + Sync>>> + Send;
     fn info() -> SourceInfo;
     fn load_config(config: &mut SourceConfig);
@@ -221,61 +238,54 @@ impl Sources {
         client: &reqwest::Client,
         search: &SearchQuery,
         config: &SourceConfig,
-        date_format: Option<String>,
+        extra: &SourceExtraConfig,
     ) -> Result<SourceResponse, Box<dyn Error + Send + Sync>> {
         match self {
             Sources::Nyaa => match load_type {
                 LoadType::Searching | LoadType::Sourcing => {
-                    NyaaHtmlSource::search(client, search, config, date_format).await
+                    NyaaHtmlSource::search(client, search, config, extra).await
                 }
-                LoadType::Sorting => {
-                    NyaaHtmlSource::sort(client, search, config, date_format).await
-                }
-                LoadType::Filtering => {
-                    NyaaHtmlSource::filter(client, search, config, date_format).await
-                }
+                LoadType::Sorting => NyaaHtmlSource::sort(client, search, config, extra).await,
+                LoadType::Filtering => NyaaHtmlSource::filter(client, search, config, extra).await,
                 LoadType::Categorizing => {
-                    NyaaHtmlSource::categorize(client, search, config, date_format).await
+                    NyaaHtmlSource::categorize(client, search, config, extra).await
                 }
                 LoadType::SolvingCaptcha(solution) => {
-                    NyaaHtmlSource::solve(solution, client, search, config, date_format).await
+                    NyaaHtmlSource::solve(solution, client, search, config, extra).await
                 }
                 LoadType::Downloading | LoadType::Batching => unreachable!(),
             },
             Sources::SukebeiNyaa => match load_type {
                 LoadType::Searching | LoadType::Sourcing => {
-                    SukebeiHtmlSource::search(client, search, config, date_format).await
+                    SukebeiHtmlSource::search(client, search, config, extra).await
                 }
-                LoadType::Sorting => {
-                    SukebeiHtmlSource::sort(client, search, config, date_format).await
-                }
+                LoadType::Sorting => SukebeiHtmlSource::sort(client, search, config, extra).await,
                 LoadType::Filtering => {
-                    SukebeiHtmlSource::filter(client, search, config, date_format).await
+                    SukebeiHtmlSource::filter(client, search, config, extra).await
                 }
                 LoadType::Categorizing => {
-                    SukebeiHtmlSource::categorize(client, search, config, date_format).await
+                    SukebeiHtmlSource::categorize(client, search, config, extra).await
                 }
                 LoadType::SolvingCaptcha(solution) => {
-                    SukebeiHtmlSource::solve(solution, client, search, config, date_format).await
+                    SukebeiHtmlSource::solve(solution, client, search, config, extra).await
                 }
                 LoadType::Downloading | LoadType::Batching => unreachable!(),
             },
             Sources::TorrentGalaxy => match load_type {
                 LoadType::Searching | LoadType::Sourcing => {
-                    TorrentGalaxyHtmlSource::search(client, search, config, date_format).await
+                    TorrentGalaxyHtmlSource::search(client, search, config, extra).await
                 }
                 LoadType::Sorting => {
-                    TorrentGalaxyHtmlSource::sort(client, search, config, date_format).await
+                    TorrentGalaxyHtmlSource::sort(client, search, config, extra).await
                 }
                 LoadType::Filtering => {
-                    TorrentGalaxyHtmlSource::filter(client, search, config, date_format).await
+                    TorrentGalaxyHtmlSource::filter(client, search, config, extra).await
                 }
                 LoadType::Categorizing => {
-                    TorrentGalaxyHtmlSource::categorize(client, search, config, date_format).await
+                    TorrentGalaxyHtmlSource::categorize(client, search, config, extra).await
                 }
                 LoadType::SolvingCaptcha(solution) => {
-                    TorrentGalaxyHtmlSource::solve(solution, client, search, config, date_format)
-                        .await
+                    TorrentGalaxyHtmlSource::solve(solution, client, search, config, extra).await
                 }
                 LoadType::Downloading | LoadType::Batching => unreachable!(),
             },

@@ -407,7 +407,7 @@ impl App {
                     search,
                     ctx.config.sources.clone(),
                     ctx.theme.clone(),
-                    ctx.config.date_format.clone(),
+                    ctx.config.clone().into(),
                 ));
                 last_load_abort = Some(task.abort_handle());
                 continue; // Redraw

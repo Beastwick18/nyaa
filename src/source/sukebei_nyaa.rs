@@ -1,3 +1,4 @@
+use std::fmt::Write;
 use std::{error::Error, time::Duration};
 
 use chrono::{DateTime, Local, NaiveDateTime, TimeZone};
@@ -15,6 +16,7 @@ use crate::{
     sync::SearchQuery,
     theme::Theme,
     util::{
+        self,
         colors::color_to_tui,
         conv::to_bytes,
         html::{attr, inner},
@@ -22,6 +24,7 @@ use crate::{
     widget::sort::{SelectedSort, SortDir},
 };
 
+use super::SourceExtraConfig;
 use super::{
     add_protocol,
     nyaa_html::{nyaa_table, NyaaColumns, NyaaFilter, NyaaSort},
@@ -106,27 +109,27 @@ impl Source for SukebeiHtmlSource {
         client: &reqwest::Client,
         search: &SearchQuery,
         config: &SourceConfig,
-        date_format: Option<String>,
+        extra: &SourceExtraConfig,
     ) -> Result<SourceResponse, Box<dyn Error + Send + Sync>> {
-        SukebeiHtmlSource::search(client, search, config, date_format).await
+        SukebeiHtmlSource::search(client, search, config, extra).await
     }
     async fn categorize(
         client: &reqwest::Client,
         search: &SearchQuery,
         config: &SourceConfig,
-        date_format: Option<String>,
+        extra: &SourceExtraConfig,
     ) -> Result<SourceResponse, Box<dyn Error + Send + Sync>> {
-        SukebeiHtmlSource::search(client, search, config, date_format).await
+        SukebeiHtmlSource::search(client, search, config, extra).await
     }
     async fn sort(
         client: &reqwest::Client,
         search: &SearchQuery,
         config: &SourceConfig,
-        date_format: Option<String>,
+        extra: &SourceExtraConfig,
     ) -> Result<SourceResponse, Box<dyn Error + Send + Sync>> {
         let sukebei = config.sukebei.to_owned().unwrap_or_default();
         let sort = search.sort;
-        let mut res = SukebeiHtmlSource::search(client, search, config, date_format).await;
+        let mut res = SukebeiHtmlSource::search(client, search, config, extra).await;
 
         if sukebei.rss {
             if let Ok(SourceResponse::Results(res)) = &mut res {
@@ -140,7 +143,7 @@ impl Source for SukebeiHtmlSource {
         client: &reqwest::Client,
         search: &SearchQuery,
         config: &SourceConfig,
-        date_format: Option<String>,
+        extra: &SourceExtraConfig,
     ) -> Result<SourceResponse, Box<dyn Error + Send + Sync>> {
         let sukebei = config.sukebei.to_owned().unwrap_or_default();
         if sukebei.rss {
@@ -149,7 +152,7 @@ impl Source for SukebeiHtmlSource {
                 sukebei.timeout,
                 client,
                 search,
-                date_format,
+                extra,
             )
             .await;
         }
@@ -233,13 +236,23 @@ impl Source for SukebeiHtmlSource {
                 let bytes = to_bytes(&size);
 
                 const DEFAULT_DATE_FORMAT: &str = "%Y-%m-%d %H:%M";
-                let mut date = inner(e, date_sel, "");
-                let naive =
-                    NaiveDateTime::parse_from_str(&date, DEFAULT_DATE_FORMAT).unwrap_or_default();
+                let date_format = extra.date_format.as_deref().unwrap_or(DEFAULT_DATE_FORMAT);
+                let date = inner(e, date_sel, "");
+                let naive = NaiveDateTime::parse_from_str(&date, date_format).unwrap_or_default();
                 let date_time: DateTime<Local> = Local.from_utc_datetime(&naive);
-                date = date_time
-                    .format(date_format.as_deref().unwrap_or(DEFAULT_DATE_FORMAT))
-                    .to_string();
+
+                let date = if extra.relative_date.unwrap_or(false) {
+                    util::conv::to_relative_date(
+                        date_time,
+                        extra.relative_date_short.unwrap_or(false),
+                    )
+                } else {
+                    let mut newstr = String::new();
+                    if write!(newstr, "{}", date_time.format(date_format)).is_err() {
+                        newstr = format!("Invalid format string: `{}`", date_format);
+                    }
+                    newstr
+                };
 
                 let seeders = inner(e, seed_sel, "0").parse().unwrap_or(0);
                 let leechers = inner(e, leech_sel, "0").parse().unwrap_or(0);
@@ -297,9 +310,9 @@ impl Source for SukebeiHtmlSource {
         client: &reqwest::Client,
         search: &SearchQuery,
         config: &SourceConfig,
-        date_format: Option<String>,
+        extra: &SourceExtraConfig,
     ) -> Result<SourceResponse, Box<dyn Error + Send + Sync>> {
-        SukebeiHtmlSource::search(client, search, config, date_format).await
+        SukebeiHtmlSource::search(client, search, config, extra).await
     }
 
     fn info() -> SourceInfo {

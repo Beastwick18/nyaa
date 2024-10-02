@@ -1,3 +1,4 @@
+use std::fmt::Write;
 use std::{cmp::Ordering, collections::BTreeMap, error::Error, str::FromStr, time::Duration};
 
 use chrono::{DateTime, Local};
@@ -8,11 +9,13 @@ use urlencoding::encode;
 use crate::{
     results::ResultResponse,
     sync::SearchQuery,
-    util::conv::to_bytes,
+    util::{self, conv::to_bytes},
     widget::sort::{SelectedSort, SortDir},
 };
 
-use super::{add_protocol, nyaa_html::NyaaSort, Item, ItemType, Source, SourceResponse};
+use super::{
+    add_protocol, nyaa_html::NyaaSort, Item, ItemType, Source, SourceExtraConfig, SourceResponse,
+};
 
 type ExtensionMap = BTreeMap<String, Vec<Extension>>;
 
@@ -44,7 +47,7 @@ pub async fn search_rss<S: Source>(
     timeout: Option<u64>,
     client: &reqwest::Client,
     search: &SearchQuery,
-    date_format: Option<String>,
+    extra: &SourceExtraConfig,
 ) -> Result<SourceResponse, Box<dyn Error + Send + Sync>> {
     let query = search.query.to_owned();
     let cat = search.category;
@@ -94,8 +97,8 @@ pub async fn search_rss<S: Source>(
                 .replace('i', "")
                 .replace("Bytes", "B");
             let pub_date = item.pub_date().unwrap_or("");
-            let date = DateTime::parse_from_rfc2822(pub_date).unwrap_or_default();
-            let date = date.with_timezone(&Local);
+            let date_time = DateTime::parse_from_rfc2822(pub_date).unwrap_or_default();
+            let date_time = date_time.with_timezone(&Local);
             let torrent_link = base_url
                 .join(&format!("/download/{}.torrent", id))
                 .map(Into::into)
@@ -107,13 +110,24 @@ pub async fn search_rss<S: Source>(
                 (_, true) => ItemType::Remake,
                 _ => ItemType::None,
             };
-            let date_format = date_format
+            let date_format = extra
+                .date_format
                 .to_owned()
                 .unwrap_or("%Y-%m-%d %H:%M".to_owned());
 
+            let date = if extra.relative_date.unwrap_or(false) {
+                util::conv::to_relative_date(date_time, extra.relative_date_short.unwrap_or(false))
+            } else {
+                let mut newstr = String::new();
+                if write!(newstr, "{}", date_time.format(&date_format)).is_err() {
+                    newstr = format!("Invalid format string: `{}`", date_format);
+                }
+                newstr
+            };
+
             Some(Item {
                 id: format!("nyaa-{}", id_usize),
-                date: date.format(&date_format).to_string(),
+                date,
                 seeders: get_ext_value(ext, "seeders"),
                 leechers: get_ext_value(ext, "leechers"),
                 downloads: get_ext_value(ext, "downloads"),
@@ -138,13 +152,4 @@ pub async fn search_rss<S: Source>(
         last_page,
         total_results,
     }))
-    // Ok(items)
-    // Ok(nyaa_table(
-    //     items,
-    //     &theme,
-    //     &search.sort,
-    //     nyaa.columns,
-    //     last_page,
-    //     total_results,
-    // ))
 }

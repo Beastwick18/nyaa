@@ -6,7 +6,7 @@ use nyaa::{
     client::{Client, ClientConfig, DownloadClientResult},
     config::{Config, ConfigManager},
     results::Results,
-    source::{Item, SourceResults},
+    source::{Item, SourceExtraConfig, SourceResults},
     sync::{EventSync, ReloadType},
 };
 use ratatui::{
@@ -170,11 +170,8 @@ impl EventSync for TestSync {
         _query: nyaa::sync::SearchQuery,
         _config: nyaa::source::SourceConfig,
         _theme: nyaa::theme::Theme,
-        _date_format: Option<String>,
+        _extra: SourceExtraConfig,
     ) {
-        //let _ = tx_res
-        //    .send(Ok(SourceResults::Results(Results::default())))
-        //    .await;
     }
 
     async fn read_event_loop(self, tx_evt: Sender<crossterm::event::Event>) {
