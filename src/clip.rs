@@ -55,7 +55,7 @@ pub struct ClipboardManager {
 impl ClipboardManager {
     pub fn new(conf: ClipboardConfig) -> (ClipboardManager, Option<String>) {
         // Dont worry about connecting to OS clipboard if using command
-        if conf.cmd.is_some() {
+        if conf.cmd.is_some() || conf.osc52 {
             #[cfg(any(target_os = "linux", target_os = "windows", target_os = "macos"))]
             return (
                 Self {
