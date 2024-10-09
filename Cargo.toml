@@ -10,6 +10,8 @@ readme = "README.md"
 repository = "https://github.com/Beastwick18/nyaa/"
 license = "GPL-3.0-or-later"
 
+exclude = ["/.github", "/assets", "/docs", "/examples", "/modules", "/scripts"]
+
 [profile.release]
 debug = 0
 lto = false
@@ -22,12 +24,19 @@ strip = "none"
 lto = true
 
 [dependencies]
-reqwest = { version = "0.12.5", features = ["cookies", "gzip", "json"], default-features = false }
+reqwest = { version = "0.12.5", features = [
+    "cookies",
+    "gzip",
+    "json",
+], default-features = false }
 tokio = { version = "1.38.0", features = ["macros", "rt-multi-thread"] }
+tokio-util = "0.7.12"
 urlencoding = "2.1.3"
-ratatui = { version = "0.28.0", default-features = false, features = ["crossterm"] }
+ratatui = { version = "0.28.0", default-features = false, features = [
+    "crossterm",
+] }
 textwrap = { version = "0.16.1", default-features = false }
-crossterm = { version = "0.28.1", default-features = false }
+crossterm = { version = "0.28.1", features = ["event-stream"] }
 unicode-width = "0.1.13"
 toml = "0.8.14"
 directories = "5.0.1"
@@ -39,17 +48,24 @@ transmission-rpc = { version = "0.4.3" }
 open = "5.1.4"
 dirs = "5.0.1"
 shellexpand = "3.1.0"
-indexmap = { version = "2.2.6", default-features = false }
+indexmap = { version = "2.2.6", default-features = false, features = ["serde"] }
 human_bytes = { version = "0.4.3", default-features = false }
 strum = { version = "0.26.2", default-features = false }
 base64 = { version = "0.22.1", default-features = false, features = ["alloc"] }
 lexopt = "0.3.0"
-ratatui-image = { version = "1.0.5", optional = true , default-features = false }
-image = { version = "0.25.1", optional = true, features = ["png"], default-features = false }
+ratatui-image = { version = "1.0.5", optional = true, default-features = false }
+image = { version = "0.25.1", optional = true, features = [
+    "png",
+], default-features = false }
+color-eyre = "0.6.3"
+futures = "0.3.30"
+tracing = "0.1.40"
+tracing-error = "0.2.0"
+derive_deref = "1.1.1"
 
-[lib]
-name = "nyaa"
-path = "src/lib.rs"
+# [lib]
+# name = "nyaa"
+# path = "src/lib.rs"
 
 [features]
 captcha = ["dep:ratatui-image", "dep:image"]
@@ -57,14 +73,16 @@ captcha = ["dep:ratatui-image", "dep:image"]
 [cargo-features-manager.keep]
 image = ["png"]
 
-[target.'cfg(unix)'.dependencies]
-nix = { version = "0.29.0", features = ["signal"] }
+[target.'cfg(not(windows))'.dependencies]
+signal-hook = "0.3.17"
 
 [target.'cfg(any(target_os = "linux", target_os = "windows", target_os = "macos"))'.dependencies]
 arboard = { version = "3.4", default-features = false }
 
 [target.'cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos")))'.dependencies]
-ratatui = { version = "0.28.0", default-features = false, features = ["termion"] }
+ratatui = { version = "0.28.0", default-features = false, features = [
+    "termion",
+] }
 
 [package.metadata.deb]
 maintainer = "Steven Culwell <bradculwell@pm.me>"

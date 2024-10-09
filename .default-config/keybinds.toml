@@ -1,0 +1,10 @@
+[Home]
+"q" = "Quit"
+"<C-z>" = "Suspend"
+"<S-tab>" = "SetMode Test"
+"t" = { "SetMode" = "Test" }
+
+[Test]
+"t" = "SetMode Home"
+"q" = "SetMode Home"
+"esc" = "SetMode Home"
