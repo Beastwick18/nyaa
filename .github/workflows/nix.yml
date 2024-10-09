@@ -1,7 +1,9 @@
 name: "Test build nix"
 on:
-  pull_request:
   push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 jobs:
   nix:
     runs-on: ubuntu-latest
