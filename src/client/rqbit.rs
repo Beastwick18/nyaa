@@ -50,8 +50,11 @@ async fn add_torrent(
     if let Some(ow) = conf.overwrite {
         query.push(format!("overwrite={}", ow));
     }
-    if let Some(out) = conf.output_folder.to_owned() {
-        query.push(format!("output_folder={}", encode(&out)));
+    if let Some(out) = conf.output_folder.as_ref() {
+        query.push(format!(
+            "output_folder={}",
+            encode(&shellexpand::tilde(out))
+        ));
     }
     url.set_query(Some(&query.join("&")));
 
