@@ -5,6 +5,7 @@ use serde::{Deserialize, Deserializer};
 
 use crate::{action::UserAction, app::Mode};
 
+/// KeyBindings are a collection of *key*-*user action* pairs
 #[derive(Clone, Debug, Default, Deref, DerefMut)]
 pub struct KeyBindings(pub IndexMap<Mode, IndexMap<Vec<KeyEvent>, UserAction>>);
 
@@ -12,7 +13,7 @@ pub struct KeyBindings(pub IndexMap<Mode, IndexMap<Vec<KeyEvent>, UserAction>>);
 #[serde(untagged)]
 pub enum UserActionWrapped {
     Unit(UserAction),
-    Other(String),
+    // Other(String), // TODO: Parse custom syntax, like "Action(arg1, ...)"
 }
 
 impl<'de> Deserialize<'de> for KeyBindings {
@@ -42,7 +43,7 @@ impl<'de> Deserialize<'de> for KeyBindings {
 fn parse_wrapped_actions(cmd: UserActionWrapped) -> Result<UserAction, String> {
     Ok(match cmd {
         UserActionWrapped::Unit(unit) => unit,
-        UserActionWrapped::Other(other) => parse_other_action_simple(other)?,
+        // UserActionWrapped::Other(other) => parse_other_action_simple(other)?,
     })
 }
 
@@ -95,41 +96,40 @@ fn parse_key_event(raw: &str) -> Result<KeyEvent, String> {
 fn extract_modifiers(raw: &str) -> (&str, KeyModifiers) {
     let mut modifiers = KeyModifiers::empty();
     let mut current = raw;
-    let lower_string = raw.to_ascii_lowercase();
-    let mut lower = lower_string.as_str();
+    // let mut lower = lower_string.as_str();
 
     loop {
-        match (lower, current) {
-            (rest, rest_upper) if rest.starts_with("ctrl-") => {
+        match (current.to_ascii_lowercase(), current) {
+            (rest_lower, rest_upper) if rest_lower.starts_with("ctrl-") => {
                 modifiers.insert(KeyModifiers::CONTROL);
                 current = &rest_upper[5..];
-                lower = &rest[5..];
+                // lower = &rest_lower[5..];
             }
             (rest, rest_upper) if rest.starts_with("alt-") => {
                 modifiers.insert(KeyModifiers::ALT);
                 current = &rest_upper[4..];
-                lower = &rest[4..];
+                // lower = &rest[4..];
             }
             (rest, rest_upper) if rest.starts_with("shift-") => {
                 modifiers.insert(KeyModifiers::SHIFT);
                 current = &rest_upper[6..];
-                lower = &rest[6..];
+                // lower = &rest[6..];
             }
             // Shorthand versions
             (rest, rest_upper) if rest.starts_with("c-") => {
                 modifiers.insert(KeyModifiers::CONTROL);
                 current = &rest_upper[2..];
-                lower = &rest[2..];
+                // lower = &rest[2..];
             }
             (rest, rest_upper) if rest.starts_with("a-") => {
                 modifiers.insert(KeyModifiers::ALT);
                 current = &rest_upper[2..];
-                lower = &rest[2..];
+                // lower = &rest[2..];
             }
             (rest, rest_upper) if rest.starts_with("s-") => {
                 modifiers.insert(KeyModifiers::SHIFT);
                 current = &rest_upper[2..];
-                lower = &rest[2..];
+                // lower = &rest[2..];
             }
             _ => break, // break out of the loop if no known prefix is detected
         };
@@ -154,11 +154,11 @@ fn parse_key_code_with_modifiers(
         "end" => KeyCode::End,
         "pageup" => KeyCode::PageUp,
         "pagedown" => KeyCode::PageDown,
-        // NOTE: Not used, S-tab is equivalent
-        // "backtab" => {
-        //     modifiers.insert(KeyModifiers::SHIFT);
-        //     KeyCode::BackTab
-        // }
+        // NOTE: S-tab is equivalent
+        "backtab" => {
+            modifiers.insert(KeyModifiers::SHIFT);
+            KeyCode::BackTab
+        }
         "backspace" => KeyCode::Backspace,
         "delete" => KeyCode::Delete,
         "insert" => KeyCode::Insert,
@@ -179,7 +179,6 @@ fn parse_key_code_with_modifiers(
         "minus" => KeyCode::Char('-'),
         "lt" => KeyCode::Char('<'),
         "gt" => KeyCode::Char('>'),
-        // "tab" => KeyCode::Tab,
         "tab" => {
             if modifiers.contains(KeyModifiers::SHIFT) {
                 KeyCode::BackTab

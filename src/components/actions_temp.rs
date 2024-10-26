@@ -5,7 +5,7 @@ use ratatui::{
     Frame,
 };
 
-use crate::action::{AppAction, UserAction};
+use crate::{action::AppAction, app::Context};
 
 use super::Component;
 
@@ -22,9 +22,13 @@ impl ActionsComponent {
 }
 
 impl Component for ActionsComponent {
-    fn update(&mut self, action: &AppAction) -> Result<Option<crate::action::AppAction>> {
-        if let AppAction::UserAction(UserAction::SetMode(m)) = action {
-            self.actions.push(m.to_string());
+    fn update(
+        &mut self,
+        _ctx: &Context,
+        action: &AppAction,
+    ) -> Result<Option<crate::action::AppAction>> {
+        if let AppAction::UserAction(m) = action {
+            self.actions.push(format!("{m:?}"));
         }
         Ok(None)
     }

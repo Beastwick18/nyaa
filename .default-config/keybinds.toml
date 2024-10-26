@@ -1,10 +1,8 @@
 [Home]
 "q" = "Quit"
 "<C-z>" = "Suspend"
-"<S-tab>" = "SetMode Test"
+"<S-tab>" = { "LongAction" = ["Testing1", "Testing2", 32] }
 "t" = { "SetMode" = "Test" }
 
 [Test]
-"t" = "SetMode Home"
-"q" = "SetMode Home"
-"esc" = "SetMode Home"
+"esc" = { "SetMode" = "Home" }

@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use color_eyre::Result;
 use crossterm::event::KeyEvent;
 use serde::Deserialize;
@@ -13,6 +15,20 @@ use crate::{
     tui::{Tui, TuiEvent},
 };
 
+pub struct Context {
+    pub config: Config,
+    pub mode: Mode,
+}
+
+impl Context {
+    fn new(config_path: PathBuf) -> Result<Self> {
+        Ok(Self {
+            config: Config::new(config_path)?,
+            mode: Mode::default(),
+        })
+    }
+}
+
 #[derive(Deserialize, Default, Display, Debug, Hash, PartialEq, Eq, Copy, Clone)]
 pub enum Mode {
     #[default]
@@ -21,8 +37,9 @@ pub enum Mode {
 }
 
 pub struct App {
-    config: Config,
-    mode: Mode,
+    // config: Config,
+    // mode: Mode,
+    ctx: Context,
     should_quit: bool,
     should_suspend: bool,
     action_tx: mpsc::UnboundedSender<AppAction>,
@@ -31,16 +48,19 @@ pub struct App {
 }
 
 impl App {
-    pub fn new(_args: Args) -> Result<Self> {
+    pub fn new(args: Args) -> Result<Self> {
         let (action_tx, action_rx) = mpsc::unbounded_channel();
+        let config_path = args
+            .config_path
+            .map(Into::into)
+            .unwrap_or_else(Config::default_config_path);
         Ok(Self {
-            config: Config::new()?,
-            mode: Mode::default(),
+            ctx: Context::new(config_path)?,
             should_quit: false,
             should_suspend: false,
             action_tx,
             action_rx,
-            components: vec![Box::new(HomeComponent::new())],
+            components: vec![HomeComponent::new()],
         })
     }
 
@@ -98,7 +118,7 @@ impl App {
     fn handle_key_event(&mut self, key: KeyEvent) -> Result<()> {
         let action_tx = self.action_tx.clone();
 
-        let Some(keymap) = self.config.keys.get(&self.mode) else {
+        let Some(keymap) = self.ctx.config.keys.get(&self.ctx.mode) else {
             return Ok(());
         };
         match keymap.get(&vec![key]) {
@@ -108,6 +128,9 @@ impl App {
             _ => {
                 // TODO: Handle multikey
             }
+        }
+        for component in self.components.iter_mut() {
+            component.on_key(&self.ctx, &key)?;
         }
         Ok(())
     }
@@ -122,7 +145,7 @@ impl App {
                 AppAction::UserAction(u) => match u {
                     UserAction::Quit => self.should_quit = true,
                     UserAction::Suspend => self.should_suspend = true,
-                    UserAction::SetMode(m) => self.mode = *m,
+                    UserAction::SetMode(m) => self.ctx.mode = *m,
                     _ => {}
                 },
                 AppAction::Resume => self.should_suspend = false,
@@ -131,7 +154,7 @@ impl App {
                 _ => {}
             }
             for component in self.components.iter_mut() {
-                if let Some(action) = component.update(&action)? {
+                if let Some(action) = component.update(&self.ctx, &action)? {
                     self.action_tx.send(action)?;
                 }
             }
