@@ -30,20 +30,13 @@ pub enum AppAction {
 ///
 #[derive(Deserialize, Display, Debug, Clone, PartialEq, Eq)]
 pub enum UserAction {
-    Suspend,
     Quit,
+    Suspend,
     Up,
     Down,
-    Insert(InsertModeAction),
+    InsertLeft,
+    InsertRight,
+    InsertNextWord,
+    InsertPrevWord,
     SetMode(Mode),
-    LongAction(String, String, u32),
-}
-
-/// Actions performed while in insert mode
-#[derive(Deserialize, Display, Debug, Clone, PartialEq, Eq)]
-pub enum InsertModeAction {
-    Left,
-    Right,
-    NextWord,
-    PrevWord,
 }

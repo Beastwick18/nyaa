@@ -172,6 +172,17 @@ impl Tui {
         Ok(())
     }
 
+    // In event of panic, abort TUI session
+    pub fn abort() {
+        let _ = crossterm::execute!(
+            stdout(),
+            DisableBracketedPaste,
+            LeaveAlternateScreen,
+            cursor::Show
+        );
+        let _ = crossterm::terminal::disable_raw_mode();
+    }
+
     pub fn suspend(&mut self) -> Result<()> {
         self.exit()?;
         #[cfg(not(windows))]

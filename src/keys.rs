@@ -1,35 +1,35 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
-use derive_deref::{Deref, DerefMut};
+use derive_more::{Deref, DerefMut};
 use indexmap::IndexMap;
 use serde::{Deserialize, Deserializer};
 
 use crate::{action::UserAction, app::Mode};
 
-/// KeyBindings are a collection of *key*-*user action* pairs
+/// KeyBindings are a collection of *key*-*user action* pairs, seperated by mode
 #[derive(Clone, Debug, Default, Deref, DerefMut)]
 pub struct KeyBindings(pub IndexMap<Mode, IndexMap<Vec<KeyEvent>, UserAction>>);
 
-#[derive(Clone, Debug, Deserialize)]
-#[serde(untagged)]
-pub enum UserActionWrapped {
-    Unit(UserAction),
-    // Other(String), // TODO: Parse custom syntax, like "Action(arg1, ...)"
-}
+pub static NON_COMBO: &[KeyCode] = &[KeyCode::Esc];
+
+// #[derive(Clone, Debug, Deserialize)]
+// #[serde(untagged)]
+// pub enum UserActionWrapped {
+//     Unit(UserAction),
+//     // Other(String), // TODO: Parse custom syntax, like "Action(arg1, ...)"
+// }
 
 impl<'de> Deserialize<'de> for KeyBindings {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
-        let parsed_map =
-            IndexMap::<Mode, IndexMap<String, UserActionWrapped>>::deserialize(deserializer)?;
+        let parsed_map = IndexMap::<Mode, IndexMap<String, UserAction>>::deserialize(deserializer)?;
 
         let keybindings = parsed_map
             .into_iter()
             .map(|(mode, inner_map)| {
                 let converted_inner_map = inner_map
                     .into_iter()
-                    .map(|(key_str, cmd)| (key_str, parse_wrapped_actions(cmd).unwrap()))
                     .map(|(key_str, cmd)| (parse_key_sequence(&key_str).unwrap(), cmd))
                     .collect();
                 (mode, converted_inner_map)
@@ -40,25 +40,24 @@ impl<'de> Deserialize<'de> for KeyBindings {
     }
 }
 
-fn parse_wrapped_actions(cmd: UserActionWrapped) -> Result<UserAction, String> {
-    Ok(match cmd {
-        UserActionWrapped::Unit(unit) => unit,
-        // UserActionWrapped::Other(other) => parse_other_action_simple(other)?,
-    })
-}
+// fn parse_wrapped_actions(cmd: UserActionWrapped) -> Result<UserAction, String> {
+//     Ok(match cmd {
+//         UserActionWrapped::Unit(unit) => unit,
+//         // UserActionWrapped::Other(other) => parse_other_action_simple(other)?,
+//     })
+// }
 
-// TODO: For now, only handle simple case of Enum1(Enum2) or Enum1(String)
-fn parse_other_action_simple(other: String) -> Result<UserAction, String> {
-    let tokens = other.split_ascii_whitespace().collect::<Vec<&str>>();
-    match tokens.as_slice() {
-        [key, val] => {
-            let mut table = toml::Table::new();
-            table.insert(key.to_string(), toml::Value::String(val.to_string()));
-            Ok(table.try_into().unwrap())
-        }
-        _ => Err("UserAction is not properly formatted".to_string()),
-    }
-}
+// fn parse_other_action_simple(other: String) -> Result<UserAction, String> {
+//     let tokens = other.split_ascii_whitespace().collect::<Vec<&str>>();
+//     match tokens.as_slice() {
+//         [key, val] => {
+//             let mut table = toml::Table::new();
+//             table.insert(key.to_string(), toml::Value::String(val.to_string()));
+//             Ok(table.try_into().unwrap())
+//         }
+//         _ => Err("UserAction is not properly formatted".to_string()),
+//     }
+// }
 
 // // TODO: More complex case
 // fn parse_other_action(other: String) -> UserAction {
@@ -201,91 +200,121 @@ fn parse_key_code_with_modifiers(
 }
 
 pub fn parse_key_sequence(raw: &str) -> Result<Vec<KeyEvent>, String> {
-    if raw.chars().filter(|c| *c == '>').count() != raw.chars().filter(|c| *c == '<').count() {
-        return Err(format!("Unable to parse `{}`", raw));
+    let mut inside = false;
+    let mut keys: Vec<KeyEvent> = Vec::new();
+    let mut working: String = String::new();
+    for c in raw.chars() {
+        if c == '>' && inside {
+            keys.push(parse_key_event(&working)?);
+            working.clear();
+            inside = false;
+        } else if c == '<' {
+            inside = true;
+        } else if inside {
+            working.push(c);
+        } else {
+            keys.push(parse_key_event(&c.to_string())?);
+        }
     }
-    let raw = if !raw.contains("><") {
-        let raw = raw.strip_prefix('<').unwrap_or(raw);
-        let raw = raw.strip_prefix('>').unwrap_or(raw);
-        raw
-    } else {
-        raw
-    };
-    let sequences = raw
-        .split("><")
-        .map(|seq| {
-            if let Some(s) = seq.strip_prefix('<') {
-                s
-            } else if let Some(s) = seq.strip_suffix('>') {
-                s
-            } else {
-                seq
-            }
-        })
-        .collect::<Vec<_>>();
-
-    sequences.into_iter().map(parse_key_event).collect()
+    Ok(keys)
 }
 
-// pub fn key_event_to_string(key_event: &KeyEvent) -> String {
-//     let char;
-//     let key_code = match key_event.code {
-//         KeyCode::Backspace => "backspace",
-//         KeyCode::Enter => "enter",
-//         KeyCode::Left => "left",
-//         KeyCode::Right => "right",
-//         KeyCode::Up => "up",
-//         KeyCode::Down => "down",
-//         KeyCode::Home => "home",
-//         KeyCode::End => "end",
-//         KeyCode::PageUp => "pageup",
-//         KeyCode::PageDown => "pagedown",
-//         KeyCode::Tab => "tab",
-//         KeyCode::BackTab => "backtab",
-//         KeyCode::Delete => "delete",
-//         KeyCode::Insert => "insert",
-//         KeyCode::F(c) => {
-//             char = format!("f({c})");
-//             &char
-//         }
-//         KeyCode::Char(' ') => "space",
-//         KeyCode::Char(c) => {
-//             char = c.to_string();
-//             &char
-//         }
-//         KeyCode::Esc => "esc",
-//         KeyCode::Null => "",
-//         KeyCode::CapsLock => "",
-//         KeyCode::Menu => "",
-//         KeyCode::ScrollLock => "",
-//         KeyCode::Media(_) => "",
-//         KeyCode::NumLock => "",
-//         KeyCode::PrintScreen => "",
-//         KeyCode::Pause => "",
-//         KeyCode::KeypadBegin => "",
-//         KeyCode::Modifier(_) => "",
+// pub fn parse_key_sequence(raw: &str) -> Result<Vec<KeyEvent>, String> {
+//     if raw.chars().filter(|c| *c == '>').count() != raw.chars().filter(|c| *c == '<').count() {
+//         return Err(format!("Unable to parse `{}`", raw));
+//     }
+//     let raw = if !raw.contains("><") {
+//         let raw = raw.strip_prefix('<').unwrap_or(raw);
+//         let raw = raw.strip_prefix('>').unwrap_or(raw);
+//         raw
+//     } else {
+//         raw
 //     };
+//     let sequences = raw
+//         .split("><")
+//         .map(|seq| {
+//             if let Some(s) = seq.strip_prefix('<') {
+//                 s
+//             } else if let Some(s) = seq.strip_suffix('>') {
+//                 s
+//             } else {
+//                 seq
+//             }
+//         })
+//         .collect::<Vec<_>>();
 //
-//     let mut modifiers = Vec::with_capacity(3);
-//
-//     if key_event.modifiers.intersects(KeyModifiers::CONTROL) {
-//         modifiers.push("ctrl");
-//     }
-//
-//     if key_event.modifiers.intersects(KeyModifiers::SHIFT) {
-//         modifiers.push("shift");
-//     }
-//
-//     if key_event.modifiers.intersects(KeyModifiers::ALT) {
-//         modifiers.push("alt");
-//     }
-//
-//     let mut key = modifiers.join("-");
-//
-//     if !key.is_empty() {
-//         key.push('-');
-//     }
-//     key.push_str(key_code);
-//
-//     key
+//     sequences.into_iter().map(parse_key_event).collect()
 // }
+
+pub fn key_event_to_string(key_event: &KeyEvent) -> String {
+    let char;
+    let key_code = match key_event.code {
+        KeyCode::Backspace => "backspace",
+        KeyCode::Enter => "enter",
+        KeyCode::Left => "left",
+        KeyCode::Right => "right",
+        KeyCode::Up => "up",
+        KeyCode::Down => "down",
+        KeyCode::Home => "home",
+        KeyCode::End => "end",
+        KeyCode::PageUp => "pageup",
+        KeyCode::PageDown => "pagedown",
+        KeyCode::Tab => "tab",
+        KeyCode::BackTab => "tab",
+        KeyCode::Delete => "delete",
+        KeyCode::Insert => "insert",
+        KeyCode::F(c) => {
+            char = format!("f{c}");
+            &char
+        }
+        KeyCode::Char(' ') => "space",
+        KeyCode::Char(c) => {
+            char = c.to_string();
+            &char
+        }
+        KeyCode::Esc => "esc",
+        KeyCode::Null => "",
+        KeyCode::CapsLock => "",
+        KeyCode::Menu => "",
+        KeyCode::ScrollLock => "",
+        KeyCode::Media(_) => "",
+        KeyCode::NumLock => "",
+        KeyCode::PrintScreen => "",
+        KeyCode::Pause => "",
+        KeyCode::KeypadBegin => "",
+        KeyCode::Modifier(_) => "",
+    };
+
+    let mut modifiers = Vec::with_capacity(3);
+
+    if key_event.modifiers.intersects(KeyModifiers::CONTROL) {
+        modifiers.push("C");
+    }
+
+    if key_event.modifiers.intersects(KeyModifiers::SHIFT) {
+        modifiers.push("S");
+    }
+
+    if key_event.modifiers.intersects(KeyModifiers::ALT) {
+        modifiers.push("A");
+    }
+
+    let mut key = modifiers.join("-");
+
+    if !key.is_empty() {
+        key.push('-');
+    }
+    if modifiers.is_empty() && key_code.len() > 1 {
+        key.push('<');
+        key.push_str(key_code);
+        key.push('>');
+    } else {
+        key.push_str(key_code);
+    }
+
+    if !modifiers.is_empty() {
+        key = format!("<{key}>");
+    }
+
+    key
+}

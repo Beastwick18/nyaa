@@ -10,14 +10,17 @@ use tracing::debug;
 use crate::{
     action::{AppAction, UserAction},
     cli::Args,
-    components::{home::HomeComponent, Component},
+    components::{home::HomeComponent, popups::PopupsComponent, Component},
     config::Config,
+    keys,
     tui::{Tui, TuiEvent},
 };
 
 pub struct Context {
     pub config: Config,
     pub mode: Mode,
+    pub keycombo: Vec<KeyEvent>,
+    pub last_successful_keycombo: Vec<KeyEvent>,
 }
 
 impl Context {
@@ -25,6 +28,8 @@ impl Context {
         Ok(Self {
             config: Config::new(config_path)?,
             mode: Mode::default(),
+            keycombo: Vec::new(),
+            last_successful_keycombo: Vec::new(),
         })
     }
 }
@@ -33,12 +38,10 @@ impl Context {
 pub enum Mode {
     #[default]
     Home,
-    Test, // TODO: Remove
+    DownloadClient, // TODO: Remove
 }
 
 pub struct App {
-    // config: Config,
-    // mode: Mode,
     ctx: Context,
     should_quit: bool,
     should_suspend: bool,
@@ -60,7 +63,7 @@ impl App {
             should_suspend: false,
             action_tx,
             action_rx,
-            components: vec![HomeComponent::new()],
+            components: vec![HomeComponent::new(), PopupsComponent::new()],
         })
     }
 
@@ -107,11 +110,6 @@ impl App {
             TuiEvent::Key(key) => self.handle_key_event(key)?,
             _ => {}
         };
-        // for component in self.components.iter_mut() {
-        //     if let Some(action) = components.handle_events(Some(event.clone()))? {
-        //         action_tx.send(action)?;
-        //     }
-        // }
         Ok(())
     }
 
@@ -121,14 +119,23 @@ impl App {
         let Some(keymap) = self.ctx.config.keys.get(&self.ctx.mode) else {
             return Ok(());
         };
-        match keymap.get(&vec![key]) {
-            Some(action) => {
-                action_tx.send(AppAction::UserAction(action.clone()))?;
-            }
-            _ => {
-                // TODO: Handle multikey
-            }
+
+        // Check for keys that may not be used in combos (resets current key combo).
+        // Do not cancel if keycombo is *only* the cancelling key
+        if keys::NON_COMBO.contains(&key.code) && !self.ctx.keycombo.is_empty() {
+            self.ctx.keycombo.clear();
+        } else {
+            self.ctx.keycombo.push(key);
         }
+
+        if let Some(action) = keymap.get(&self.ctx.keycombo) {
+            action_tx.send(AppAction::UserAction(action.clone()))?;
+            self.ctx
+                .last_successful_keycombo
+                .clone_from(&self.ctx.keycombo);
+            self.ctx.keycombo.clear();
+        }
+
         for component in self.components.iter_mut() {
             component.on_key(&self.ctx, &key)?;
         }
@@ -165,7 +172,7 @@ impl App {
     fn render(&mut self, tui: &mut Tui) -> Result<()> {
         tui.draw(|frame| {
             for component in self.components.iter_mut() {
-                if let Err(err) = component.render(frame, frame.area()) {
+                if let Err(err) = component.render(&self.ctx, frame, frame.area()) {
                     let _ = self
                         .action_tx
                         .send(AppAction::Error(format!("Failed to draw: {:?}", err)));

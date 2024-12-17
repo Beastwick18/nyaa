@@ -1,8 +1,9 @@
 [Home]
 "q" = "Quit"
 "<C-z>" = "Suspend"
-"<S-tab>" = { "LongAction" = ["Testing1", "Testing2", 32] }
-"t" = { "SetMode" = "Test" }
+"<esc>" = { "SetMode" = "DownloadClient" }
 
-[Test]
-"esc" = { "SetMode" = "Home" }
+[DownloadClient]
+"<esc>" = { "SetMode" = "Home" }
+"q" = { "SetMode" = "Home" }
+"d" = { "SetMode" = "Home" }
