@@ -1,29 +1,14 @@
-use ratatui::{
-    buffer::Buffer,
-    layout::Rect,
-    style::{Color, Stylize as _},
-    widgets::{Block, Clear, Widget},
-};
+use ratatui::{buffer::Buffer, layout::Rect, widgets::Widget};
 use unicode_width::UnicodeWidthStr as _;
 
 /// Performs the same function as ratatui::widgets::Clear, except it removes wide
-/// characters which would overlap the given area, and fills in the cleared space with a provided
-/// fill color.
+/// characters which would overlap the given area.
 ///
 /// ```rs
-/// ClearOverlap::default().render(area, buf);      // Defaults to Color::Reset
-/// ClearOverlap::new(fillColor).render(area, buf); // Or pick a specific fill color
+/// ClearOverlap.render(area, buf);
 /// ```
 #[derive(Debug, Default, Clone, Eq, PartialEq, Hash)]
-pub struct ClearOverlap {
-    fill: Color,
-}
-
-impl ClearOverlap {
-    pub fn new(fill: Color) -> Self {
-        Self { fill }
-    }
-}
+pub struct ClearOverlap;
 
 impl Widget for ClearOverlap {
     fn render(self, area: Rect, buf: &mut Buffer) {
@@ -37,9 +22,5 @@ impl Widget for ClearOverlap {
                 }
             }
         }
-
-        Clear.render(area, buf);
-
-        Block::new().bg(self.fill).render(area, buf);
     }
 }

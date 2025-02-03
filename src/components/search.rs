@@ -2,6 +2,7 @@ use color_eyre::Result;
 use crossterm::event::KeyEvent;
 use ratatui::{
     layout::Rect,
+    style::{Color, Stylize},
     widgets::{Block, Borders, Paragraph, Widget},
     Frame,
 };
@@ -20,7 +21,7 @@ pub struct SearchComponent {
 impl SearchComponent {
     pub fn new() -> Self {
         Self {
-            content: String::new(),
+            content: "testing".to_string(),
         }
     }
 }
@@ -42,9 +43,12 @@ impl Component for SearchComponent {
     }
 
     fn render(&mut self, _ctx: &Context, frame: &mut Frame, area: Rect) -> Result<()> {
-        let block = Block::new().borders(Borders::ALL);
+        let block = Block::new()
+            .fg(Color::Rgb(255, 255, 255))
+            .borders(Borders::ALL);
         Paragraph::new(&*self.content)
             .block(block)
+            .fg(Color::Rgb(255, 255, 255))
             .render(area, frame.buffer_mut());
         Ok(())
     }

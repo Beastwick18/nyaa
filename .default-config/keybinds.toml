@@ -1,7 +1,12 @@
 [Home]
 "q" = "Quit"
 "<C-z>" = "Suspend"
-"<esc>" = { "SetMode" = "DownloadClient" }
+"d" = { "SetMode" = "DownloadClient" }
+# "<esc>" = { "SetMode" = "DownloadClient" }
+# "fasdf" = { "SetMode" = "DownloadClient" }
+# "ffasdf" = { "SetMode" = "DownloadClient" }
+# "quit" = { "SetMode" = "DownloadClient" }
+# "q12" = { "SetMode" = "DownloadClient" }
 
 [DownloadClient]
 "<esc>" = { "SetMode" = "Home" }

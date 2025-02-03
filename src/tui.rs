@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use color_eyre::Result;
 
-use crossterm::cursor;
+use crossterm::cursor::{self};
 use crossterm::event::{
     DisableBracketedPaste, EnableBracketedPaste, Event, EventStream, KeyEvent, KeyEventKind,
     MouseEvent,
@@ -52,7 +52,7 @@ impl Tui {
             event_rx,
             event_tx,
             frame_rate: 60.0,
-            tick_rate: 4.0,
+            tick_rate: 60.0,
         })
     }
 
@@ -151,8 +151,9 @@ impl Tui {
             stdout(),
             EnterAlternateScreen,
             EnableBracketedPaste,
-            cursor::Hide
+            cursor::Hide,
         )?;
+
         self.start();
         Ok(())
     }
@@ -165,7 +166,8 @@ impl Tui {
                 stdout(),
                 DisableBracketedPaste,
                 LeaveAlternateScreen,
-                cursor::Show
+                cursor::Show,
+                cursor::SetCursorStyle::DefaultUserShape
             )?;
             crossterm::terminal::disable_raw_mode()?;
         }

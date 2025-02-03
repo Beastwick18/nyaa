@@ -2,10 +2,17 @@ use color_eyre::Result;
 use crossterm::event::KeyEvent;
 use ratatui::{
     layout::{Constraint, Layout, Rect},
+    style::{Color, Stylize},
+    widgets::{Block, Widget as _},
     Frame,
 };
 
-use crate::{action::AppAction, app::Context};
+use crate::{
+    action::AppAction,
+    animate::{AnimationState, Direction, Smoothing},
+    app::{Context, Mode},
+    widgets::dim::Dim,
+};
 
 use super::{
     actions_temp::ActionsComponent, results::ResultsComponent, search::SearchComponent, Component,
@@ -16,8 +23,7 @@ pub struct HomeComponent {
     search: SearchComponent,
     results: ResultsComponent,
     actions_temp: ActionsComponent,
-    // batch: BatchComponent,
-    // search: SearchComponent,
+    dim_state: AnimationState,
 }
 
 impl HomeComponent {
@@ -27,6 +33,10 @@ impl HomeComponent {
             search: SearchComponent::new(),
             results: ResultsComponent::new(),
             actions_temp: ActionsComponent::new(),
+            dim_state: AnimationState::new(0.04)
+                .playing(true)
+                .smoothing(Smoothing::EaseInAndOut)
+                .backwards(),
         })
     }
 }
@@ -36,9 +46,13 @@ impl Component for HomeComponent {
         self.results.update(ctx, action)?;
         self.actions_temp.update(ctx, action)?;
 
-        // match action {
-        //     AppAction::UserAction(UserAction::SetMode(Mode::Search)) => self.
-        // }
+        self.dim_state.set_direction(match ctx.mode {
+            Mode::Home => Direction::Backwards,
+            _ => Direction::Forwards,
+        });
+        if let AppAction::Tick = action {
+            self.dim_state.update();
+        }
 
         Ok(None)
     }
@@ -49,6 +63,10 @@ impl Component for HomeComponent {
     }
 
     fn render(&mut self, ctx: &Context, frame: &mut Frame, area: Rect) -> Result<()> {
+        Block::new()
+            .bg(Color::Rgb(34, 36, 54))
+            .render(area, frame.buffer_mut());
+
         let vlayout = Layout::vertical([Constraint::Length(self.search_size), Constraint::Fill(1)])
             .split(area);
         let hlayout = Layout::horizontal([Constraint::Percentage(50), Constraint::Percentage(50)])
@@ -56,6 +74,10 @@ impl Component for HomeComponent {
         self.search.render(ctx, frame, vlayout[0])?;
         self.results.render(ctx, frame, hlayout[0])?;
         self.actions_temp.render(ctx, frame, hlayout[1])?;
+
+        Dim::new(0.5)
+            .animated(self.dim_state)
+            .render(area, frame.buffer_mut());
 
         Ok(())
     }

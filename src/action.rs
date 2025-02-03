@@ -38,5 +38,6 @@ pub enum UserAction {
     InsertRight,
     InsertNextWord,
     InsertPrevWord,
+    Submit,
     SetMode(Mode),
 }

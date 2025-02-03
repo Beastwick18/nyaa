@@ -12,7 +12,7 @@ use crate::{
     cli::Args,
     components::{home::HomeComponent, popups::PopupsComponent, Component},
     config::Config,
-    keys,
+    keys::{self, KeyCombo},
     tui::{Tui, TuiEvent},
 };
 
@@ -20,7 +20,7 @@ pub struct Context {
     pub config: Config,
     pub mode: Mode,
     pub keycombo: Vec<KeyEvent>,
-    pub last_successful_keycombo: Vec<KeyEvent>,
+    pub last_keycombo: Option<KeyCombo>,
 }
 
 impl Context {
@@ -29,7 +29,7 @@ impl Context {
             config: Config::new(config_path)?,
             mode: Mode::default(),
             keycombo: Vec::new(),
-            last_successful_keycombo: Vec::new(),
+            last_keycombo: None,
         })
     }
 }
@@ -69,7 +69,7 @@ impl App {
 
     pub async fn run(&mut self) -> Result<()> {
         let mut tui = Tui::new()?
-            .tick_rate(4.0) // TODO: Eliminate or gather from config
+            .tick_rate(60.0) // TODO: Eliminate or gather from config
             .frame_rate(60.0); // TODO: Eliminate or gather from config
         tui.enter()?;
 
@@ -123,16 +123,20 @@ impl App {
         // Check for keys that may not be used in combos (resets current key combo).
         // Do not cancel if keycombo is *only* the cancelling key
         if keys::NON_COMBO.contains(&key.code) && !self.ctx.keycombo.is_empty() {
+            self.ctx.keycombo.push(key);
+            self.ctx.last_keycombo = Some(KeyCombo::Cancelled(self.ctx.keycombo.clone()));
             self.ctx.keycombo.clear();
         } else {
             self.ctx.keycombo.push(key);
         }
 
-        if let Some(action) = keymap.get(&self.ctx.keycombo) {
+        let action = keymap.iter().find(|(k, _)| k.eq(&&self.ctx.keycombo));
+        if let Some((_, action)) = action {
             action_tx.send(AppAction::UserAction(action.clone()))?;
-            self.ctx
-                .last_successful_keycombo
-                .clone_from(&self.ctx.keycombo);
+            self.ctx.last_keycombo = Some(KeyCombo::Successful(self.ctx.keycombo.clone()));
+            self.ctx.keycombo.clear();
+        } else if !keymap.keys().any(|k| k.starts_with(&self.ctx.keycombo)) {
+            self.ctx.last_keycombo = Some(KeyCombo::Unmatched(self.ctx.keycombo.clone()));
             self.ctx.keycombo.clear();
         }
 

@@ -5,6 +5,7 @@ mod animate;
 mod app;
 mod cli;
 mod clients;
+mod color;
 mod components;
 mod config;
 mod errors;

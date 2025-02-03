@@ -1,7 +1,7 @@
 use derive_more::{Deref, DerefMut};
 use ratatui::{
     layout::{Alignment, Constraint},
-    style::Style,
+    style::{Style, Stylize},
     text::Text,
     widgets::{Cell, Row, Table},
 };
@@ -11,7 +11,7 @@ pub struct ResultHeader {
     #[deref]
     #[deref_mut]
     cell: ResultCell,
-    status: char,
+    status: Option<char>,
 }
 
 #[derive(Clone, Default)]
@@ -53,6 +53,33 @@ impl ResultCell {
         A: Into<Alignment>,
     {
         self.alignment = alignment.into();
+    }
+}
+
+impl<'a> Stylize<'a, ResultCell> for ResultCell {
+    fn bg<C: Into<ratatui::prelude::Color>>(mut self, color: C) -> Self {
+        self.style = self.style.bg(color.into());
+        self
+    }
+
+    fn fg<C: Into<ratatui::prelude::Color>>(mut self, color: C) -> Self {
+        self.style = self.style.fg(color.into());
+        self
+    }
+
+    fn reset(mut self) -> Self {
+        self.style = self.style.reset();
+        self
+    }
+
+    fn add_modifier(mut self, modifier: ratatui::prelude::Modifier) -> Self {
+        self.style = self.style.add_modifier(modifier);
+        self
+    }
+
+    fn remove_modifier(mut self, modifier: ratatui::prelude::Modifier) -> Self {
+        self.style = self.style.remove_modifier(modifier);
+        self
     }
 }
 
@@ -129,6 +156,11 @@ impl ResultTable {
         self
     }
 
+    pub fn header_style(mut self, style: Style) -> Self {
+        self.header.style = style;
+        self
+    }
+
     pub fn binding<C>(mut self, binding: C) -> Self
     where
         C: IntoIterator,
@@ -175,10 +207,15 @@ impl<'a> From<ResultCell> for Cell<'a> {
 
 impl From<ResultHeader> for ResultCell {
     fn from(mut rhead: ResultHeader) -> Self {
+        let (padding, content) = if let Some(status) = rhead.status {
+            ("  ", format!("{} {}", rhead.content, status))
+        } else {
+            ("", rhead.content.clone())
+        };
         let content = match rhead.cell.alignment {
-            Alignment::Left => format!("{} {}", rhead.cell.content, rhead.status),
-            Alignment::Center => format!("  {} {}", rhead.cell.content, rhead.status),
-            Alignment::Right => todo!("{} {}", rhead.status, rhead.cell.content),
+            Alignment::Left => content.clone(),
+            Alignment::Center => format!("{}{}", padding, content),
+            Alignment::Right => content.clone(),
         };
         rhead.cell.content = content;
         rhead.cell
@@ -207,10 +244,10 @@ impl<S: Into<String>> From<S> for ResultCell {
     }
 }
 
-impl<S: Into<String>> From<(S, char)> for ResultHeader {
-    fn from(s: (S, char)) -> Self {
+impl<S: Into<ResultCell>> From<(S, Option<char>)> for ResultHeader {
+    fn from(s: (S, Option<char>)) -> Self {
         Self {
-            cell: ResultCell::new(s.0),
+            cell: s.0.into(),
             status: s.1,
         }
     }

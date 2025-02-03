@@ -5,11 +5,20 @@ use serde::{Deserialize, Deserializer};
 
 use crate::{action::UserAction, app::Mode};
 
+// Keys that cannot be used in combos, and will cancel the current combo.
+// These keys may be used by themselves, as a single key keybind
+pub static NON_COMBO: &[KeyCode] = &[KeyCode::Esc];
+
 /// KeyBindings are a collection of *key*-*user action* pairs, seperated by mode
 #[derive(Clone, Debug, Default, Deref, DerefMut)]
 pub struct KeyBindings(pub IndexMap<Mode, IndexMap<Vec<KeyEvent>, UserAction>>);
 
-pub static NON_COMBO: &[KeyCode] = &[KeyCode::Esc];
+#[derive(Clone)]
+pub enum KeyCombo {
+    Successful(Vec<KeyEvent>),
+    Cancelled(Vec<KeyEvent>),
+    Unmatched(Vec<KeyEvent>),
+}
 
 // #[derive(Clone, Debug, Deserialize)]
 // #[serde(untagged)]
