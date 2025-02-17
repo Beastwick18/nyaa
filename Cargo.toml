@@ -63,6 +63,7 @@ tracing = "0.1.40"
 tracing-error = "0.2.0"
 derive_more = { version = "1.0.0", features = ["deref", "deref_mut"] }
 rand = { version = "0.9.0", features = ["small_rng"] }
+enum-assoc = "1.2.4"
 
 # [lib]
 # name = "nyaa"

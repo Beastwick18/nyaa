@@ -8,19 +8,25 @@ use tokio::sync::mpsc;
 use tracing::debug;
 
 use crate::{
-    action::{AppAction, UserAction},
+    action::{AppAction, TaskAction, UserAction},
     cli::Args,
     components::{home::HomeComponent, popups::PopupsComponent, Component},
     config::Config,
     keys::{self, KeyCombo},
+    result::ResultTable,
+    sources::{nyaa::NyaaSource, Source, SourceTask, SourceTaskRunner},
     tui::{Tui, TuiEvent},
 };
 
 pub struct Context {
     pub config: Config,
     pub mode: Mode,
+    pub input_mode: InputMode,
     pub keycombo: Vec<KeyEvent>,
+    pub source: Source,
+    pub source_box: Box<dyn SourceTask>,
     pub last_keycombo: Option<KeyCombo>,
+    pub results: Option<ResultTable>,
 }
 
 impl Context {
@@ -28,8 +34,12 @@ impl Context {
         Ok(Self {
             config: Config::new(config_path)?,
             mode: Mode::default(),
+            input_mode: InputMode::default(),
             keycombo: Vec::new(),
+            source: Source::Nyaa,
+            source_box: Box::new(NyaaSource),
             last_keycombo: None,
+            results: None,
         })
     }
 }
@@ -38,8 +48,26 @@ impl Context {
 pub enum Mode {
     #[default]
     Home,
-    DownloadClient, // TODO: Remove
+    DownloadClient,
+    Search,
 }
+
+#[derive(Deserialize, Default, Display, Debug, Hash, PartialEq, Eq, Copy, Clone)]
+pub enum InputMode {
+    #[default]
+    Normal,
+    Insert,
+}
+
+// impl Mode {
+//     pub fn get_input_mode(&self) -> InputMode {
+//         match self {
+//             Self::Home => InputMode::Normal,
+//             Self::DownloadClient => InputMode::Normal,
+//             Self::Search => InputMode::Insert,
+//         }
+//     }
+// }
 
 pub struct App {
     ctx: Context,
@@ -103,7 +131,6 @@ impl App {
 
         let action_tx = self.action_tx.clone();
         match event {
-            // TuiEvent::Quit => action_tx.send(AppAction::UserAction(UserAction::Quit))?,
             TuiEvent::Tick => action_tx.send(AppAction::Tick)?,
             TuiEvent::Render => action_tx.send(AppAction::Render)?,
             TuiEvent::Resize(x, y) => action_tx.send(AppAction::Resize(x, y))?,
@@ -122,7 +149,7 @@ impl App {
 
         // Check for keys that may not be used in combos (resets current key combo).
         // Do not cancel if keycombo is *only* the cancelling key
-        if keys::NON_COMBO.contains(&key.code) && !self.ctx.keycombo.is_empty() {
+        if !self.ctx.keycombo.is_empty() && keys::NON_COMBO.contains(&key.code) {
             self.ctx.keycombo.push(key);
             self.ctx.last_keycombo = Some(KeyCombo::Cancelled(self.ctx.keycombo.clone()));
             self.ctx.keycombo.clear();
@@ -130,12 +157,12 @@ impl App {
             self.ctx.keycombo.push(key);
         }
 
-        let action = keymap.iter().find(|(k, _)| k.eq(&&self.ctx.keycombo));
-        if let Some((_, action)) = action {
+        if let Some(action) = keymap.get(&self.ctx.keycombo) {
             action_tx.send(AppAction::UserAction(action.clone()))?;
             self.ctx.last_keycombo = Some(KeyCombo::Successful(self.ctx.keycombo.clone()));
             self.ctx.keycombo.clear();
         } else if !keymap.keys().any(|k| k.starts_with(&self.ctx.keycombo)) {
+            // No possible action with current keycombo
             self.ctx.last_keycombo = Some(KeyCombo::Unmatched(self.ctx.keycombo.clone()));
             self.ctx.keycombo.clear();
         }
@@ -159,6 +186,7 @@ impl App {
                     UserAction::SetMode(m) => self.ctx.mode = *m,
                     _ => {}
                 },
+                AppAction::Search(query) => self.search(query.clone()),
                 AppAction::Resume => self.should_suspend = false,
                 AppAction::Render => self.render(tui)?,
                 AppAction::ClearScreen => tui.clear()?,
@@ -171,6 +199,17 @@ impl App {
             }
         }
         Ok(())
+    }
+
+    fn search(&self, query: String) {
+        let action_tx = self.action_tx.clone();
+        let source = self.ctx.source;
+        // let src: Box<dyn SourceTask> = self.ctx.source_box;
+
+        tokio::spawn(async move {
+            let results = SourceTaskRunner::run(source, query).await;
+            let _ = action_tx.send(AppAction::Task(TaskAction::SourceResults(results)));
+        });
     }
 
     fn render(&mut self, tui: &mut Tui) -> Result<()> {

@@ -2,11 +2,7 @@
 "q" = "Quit"
 "<C-z>" = "Suspend"
 "d" = { "SetMode" = "DownloadClient" }
-# "<esc>" = { "SetMode" = "DownloadClient" }
-# "fasdf" = { "SetMode" = "DownloadClient" }
-# "ffasdf" = { "SetMode" = "DownloadClient" }
-# "quit" = { "SetMode" = "DownloadClient" }
-# "q12" = { "SetMode" = "DownloadClient" }
+"<enter>" = "Submit"
 
 [DownloadClient]
 "<esc>" = { "SetMode" = "Home" }

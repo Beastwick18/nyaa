@@ -8,7 +8,7 @@ use ratatui::{
 };
 
 use crate::{
-    action::AppAction,
+    action::{AppAction, UserAction},
     animate::{AnimationState, Direction, Smoothing},
     app::{Context, Mode},
     widgets::dim::Dim,
@@ -52,6 +52,9 @@ impl Component for HomeComponent {
         });
         if let AppAction::Tick = action {
             self.dim_state.update();
+        }
+        if let AppAction::UserAction(UserAction::Submit) = action {
+            return Ok(Some(AppAction::Search("queriees".to_string())));
         }
 
         Ok(None)

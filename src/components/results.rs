@@ -1,74 +1,34 @@
 use color_eyre::Result;
-use crossterm::event::KeyEvent;
 use ratatui::{
-    layout::{Alignment, Constraint, Rect},
-    style::{Color, Style, Stylize as _},
+    layout::{Margin, Rect},
+    style::{Color, Stylize as _},
     symbols::line,
     text::Line,
-    widgets::{Block, Borders, StatefulWidget, Table, TableState},
+    widgets::{Block, Borders, Paragraph, Table, TableState},
     Frame,
 };
 
 use crate::{
-    action::AppAction,
+    action::{AppAction, TaskAction},
     app::Context,
-    keys::{self, KeyCombo},
-    result::{ResultCell, ResultHeader, ResultTable},
+    keys,
+    result::Results,
 };
 
 use super::Component;
 
 pub struct ResultsComponent {
-    results: ResultTable,
+    results: Option<Results>,
+    table_state: TableState,
     current_keycombo: String,
     current_keycombo_color: Color,
 }
 
 impl ResultsComponent {
     pub fn new() -> Self {
-        let header: &mut [ResultHeader] = &mut [
-            ("Cat", None).into(),
-            ("Name", None).into(),
-            (ResultCell::new("Size").alignment(Alignment::Center), None).into(),
-            (
-                ResultCell::new("Date").alignment(Alignment::Center),
-                Some('▼'),
-            )
-                .into(),
-            (ResultCell::new("").alignment(Alignment::Center), None).into(),
-            (ResultCell::new("").alignment(Alignment::Center), None).into(),
-            (ResultCell::new("").alignment(Alignment::Center), None).into(),
-        ];
         Self {
-            results: ResultTable::new([[
-                ResultCell::new("Raw").fg(Color::Green),
-                ResultCell::new("恋するMOON DOG raw 第13巻").fg(Color::White),
-                ResultCell::new("54.5 KiB").fg(Color::DarkGray),
-                ResultCell::new("2025-02-02 22:18").fg(Color::White),
-                ResultCell::new("12").fg(Color::Green),
-                ResultCell::new("2").fg(Color::Red),
-                ResultCell::new("24").fg(Color::White),
-            ]])
-            .header(header.to_vec())
-            .header_style(Style::new().underlined())
-            .apply_alignment([
-                Alignment::Center,
-                Alignment::Left,
-                Alignment::Right,
-                Alignment::Center,
-                Alignment::Right,
-                Alignment::Right,
-                Alignment::Left,
-            ])
-            .binding([
-                3.into(),
-                Constraint::Fill(5),
-                12.into(),
-                16.into(),
-                3.into(),
-                3.into(),
-                3.into(),
-            ]),
+            results: None,
+            table_state: TableState::default(),
             current_keycombo: String::new(),
             current_keycombo_color: Color::White,
         }
@@ -79,14 +39,21 @@ impl Component for ResultsComponent {
     fn update(
         &mut self,
         ctx: &Context,
-        _action: &AppAction,
+        action: &AppAction,
     ) -> color_eyre::eyre::Result<Option<AppAction>> {
-        let (keycombo, keycombo_color) = if ctx.keycombo.is_empty() && ctx.last_keycombo.is_some() {
-            match ctx.last_keycombo.as_ref().unwrap() {
-                KeyCombo::Successful(vec) => (vec, Color::Cyan),
-                KeyCombo::Cancelled(vec) => (vec, Color::DarkGray),
-                KeyCombo::Unmatched(vec) => (vec, Color::Red),
+        match action {
+            AppAction::Task(TaskAction::SourceResults(results)) => {
+                self.results.clone_from(results);
             }
+            AppAction::Search(_) => {
+                self.results = None;
+            }
+            _ => {}
+        }
+
+        let (keycombo, keycombo_color) = if ctx.keycombo.is_empty() && ctx.last_keycombo.is_some() {
+            let keycombo = ctx.last_keycombo.as_ref().unwrap();
+            (keycombo.inner(), keycombo.color())
         } else {
             (&ctx.keycombo, Color::White)
         };
@@ -94,13 +61,6 @@ impl Component for ResultsComponent {
         self.current_keycombo_color = keycombo_color;
 
         Ok(None)
-    }
-
-    fn on_key(&mut self, _ctx: &Context, _key: &KeyEvent) -> Result<()> {
-        // if ctx.mode != Mode::Home {
-        //     return Ok(());
-        // }
-        Ok(())
     }
 
     fn render(&mut self, _ctx: &Context, frame: &mut Frame, area: Rect) -> Result<()> {
@@ -114,6 +74,8 @@ impl Component for ResultsComponent {
                 .fg(self.current_keycombo_color);
             let vr = line::NORMAL.vertical_right;
             let vl = line::NORMAL.vertical_left;
+            // let vr = '';
+            // let vl = '';
             let keycombo = Line::from_iter([
                 format!("{} ", vl).fg(Color::Rgb(255, 255, 255)),
                 combo,
@@ -123,10 +85,25 @@ impl Component for ResultsComponent {
             block = block.title_bottom(keycombo.right_aligned());
         };
 
-        let table: Table = self.results.clone().into();
-        table
-            .block(block)
-            .render(area, frame.buffer_mut(), &mut TableState::default());
+        frame.render_widget(block, area);
+
+        let area = area.inner(Margin::new(1, 1));
+        if let Some(results) = &self.results {
+            if results.items.is_empty() {
+                let text = "No results";
+                let paragraph = Paragraph::new(text);
+                let center = super::centered_rect(area, text.len() as u16, 1);
+                frame.render_widget(paragraph, center);
+            }
+            let table: Table = results.table.clone().into();
+            frame.render_stateful_widget(table, area, &mut self.table_state);
+        } else {
+            let text = "Loading...";
+            let paragraph = Paragraph::new(text);
+            let center = super::centered_rect(area, text.len() as u16, 1);
+            frame.render_widget(paragraph, center);
+        }
+
         Ok(())
     }
 }

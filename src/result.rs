@@ -6,15 +6,35 @@ use ratatui::{
     widgets::{Cell, Row, Table},
 };
 
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct ResultItem {
+    id: String,                   // Unique ID
+    name: String,                 // Name of torrent on website
+    magnet_link: Option<String>,  // Torrents magnet link
+    torrent_link: Option<String>, // Link to torrent file
+    post_link: Option<String>,    // Link to forum post
+    filename: String,             // Filename on website
+    seeders: u16,                 // Number of seeders
+    leechers: u16,                // Number of leechers
+    downloads: u16,               // Total downloads
+    size: usize,                  // Size of file in bytes
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct Results {
+    pub items: Vec<ResultItem>,
+    pub table: ResultTable,
+}
+
 #[derive(Clone, Default, Deref, DerefMut)]
-pub struct ResultHeader {
+pub struct ResultHeaderCell {
     #[deref]
     #[deref_mut]
     cell: ResultCell,
     status: Option<char>,
 }
 
-#[derive(Clone, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ResultCell {
     content: String,
     style: Style,
@@ -83,7 +103,7 @@ impl<'a> Stylize<'a, ResultCell> for ResultCell {
     }
 }
 
-#[derive(Clone, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ResultRow {
     cells: Vec<ResultCell>,
     style: Style,
@@ -123,7 +143,7 @@ impl ResultRow {
     }
 }
 
-#[derive(Clone, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ResultTable {
     header: ResultRow,
     binding: Vec<Constraint>,
@@ -145,11 +165,11 @@ impl ResultTable {
     pub fn header<R>(mut self, header: R) -> Self
     where
         R: IntoIterator,
-        R::Item: Into<ResultHeader>,
+        R::Item: Into<ResultHeaderCell>,
     {
         self.header = header
             .into_iter()
-            .map(Into::<ResultHeader>::into)
+            .map(Into::<ResultHeaderCell>::into)
             .map(Into::<ResultCell>::into)
             .collect::<Vec<ResultCell>>()
             .into();
@@ -205,8 +225,8 @@ impl<'a> From<ResultCell> for Cell<'a> {
     }
 }
 
-impl From<ResultHeader> for ResultCell {
-    fn from(mut rhead: ResultHeader) -> Self {
+impl From<ResultHeaderCell> for ResultCell {
+    fn from(mut rhead: ResultHeaderCell) -> Self {
         let (padding, content) = if let Some(status) = rhead.status {
             ("  ", format!("{} {}", rhead.content, status))
         } else {
@@ -244,7 +264,7 @@ impl<S: Into<String>> From<S> for ResultCell {
     }
 }
 
-impl<S: Into<ResultCell>> From<(S, Option<char>)> for ResultHeader {
+impl<S: Into<ResultCell>> From<(S, Option<char>)> for ResultHeaderCell {
     fn from(s: (S, Option<char>)) -> Self {
         Self {
             cell: s.0.into(),

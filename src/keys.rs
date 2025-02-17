@@ -1,6 +1,8 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use derive_more::{Deref, DerefMut};
+use enum_assoc::Assoc;
 use indexmap::IndexMap;
+use ratatui::style::Color;
 use serde::{Deserialize, Deserializer};
 
 use crate::{action::UserAction, app::Mode};
@@ -10,13 +12,20 @@ use crate::{action::UserAction, app::Mode};
 pub static NON_COMBO: &[KeyCode] = &[KeyCode::Esc];
 
 /// KeyBindings are a collection of *key*-*user action* pairs, seperated by mode
+// #[derive(Clone, Debug, Default, Deref, DerefMut)]
+// pub struct KeyBindings(pub IndexMap<Mode, IndexMap<Vec<KeyEvent>, UserAction>>);
 #[derive(Clone, Debug, Default, Deref, DerefMut)]
 pub struct KeyBindings(pub IndexMap<Mode, IndexMap<Vec<KeyEvent>, UserAction>>);
 
-#[derive(Clone)]
+#[derive(Assoc, Clone)]
+#[func(pub const fn color(&self) -> Color)]
+#[func(pub const fn inner(&self) -> &Vec<KeyEvent> { _0 })]
 pub enum KeyCombo {
+    #[assoc(color = Color::Cyan)]
     Successful(Vec<KeyEvent>),
+    #[assoc(color = Color::DarkGray)]
     Cancelled(Vec<KeyEvent>),
+    #[assoc(color = Color::Red)]
     Unmatched(Vec<KeyEvent>),
 }
 
@@ -32,6 +41,7 @@ impl<'de> Deserialize<'de> for KeyBindings {
     where
         D: Deserializer<'de>,
     {
+        // let parsed_map = IndexMap::<Mode, IndexMap<String, UserAction>>::deserialize(deserializer)?;
         let parsed_map = IndexMap::<Mode, IndexMap<String, UserAction>>::deserialize(deserializer)?;
 
         let keybindings = parsed_map

@@ -459,6 +459,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "enum-assoc"
+version = "1.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4f4b100e337b021ae69f3e7dd82e230452c54ff833958446c4a3854c66dc9326"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.66",
+]
+
+[[package]]
 name = "enum-iterator"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1305,6 +1316,7 @@ dependencies = [
  "derive_more 1.0.0",
  "directories",
  "dirs",
+ "enum-assoc",
  "futures",
  "human_bytes",
  "image",
@@ -1859,7 +1871,7 @@ dependencies = [
  "icy_sixel",
  "image",
  "rand 0.8.5",
- "ratatui 0.28.0",
+ "ratatui 0.29.0",
 ]
 
 [[package]]
