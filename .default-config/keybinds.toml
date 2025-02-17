@@ -3,6 +3,8 @@
 "<C-z>" = "Suspend"
 "d" = { "SetMode" = "DownloadClient" }
 "<enter>" = "Submit"
+"asdf" = "Suspend"
+"?" = "WhichKey"
 
 [DownloadClient]
 "<esc>" = { "SetMode" = "Home" }

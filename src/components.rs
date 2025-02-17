@@ -2,6 +2,7 @@ use color_eyre::Result;
 use crossterm::event::KeyEvent;
 use ratatui::{
     layout::{Constraint, Flex, Layout, Rect},
+    widgets::Borders,
     Frame,
 };
 
@@ -28,4 +29,21 @@ pub fn centered_rect<C: Into<Constraint>>(area: Rect, horizontal: C, vertical: C
         .areas(area);
     let [center] = Layout::vertical([vertical]).flex(Flex::Center).areas(area);
     center
+}
+
+pub fn borders(a: Rect, b: Rect) -> Borders {
+    let mut borders = Borders::empty();
+    if a.height + a.y <= b.y + b.height {
+        borders |= Borders::BOTTOM;
+    }
+    if a.y >= b.y {
+        borders |= Borders::TOP;
+    }
+    if a.width + a.x <= b.x + b.width {
+        borders |= Borders::RIGHT;
+    }
+    if a.x >= b.x {
+        borders |= Borders::LEFT;
+    }
+    borders
 }

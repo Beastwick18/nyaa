@@ -2,12 +2,14 @@ use color_eyre::Result;
 use crossterm::event::KeyEvent;
 use download_client::DownloadClientComponent;
 use ratatui::{layout::Rect, Frame};
+use which_key::WhichKeyComponent;
 
 use crate::{action::AppAction, app::Context};
 
 use super::Component;
 
 pub mod download_client;
+pub mod which_key;
 
 pub struct PopupsComponent {
     popups: Vec<Box<dyn Component>>,
@@ -16,7 +18,7 @@ pub struct PopupsComponent {
 impl PopupsComponent {
     pub fn new() -> Box<Self> {
         Box::new(Self {
-            popups: vec![DownloadClientComponent::new()],
+            popups: vec![DownloadClientComponent::new(), WhichKeyComponent::new()],
         })
     }
 }
