@@ -1,7 +1,7 @@
 use color_eyre::Result;
 use ratatui::{
     layout::{Margin, Rect},
-    style::{Color, Stylize as _},
+    style::{Color, Style, Stylize as _},
     symbols::line,
     text::Line,
     widgets::{Block, Borders, Paragraph, Table, TableState},
@@ -9,7 +9,7 @@ use ratatui::{
 };
 
 use crate::{
-    action::{AppAction, TaskAction},
+    action::{AppAction, TaskAction, UserAction},
     app::Context,
     keys,
     result::Results,
@@ -44,9 +44,22 @@ impl Component for ResultsComponent {
         match action {
             AppAction::Task(TaskAction::SourceResults(results)) => {
                 self.results.clone_from(results);
+                self.table_state.select_first();
             }
             AppAction::Search(_) => {
                 self.results = None;
+            }
+            AppAction::UserAction(UserAction::Up) => {
+                self.table_state.select_previous();
+            }
+            AppAction::UserAction(UserAction::Down) => {
+                self.table_state.select_next();
+            }
+            AppAction::UserAction(UserAction::Top) => {
+                self.table_state.select_first();
+            }
+            AppAction::UserAction(UserAction::Bottom) => {
+                self.table_state.select_last();
             }
             _ => {}
         }
@@ -70,7 +83,7 @@ impl Component for ResultsComponent {
         if !self.current_keycombo.is_empty() {
             let combo = self
                 .current_keycombo
-                .clone()
+                .as_str()
                 .fg(self.current_keycombo_color);
             let vr = line::NORMAL.vertical_right;
             let vl = line::NORMAL.vertical_left;
@@ -95,7 +108,8 @@ impl Component for ResultsComponent {
                 let center = super::centered_rect(area, text.len() as u16, 1);
                 frame.render_widget(paragraph, center);
             }
-            let table: Table = results.table.clone().into();
+            let table: Table = (&results.table).into();
+            let table = table.row_highlight_style(Style::new().bg(Color::Rgb(58, 61, 92)));
             frame.render_stateful_widget(table, area, &mut self.table_state);
         } else {
             let text = "Loading...";

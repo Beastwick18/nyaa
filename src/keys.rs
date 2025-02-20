@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use derive_more::{Deref, DerefMut};
 use enum_assoc::Assoc;
@@ -12,10 +14,8 @@ use crate::{action::UserAction, app::Mode};
 pub static NON_COMBO: &[KeyCode] = &[KeyCode::Esc];
 
 /// KeyBindings are a collection of *key*-*user action* pairs, seperated by mode
-// #[derive(Clone, Debug, Default, Deref, DerefMut)]
-// pub struct KeyBindings(pub IndexMap<Mode, IndexMap<Vec<KeyEvent>, UserAction>>);
 #[derive(Clone, Debug, Default, Deref, DerefMut)]
-pub struct KeyBindings(pub IndexMap<Mode, IndexMap<Vec<KeyEvent>, UserAction>>);
+pub struct KeyBindings(pub IndexMap<Mode, IndexMap<Vec<KeyEvent>, OneOrManyActions>>);
 
 #[derive(Assoc, Clone)]
 #[func(pub const fn color(&self) -> Color)]
@@ -27,6 +27,34 @@ pub enum KeyCombo {
     Cancelled(Vec<KeyEvent>),
     #[assoc(color = Color::Red)]
     Unmatched(Vec<KeyEvent>),
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(untagged)]
+pub enum OneOrManyActions {
+    One(UserAction),
+    Many(Vec<UserAction>),
+    Repeat(u16, UserAction),
+}
+
+impl Display for OneOrManyActions {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            OneOrManyActions::One(user_action) => write!(f, "{:?}", user_action),
+            OneOrManyActions::Many(user_actions) => {
+                write!(
+                    f,
+                    "{}",
+                    user_actions
+                        .iter()
+                        .map(|a| format!("{:?}", a))
+                        .collect::<Vec<String>>()
+                        .join(", ")
+                )
+            }
+            OneOrManyActions::Repeat(n, user_action) => write!(f, "{n}×{:?}", user_action),
+        }
+    }
 }
 
 // #[derive(Clone, Debug, Deserialize)]
@@ -41,8 +69,8 @@ impl<'de> Deserialize<'de> for KeyBindings {
     where
         D: Deserializer<'de>,
     {
-        // let parsed_map = IndexMap::<Mode, IndexMap<String, UserAction>>::deserialize(deserializer)?;
-        let parsed_map = IndexMap::<Mode, IndexMap<String, UserAction>>::deserialize(deserializer)?;
+        let parsed_map =
+            IndexMap::<Mode, IndexMap<String, OneOrManyActions>>::deserialize(deserializer)?;
 
         let keybindings = parsed_map
             .into_iter()

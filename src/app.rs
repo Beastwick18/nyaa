@@ -12,7 +12,7 @@ use crate::{
     cli::Args,
     components::{home::HomeComponent, popups::PopupsComponent, Component},
     config::Config,
-    keys::{self, KeyCombo},
+    keys::{self, KeyCombo, OneOrManyActions},
     result::ResultTable,
     sources::{nyaa::NyaaSource, Source, SourceTask, SourceTaskRunner},
     tui::{Tui, TuiEvent},
@@ -158,7 +158,21 @@ impl App {
         }
 
         if let Some(action) = keymap.get(&self.ctx.keycombo) {
-            action_tx.send(AppAction::UserAction(action.clone()))?;
+            match action {
+                OneOrManyActions::One(action) => {
+                    action_tx.send(AppAction::UserAction(action.clone()))?
+                }
+                OneOrManyActions::Many(actions) => {
+                    for action in actions {
+                        action_tx.send(AppAction::UserAction(action.clone()))?
+                    }
+                }
+                OneOrManyActions::Repeat(n, action) => {
+                    for _ in 0..*n {
+                        action_tx.send(AppAction::UserAction(action.clone()))?
+                    }
+                }
+            }
             self.ctx.last_keycombo = Some(KeyCombo::Successful(self.ctx.keycombo.clone()));
             self.ctx.keycombo.clear();
         } else if !keymap.keys().any(|k| k.starts_with(&self.ctx.keycombo)) {

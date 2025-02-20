@@ -33,6 +33,8 @@ pub enum UserAction {
     Suspend,
     Up,
     Down,
+    Top,
+    Bottom,
     InsertLeft,
     InsertRight,
     InsertNextWord,

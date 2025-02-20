@@ -1,3 +1,5 @@
+use std::borrow::Borrow;
+
 use derive_more::{Deref, DerefMut};
 use ratatui::{
     layout::{Alignment, Constraint},
@@ -206,21 +208,21 @@ impl ResultTable {
     }
 }
 
-impl<'a> From<ResultTable> for Table<'a> {
-    fn from(res: ResultTable) -> Self {
-        Table::new(res.rows, res.binding).header(res.header.into())
+impl<'a> From<&'a ResultTable> for Table<'a> {
+    fn from(res: &'a ResultTable) -> Self {
+        Table::new(&res.rows, &res.binding).header((&res.header).into())
     }
 }
 
-impl<'a> From<ResultRow> for Row<'a> {
-    fn from(rrow: ResultRow) -> Self {
-        Row::new(rrow.cells).style(rrow.style)
+impl<'a> From<&'a ResultRow> for Row<'a> {
+    fn from(rrow: &'a ResultRow) -> Self {
+        Row::new(&rrow.cells).style(rrow.style)
     }
 }
 
-impl<'a> From<ResultCell> for Cell<'a> {
-    fn from(rcell: ResultCell) -> Self {
-        let text = Into::<Text<'a>>::into(rcell.content).alignment(rcell.alignment);
+impl<'a> From<&'a ResultCell> for Cell<'a> {
+    fn from(rcell: &'a ResultCell) -> Self {
+        let text = Into::<Text<'a>>::into(rcell.content.as_str()).alignment(rcell.alignment);
         Cell::new(text).style(rcell.style)
     }
 }
