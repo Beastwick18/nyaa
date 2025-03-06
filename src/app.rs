@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use color_eyre::Result;
-use crossterm::event::KeyEvent;
+use crossterm::event::{KeyCode, KeyEvent};
 use serde::Deserialize;
 use strum::Display;
 use tokio::sync::mpsc;
@@ -12,7 +12,7 @@ use crate::{
     cli::Args,
     components::{home::HomeComponent, popups::PopupsComponent, Component},
     config::Config,
-    keys::{self, KeyCombo, OneOrManyActions},
+    keys::{self, KeyCombo, KeyComboStatus},
     result::ResultTable,
     sources::{nyaa::NyaaSource, Source, SourceTask, SourceTaskRunner},
     tui::{Tui, TuiEvent},
@@ -22,7 +22,8 @@ pub struct Context {
     pub config: Config,
     pub mode: Mode,
     pub input_mode: InputMode,
-    pub keycombo: Vec<KeyEvent>,
+    pub keycombo: KeyCombo,
+    // pub keycombo_multiplier: Option<u8>,
     pub source: Source,
     pub source_box: Box<dyn SourceTask>,
     pub last_keycombo: Option<KeyCombo>,
@@ -35,7 +36,7 @@ impl Context {
             config: Config::new(config_path)?,
             mode: Mode::default(),
             input_mode: InputMode::default(),
-            keycombo: Vec::new(),
+            keycombo: KeyCombo::default(),
             source: Source::Nyaa,
             source_box: Box::new(NyaaSource),
             last_keycombo: None,
@@ -149,36 +150,44 @@ impl App {
 
         // Check for keys that may not be used in combos (resets current key combo).
         // Do not cancel if keycombo is *only* the cancelling key
-        if !self.ctx.keycombo.is_empty() && keys::NON_COMBO.contains(&key.code) {
-            self.ctx.keycombo.push(key);
-            self.ctx.last_keycombo = Some(KeyCombo::Cancelled(self.ctx.keycombo.clone()));
-            self.ctx.keycombo.clear();
+        if self.ctx.keycombo.status() == &KeyComboStatus::Pending
+            && keys::NON_COMBO.contains(&key.code)
+        {
+            self.ctx.keycombo.push_key(key);
+            self.ctx.keycombo.set_status(KeyComboStatus::Cancelled);
         } else {
-            self.ctx.keycombo.push(key);
-        }
-
-        if let Some(action) = keymap.get(&self.ctx.keycombo) {
-            match action {
-                OneOrManyActions::One(action) => {
-                    action_tx.send(AppAction::UserAction(action.clone()))?
-                }
-                OneOrManyActions::Many(actions) => {
-                    for action in actions {
-                        action_tx.send(AppAction::UserAction(action.clone()))?
-                    }
-                }
-                OneOrManyActions::Repeat(n, action) => {
-                    for _ in 0..*n {
-                        action_tx.send(AppAction::UserAction(action.clone()))?
-                    }
-                }
+            // If no pending keycombo, reset to now be pending
+            if self.ctx.keycombo.status() != &KeyComboStatus::Pending {
+                self.ctx.keycombo.set_status(KeyComboStatus::Pending);
+                self.ctx.keycombo.clear();
             }
-            self.ctx.last_keycombo = Some(KeyCombo::Successful(self.ctx.keycombo.clone()));
-            self.ctx.keycombo.clear();
-        } else if !keymap.keys().any(|k| k.starts_with(&self.ctx.keycombo)) {
-            // No possible action with current keycombo
-            self.ctx.last_keycombo = Some(KeyCombo::Unmatched(self.ctx.keycombo.clone()));
-            self.ctx.keycombo.clear();
+
+            self.ctx.keycombo.push_key(key);
+
+            if let Some(action) = keymap.get(self.ctx.keycombo.events()) {
+                let mult = action
+                    .multiplier()
+                    .saturating_mul(self.ctx.keycombo.repeat().unwrap_or(1));
+
+                let actions_to_send: Vec<AppAction> = action
+                    .actions()
+                    .into_iter()
+                    .map(AppAction::UserAction)
+                    .collect();
+
+                for _ in 0..mult {
+                    for action in actions_to_send.clone() {
+                        action_tx.send(action)?
+                    }
+                }
+                self.ctx.keycombo.set_status(KeyComboStatus::Successful);
+            } else if !keymap
+                .keys()
+                .any(|k| k.starts_with(self.ctx.keycombo.events()))
+            {
+                // No possible action with current keycombo
+                self.ctx.keycombo.set_status(KeyComboStatus::Unmatched);
+            }
         }
 
         for component in self.components.iter_mut() {
@@ -218,7 +227,6 @@ impl App {
     fn search(&self, query: String) {
         let action_tx = self.action_tx.clone();
         let source = self.ctx.source;
-        // let src: Box<dyn SourceTask> = self.ctx.source_box;
 
         tokio::spawn(async move {
             let results = SourceTaskRunner::run(source, query).await;

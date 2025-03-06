@@ -3,7 +3,7 @@
 "<C-z>" = "Suspend"
 "d" = { "SetMode" = "DownloadClient" }
 "<enter>" = "Submit"
-"asdf" = ["Down", "Down", "WhichKey", "WhichKey", "WhichKey", "WhichKey"]
+"asdf" = ["Down", "Down", "Up"]
 "?" = "WhichKey"
 "k" = "Up"
 "j" = "Down"

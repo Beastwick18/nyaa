@@ -64,13 +64,21 @@ impl Component for ResultsComponent {
             _ => {}
         }
 
-        let (keycombo, keycombo_color) = if ctx.keycombo.is_empty() && ctx.last_keycombo.is_some() {
-            let keycombo = ctx.last_keycombo.as_ref().unwrap();
-            (keycombo.inner(), keycombo.color())
-        } else {
-            (&ctx.keycombo, Color::White)
-        };
-        self.current_keycombo = keycombo.iter().map(keys::key_event_to_string).collect();
+        let (mult, keycombo, keycombo_color) = (
+            ctx.keycombo
+                .repeat()
+                .as_ref()
+                .map(ToString::to_string)
+                .unwrap_or_default(),
+            ctx.keycombo
+                .events()
+                .iter()
+                .map(keys::key_event_to_string)
+                .collect::<String>(),
+            ctx.keycombo.status().color(),
+        );
+
+        self.current_keycombo = format!("{mult}{keycombo}");
         self.current_keycombo_color = keycombo_color;
 
         Ok(None)

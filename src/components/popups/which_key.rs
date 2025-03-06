@@ -5,8 +5,8 @@ use ratatui::{
     layout::{Alignment, Rect},
     style::{Color, Stylize as _},
     symbols,
-    text::{Line, Span},
-    widgets::{Block, Borders, Clear, List, Widget as _},
+    text::Line,
+    widgets::{Block, Clear, List, Widget as _},
     Frame,
 };
 
@@ -15,7 +15,7 @@ use crate::{
     animate::{translate::Translate, Animation, AnimationState, Direction, Smoothing},
     app::Context,
     components::borders,
-    keys::key_event_to_string,
+    keys::{key_event_to_string, KeyComboStatus},
     widgets::clear_overlap::ClearOverlap,
 };
 
@@ -23,7 +23,8 @@ use super::Component;
 
 pub struct WhichKeyComponent {
     translate: Translate,
-    possible_actions: Vec<(String, String, String)>,
+    current_keycombo: String,
+    possible_actions: Vec<(String, String)>,
     wait_duration: Duration,
     current_time: Duration,
 }
@@ -37,6 +38,7 @@ impl WhichKeyComponent {
                 .backwards()
                 .smoothing(Smoothing::EaseInAndOut)
                 .into(),
+            current_keycombo: String::new(),
             possible_actions: Vec::new(),
             wait_duration,
             current_time: wait_duration,
@@ -59,20 +61,26 @@ impl Component for WhichKeyComponent {
             self.translate.state_mut().update();
 
             if let Some(keymap) = ctx.config.keys.get(&ctx.mode) {
-                if !ctx.keycombo.is_empty() {
+                let events = if ctx.keycombo.status() == &KeyComboStatus::Pending {
+                    // Decrement time till WhichKey popup appears
                     self.current_time = self.current_time.saturating_sub(Duration::from_millis(16));
-                }
-                let current_keycombo: String =
-                    ctx.keycombo.iter().map(key_event_to_string).collect();
+                    Some(ctx.keycombo.events())
+                } else {
+                    None
+                };
+
+                self.current_keycombo = events
+                    .map(|e| e.iter().map(key_event_to_string).collect::<String>())
+                    .unwrap_or_default();
+
                 self.possible_actions = keymap
                     .into_iter()
-                    .filter(|(keys, _action)| keys.starts_with(&ctx.keycombo))
+                    .filter(|(keys, _action)| events.is_none() || keys.starts_with(events.unwrap()))
                     .map(|(keys, action)| {
                         (
-                            current_keycombo.clone(),
                             keys.iter()
                                 .map(key_event_to_string)
-                                .skip(current_keycombo.len())
+                                .skip(self.current_keycombo.len())
                                 .collect::<String>(),
                             action.to_string(),
                         )
@@ -85,7 +93,7 @@ impl Component for WhichKeyComponent {
     }
 
     fn on_key(&mut self, ctx: &Context, _key: &crossterm::event::KeyEvent) -> Result<()> {
-        if ctx.keycombo.is_empty() {
+        if ctx.keycombo.status() != &KeyComboStatus::Pending {
             self.current_time = self.wait_duration;
         }
         Ok(())
@@ -119,9 +127,9 @@ impl Component for WhichKeyComponent {
             .border_set(symbols::border::ROUNDED)
             .title(" Possible Actions ")
             .title_alignment(Alignment::Center);
-        let list = List::new(self.possible_actions.iter().map(|(curr, rest, action)| {
+        let list = List::new(self.possible_actions.iter().map(|(rest, action)| {
             Line::from_iter([
-                curr.as_str().fg(Color::Cyan),
+                self.current_keycombo.as_str().fg(Color::Cyan),
                 rest.into(),
                 " ➜ ".fg(Color::DarkGray),
                 action.as_str().fg(Color::White),

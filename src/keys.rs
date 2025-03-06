@@ -17,24 +17,79 @@ pub static NON_COMBO: &[KeyCode] = &[KeyCode::Esc];
 #[derive(Clone, Debug, Default, Deref, DerefMut)]
 pub struct KeyBindings(pub IndexMap<Mode, IndexMap<Vec<KeyEvent>, OneOrManyActions>>);
 
-#[derive(Assoc, Clone)]
-#[func(pub const fn color(&self) -> Color)]
-#[func(pub const fn inner(&self) -> &Vec<KeyEvent> { _0 })]
-pub enum KeyCombo {
-    #[assoc(color = Color::Cyan)]
-    Successful(Vec<KeyEvent>),
-    #[assoc(color = Color::DarkGray)]
-    Cancelled(Vec<KeyEvent>),
-    #[assoc(color = Color::Red)]
-    Unmatched(Vec<KeyEvent>),
+#[derive(Default, Clone)]
+pub struct KeyCombo {
+    status: KeyComboStatus,
+    repeat: Option<u8>,
+    events: Vec<KeyEvent>,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+impl KeyCombo {
+    pub fn status(&self) -> &KeyComboStatus {
+        &self.status
+    }
+
+    pub fn set_status(&mut self, status: KeyComboStatus) {
+        self.status = status;
+    }
+
+    pub fn repeat(&self) -> &Option<u8> {
+        &self.repeat
+    }
+
+    fn push_digit(&mut self, digit: u8) {
+        let digit = digit.min(9);
+        let result = self
+            .repeat
+            .map(|r| r.saturating_mul(10).saturating_add(digit))
+            .unwrap_or(digit);
+        self.repeat = Some(result);
+    }
+
+    pub fn events(&self) -> &Vec<KeyEvent> {
+        &self.events
+    }
+
+    pub fn clear(&mut self) {
+        self.repeat = None;
+        self.events.clear();
+    }
+
+    pub fn push_key(&mut self, key: KeyEvent) {
+        match key.code {
+            KeyCode::Char(c) if c.is_ascii_digit() => {
+                self.push_digit((c as u8).saturating_sub(b'0'))
+            }
+            _ => self.events.push(key),
+        }
+    }
+}
+
+#[derive(Assoc, Clone, Copy, Default, PartialEq, Eq)]
+#[func(pub const fn color(&self) -> Color)]
+pub enum KeyComboStatus {
+    #[assoc(color = Color::White)]
+    Pending,
+    #[assoc(color = Color::Cyan)]
+    Successful,
+    #[default]
+    #[assoc(color = Color::DarkGray)]
+    Cancelled,
+    #[assoc(color = Color::Red)]
+    Unmatched,
+}
+
+#[derive(Assoc, Clone, Debug, Deserialize)]
+#[func(pub fn multiplier(&self) -> u8)]
+#[func(pub fn actions(&self) -> Vec<UserAction>)]
 #[serde(untagged)]
 pub enum OneOrManyActions {
+    #[assoc(multiplier = 1, actions = vec![_0.clone()])]
     One(UserAction),
+    #[assoc(multiplier = 1, actions = _0.clone())]
     Many(Vec<UserAction>),
-    Repeat(u16, UserAction),
+    #[assoc(multiplier = *_0, actions = vec![_1.clone()])]
+    Repeat(u8, UserAction),
 }
 
 impl Display for OneOrManyActions {

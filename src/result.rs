@@ -1,5 +1,3 @@
-use std::borrow::Borrow;
-
 use derive_more::{Deref, DerefMut};
 use ratatui::{
     layout::{Alignment, Constraint},

@@ -9,7 +9,7 @@ use ratatui::{
 use crate::{
     action::AppAction,
     app::Context,
-    keys::{self, key_event_to_string, KeyCombo},
+    keys::{self, key_event_to_string, KeyComboStatus},
 };
 
 use super::Component;
@@ -53,31 +53,37 @@ impl Component for ActionsComponent {
                 })
                 .collect();
 
-            self.possible_actions = keymap
-                .iter()
-                .filter(|(keys, _action)| keys.starts_with(&ctx.keycombo))
-                .map(|(keys, action)| {
-                    format!(
-                        "{} => {:?}",
-                        keys.iter()
-                            .map(key_event_to_string)
-                            .collect::<Vec<String>>()
-                            .join(""),
-                        action
-                    )
-                })
-                .collect();
-        }
-        let (keycombo, keycombo_color) = if ctx.keycombo.is_empty() && ctx.last_keycombo.is_some() {
-            match ctx.last_keycombo.as_ref().unwrap() {
-                KeyCombo::Successful(vec) => (vec, Color::Cyan),
-                KeyCombo::Cancelled(vec) => (vec, Color::Magenta),
-                KeyCombo::Unmatched(vec) => (vec, Color::Red),
+            if ctx.keycombo.status() == &KeyComboStatus::Pending {
+                self.possible_actions = keymap
+                    .iter()
+                    .filter(|(keys, _action)| keys.starts_with(ctx.keycombo.events()))
+                    .map(|(keys, action)| {
+                        format!(
+                            "{} => {:?}",
+                            keys.iter()
+                                .map(key_event_to_string)
+                                .collect::<Vec<String>>()
+                                .join(""),
+                            action
+                        )
+                    })
+                    .collect();
             }
-        } else {
-            (&ctx.keycombo, Color::White)
-        };
-        self.current_keycombo = keycombo.iter().map(keys::key_event_to_string).collect();
+        }
+        let (mult, keycombo, keycombo_color) = (
+            ctx.keycombo.repeat(),
+            ctx.keycombo.events(),
+            ctx.keycombo.status().color(),
+        );
+
+        self.current_keycombo = format!(
+            "{}{}",
+            mult.as_ref().map(ToString::to_string).unwrap_or_default(),
+            keycombo
+                .iter()
+                .map(keys::key_event_to_string)
+                .collect::<String>()
+        );
         self.current_keycombo_color = keycombo_color;
         Ok(None)
     }
