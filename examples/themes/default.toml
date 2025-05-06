@@ -1,3 +1,5 @@
+#:schema ../../theme.schema.json
+
 name = "Default"
 bg = "Reset"
 fg = "White"
