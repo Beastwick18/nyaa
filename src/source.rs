@@ -6,7 +6,6 @@ use serde::{Deserialize, Serialize};
 use strum::{Display, VariantArray};
 use sukebei_nyaa::SukebeiTheme;
 use torrent_galaxy::TgxTheme;
-use url::Url;
 
 use crate::{
     app::{Context, LoadType, Widgets},
@@ -172,23 +171,6 @@ pub struct Item {
     pub icon: CatIcon,
     pub item_type: ItemType,
     pub extra: HashMap<String, String>,
-}
-
-impl Item {
-    pub fn minimal_magnet_link(self) -> Result<String, String> {
-        let url = Url::parse(&self.magnet_link).map_err(|e| e.to_string())?;
-
-        // Extract the query parameters into a HashMap.
-        let query_pairs = url.query_pairs();
-        let params: HashMap<_, _> = query_pairs.into_owned().collect();
-
-        let xt = params
-            .get("xt")
-            .ok_or("Missing `xt` in magnet URL".to_string())?;
-        let mut magnet = "magnet:?xt=".to_string();
-        magnet.push_str(xt);
-        Ok(magnet)
-    }
 }
 
 #[derive(Serialize, Deserialize, Display, Clone, Copy, VariantArray, PartialEq, Eq)]
@@ -395,17 +377,5 @@ impl Sources {
                 TorrentGalaxyHtmlSource::format_table(items, search, config, theme)
             }
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn test_minimal_magnet_link() {
-        let item = crate::source::Item {magnet_link: "magnet:?xt=urn:btih:691526c892951e9b41b7946524513f945e5c7c45&dn=Example.File.Name&tr=http://example.com/tracker/announce".to_owned(), ..Default::default()};
-        assert_eq!(
-            &item.minimal_magnet_link().unwrap(),
-            "magnet:?xt=urn:btih:691526c892951e9b41b7946524513f945e5c7c45"
-        );
     }
 }

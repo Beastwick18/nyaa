@@ -1,6 +1,10 @@
-use std::{collections::VecDeque, ops::RangeBounds};
+use std::{
+    collections::{HashMap, VecDeque},
+    ops::RangeBounds,
+};
 
 use unicode_width::UnicodeWidthChar as _;
+use url::Url;
 
 pub fn pos_of_nth_char(s: &str, idx: usize) -> usize {
     s.chars()
@@ -149,4 +153,32 @@ pub fn forward_word(input: &str, start: usize) -> usize {
         .position(|c| !c.is_whitespace())
         .map(|n| n + nonws)
         .unwrap_or(input.chars().count())
+}
+
+pub fn minimal_magnet_link(magnet_link: &String) -> Result<String, String> {
+    let url = Url::parse(magnet_link).map_err(|e| e.to_string())?;
+
+    // Extract the query parameters into a HashMap.
+    let query_pairs = url.query_pairs();
+    let params: HashMap<_, _> = query_pairs.into_owned().collect();
+
+    let xt = params
+        .get("xt")
+        .ok_or("Missing `xt` in magnet URL".to_string())?;
+    let mut magnet = "magnet:?xt=".to_string();
+    magnet.push_str(xt);
+    Ok(magnet)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_minimal_magnet_link() {
+        assert_eq!(
+            minimal_magnet_link(&String::from("magnet:?xt=urn:btih:691526c892951e9b41b7946524513f945e5c7c45&dn=Example.File.Name&tr=http://example.com/tracker/announce")).unwrap(),
+            "magnet:?xt=urn:btih:691526c892951e9b41b7946524513f945e5c7c45"
+        );
+    }
 }

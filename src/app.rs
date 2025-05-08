@@ -28,7 +28,7 @@ use crate::{
     },
     sync::{EventSync, ReloadType, SearchQuery},
     theme::{self, Theme},
-    util::conv::key_to_string,
+    util::{conv::key_to_string, strings::minimal_magnet_link},
     widget::{
         batch::BatchWidget,
         category::CategoryPopup,
@@ -655,7 +655,7 @@ impl App {
                             't' => item.torrent_link,
                             'm' => {
                                 if ctx.config.yank_full_magnet {
-                                    match item.minimal_magnet_link() {
+                                    match minimal_magnet_link(&item.magnet_link) {
                                         Ok(magnet) => magnet,
                                         Err(e) => return ctx.notify_error(e),
                                     }

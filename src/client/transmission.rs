@@ -25,6 +25,7 @@ pub struct TransmissionConfig {
     pub peer_limit: Option<i64>,
     pub download_dir: Option<String>,
     pub bandwidth_priority: Option<Priority>,
+    pub yank_full_magnet: Option<bool>,
 }
 
 pub struct TransmissionClient;
@@ -42,6 +43,7 @@ impl Default for TransmissionConfig {
             peer_limit: None,
             download_dir: None,
             bandwidth_priority: None,
+            yank_full_magnet: None,
         }
     }
 }
@@ -113,10 +115,12 @@ impl DownloadClient for TransmissionClient {
             }
         }
 
-        let link = match conf.use_magnet {
-            None | Some(true) => item.magnet_link.to_owned(),
-            Some(false) => item.torrent_link.to_owned(),
-        };
+        let link = super::Client::get_link(
+            conf.use_magnet.unwrap_or(true),
+            conf.yank_full_magnet,
+            item.torrent_link.clone(),
+            item.magnet_link.clone(),
+        );
         if let Err(e) = add_torrent(conf, link, client).await {
             return SingleDownloadResult::error(e);
         }

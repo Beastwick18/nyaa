@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{source::Item, util::cmd::CommandBuilder};
+use crate::{
+    source::Item,
+    util::{cmd::CommandBuilder, strings::minimal_magnet_link},
+};
 
 use super::{
     multidownload, BatchDownloadResult, ClientConfig, DownloadClient, SingleDownloadResult,
@@ -11,6 +14,7 @@ use super::{
 pub struct CmdConfig {
     cmd: String,
     shell_cmd: String,
+    yank_full_magnet: Option<bool>,
 }
 
 pub struct CmdClient;
@@ -24,6 +28,7 @@ impl Default for CmdConfig {
             cmd: "curl \"{torrent}\" > ~/{file}".to_owned(),
 
             shell_cmd: CommandBuilder::default_shell(),
+            yank_full_magnet: None,
         }
     }
 }
@@ -36,8 +41,14 @@ impl DownloadClient for CmdClient {
                 return SingleDownloadResult::error("Failed to get cmd config");
             }
         };
+
+        let magnet = if cmd.yank_full_magnet.unwrap_or(true) {
+            item.magnet_link.clone()
+        } else {
+            minimal_magnet_link(&item.magnet_link).unwrap_or_else(|_| item.magnet_link.clone())
+        };
         let res = CommandBuilder::new(cmd.cmd)
-            .sub("{magnet}", &item.magnet_link)
+            .sub("{magnet}", &magnet)
             .sub("{torrent}", &item.torrent_link)
             .sub("{title}", &item.title)
             .sub("{file}", &item.file_name)

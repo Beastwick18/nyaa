@@ -221,4 +221,74 @@ impl Client {
             Self::Transmission => TransmissionClient::load_config(cfg),
         };
     }
+
+    pub fn get_link(
+        use_magnet: bool,
+        yank_full_magnet: Option<bool>,
+        torrent: String,
+        magnet: String,
+    ) -> String {
+        if use_magnet {
+            if let Some(full) = yank_full_magnet {
+                if full {
+                    magnet
+                } else {
+                    match crate::util::strings::minimal_magnet_link(&magnet) {
+                        Ok(minimal) => minimal,
+                        Err(_) => magnet,
+                    }
+                }
+            } else {
+                magnet
+            }
+        } else {
+            torrent
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::util::strings::minimal_magnet_link;
+
+    use super::*;
+
+    #[test]
+    fn test_get_link() {
+        let torrent_link = String::from("torrent");
+        let magnet_link = String::from("magnet:?xt=urn:btih:691526c892951e9b41b7946524513f945e5c7c45&dn=Example.File.Name&tr=http://example.com/tracker/announce");
+
+        // use magnet_link
+        assert_eq!(
+            Client::get_link(true, None, torrent_link.clone(), magnet_link.clone()),
+            magnet_link
+        );
+        assert_eq!(
+            Client::get_link(true, Some(true), torrent_link.clone(), magnet_link.clone()),
+            magnet_link
+        );
+        assert_eq!(
+            Client::get_link(true, Some(false), torrent_link.clone(), magnet_link.clone()),
+            minimal_magnet_link(&magnet_link).unwrap()
+        );
+
+        // do not use magnet link
+        assert_eq!(
+            Client::get_link(false, None, torrent_link.clone(), magnet_link.clone()),
+            torrent_link
+        );
+        assert_eq!(
+            Client::get_link(false, Some(true), torrent_link.clone(), magnet_link.clone()),
+            torrent_link
+        );
+        assert_eq!(
+            Client::get_link(
+                false,
+                Some(false),
+                torrent_link.clone(),
+                magnet_link.clone()
+            ),
+            torrent_link
+        );
+    }
 }
