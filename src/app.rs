@@ -653,7 +653,16 @@ impl App {
                     Some(item) => {
                         let link = match c {
                             't' => item.torrent_link,
-                            'm' => item.magnet_link,
+                            'm' => {
+                                if ctx.config.yank_full_magnet {
+                                    match item.minimal_magnet_link() {
+                                        Ok(magnet) => magnet,
+                                        Err(e) => return ctx.notify_error(e),
+                                    }
+                                } else {
+                                    item.magnet_link
+                                }
+                            }
                             'p' => item.post_link,
                             'i' => match item.extra.get("imdb").cloned() {
                                 Some(imdb) => imdb,

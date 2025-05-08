@@ -148,6 +148,7 @@ request_proxy = "localhost:8118" # request proxy for sending requests through (u
 timeout = 30                     # request timeout for sources and clients (measured in seconds)
 scroll_padding = 6               # scroll padding for results table
 save_config_on_change = true     # save config when changing sources/themes
+yank_full_magnet = true          # if false, only keep the torrent hash in the magnet link
 
 
 [source.nyaa]
