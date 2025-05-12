@@ -655,12 +655,12 @@ impl App {
                             't' => item.torrent_link,
                             'm' => {
                                 if ctx.config.yank_full_magnet {
+                                    item.magnet_link
+                                } else {
                                     match minimal_magnet_link(&item.magnet_link) {
                                         Ok(magnet) => magnet,
                                         Err(e) => return ctx.notify_error(e),
                                     }
-                                } else {
-                                    item.magnet_link
                                 }
                             }
                             'p' => item.post_link,
