@@ -200,12 +200,9 @@ impl super::Widget for ResultsWidget {
 
         if area.height >= 3 {
             let offset = self.table.state.offset();
-            if let Some(visible_items) = ctx
-                .results
-                .response
-                .items
-                .get(offset..(offset + visible_height))
-            {
+            let start = offset.min(ctx.results.response.items.len());
+            let end = (offset + visible_height).min(ctx.results.response.items.len());
+            if let Some(visible_items) = ctx.results.response.items.get(start..end) {
                 let selected_ids: Vec<String> =
                     ctx.batch.clone().into_iter().map(|i| i.id).collect();
                 let vert_left = ctx.theme.border.to_border_set().vertical_left;
