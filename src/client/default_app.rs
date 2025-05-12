@@ -10,6 +10,7 @@ use super::{
 #[serde(default)]
 pub struct DefaultAppConfig {
     use_magnet: bool,
+    pub yank_full_magnet: Option<bool>,
 }
 
 pub struct DefaultAppClient;
@@ -22,10 +23,12 @@ impl DownloadClient for DefaultAppClient {
                 return SingleDownloadResult::error("Failed to get default app config");
             }
         };
-        let link = match conf.use_magnet {
-            true => item.magnet_link.to_owned(),
-            false => item.torrent_link.to_owned(),
-        };
+        let link = super::Client::get_link(
+            conf.use_magnet,
+            conf.yank_full_magnet,
+            item.torrent_link.clone(),
+            item.magnet_link.clone(),
+        );
         match open::that_detached(link).map_err(|e| e.to_string()) {
             Ok(()) => {
                 SingleDownloadResult::success("Successfully opened link in default app", item.id)

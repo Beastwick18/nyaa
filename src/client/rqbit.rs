@@ -18,6 +18,7 @@ pub struct RqbitConfig {
     pub use_magnet: Option<bool>,
     pub overwrite: Option<bool>,
     pub output_folder: Option<String>,
+    pub yank_full_magnet: Option<bool>,
 }
 
 pub struct RqbitClient;
@@ -35,6 +36,7 @@ impl Default for RqbitConfig {
             use_magnet: None,
             overwrite: None,
             output_folder: None,
+            yank_full_magnet: None,
         }
     }
 }
@@ -76,10 +78,12 @@ impl DownloadClient for RqbitClient {
                 return SingleDownloadResult::error("Failed to get rqbit config");
             }
         };
-        let link = match conf.use_magnet.unwrap_or(true) {
-            true => item.magnet_link.to_owned(),
-            false => item.torrent_link.to_owned(),
-        };
+        let link = super::Client::get_link(
+            conf.use_magnet.unwrap_or(true),
+            conf.yank_full_magnet,
+            item.torrent_link.clone(),
+            item.magnet_link.clone(),
+        );
         let res = match add_torrent(&conf, link, &client).await {
             Ok(r) => r,
             Err(e) => {

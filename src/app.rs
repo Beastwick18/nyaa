@@ -28,7 +28,7 @@ use crate::{
     },
     sync::{EventSync, ReloadType, SearchQuery},
     theme::{self, Theme},
-    util::conv::key_to_string,
+    util::{conv::key_to_string, strings::minimal_magnet_link},
     widget::{
         batch::BatchWidget,
         category::CategoryPopup,
@@ -653,7 +653,16 @@ impl App {
                     Some(item) => {
                         let link = match c {
                             't' => item.torrent_link,
-                            'm' => item.magnet_link,
+                            'm' => {
+                                if ctx.config.yank_full_magnet {
+                                    match minimal_magnet_link(&item.magnet_link) {
+                                        Ok(magnet) => magnet,
+                                        Err(e) => return ctx.notify_error(e),
+                                    }
+                                } else {
+                                    item.magnet_link
+                                }
+                            }
                             'p' => item.post_link,
                             'i' => match item.extra.get("imdb").cloned() {
                                 Some(imdb) => imdb,

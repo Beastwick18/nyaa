@@ -59,6 +59,9 @@ pub struct Config {
     pub cursor_padding: usize,
     pub save_config_on_change: bool,
     pub hot_reload_config: bool,
+    /// Tell if we yank all available magnet info or just the minimal magnet info when it is `false`:
+    /// `magnet:?xt=urn:btih:691526c892951e9b41b7946524513f945e5c7c45&dn=Example.File.Name&tr=http://example.com/tracker/announce` become `magnet:?xt=urn:btih:691526c892951e9b41b7946524513f945e5c7c45` when `false`
+    pub yank_full_magnet: bool,
 
     #[serde(rename = "notifications")]
     pub notifications: Option<NotificationConfig>,
@@ -85,6 +88,7 @@ impl Default for Config {
             cursor_padding: 4,
             save_config_on_change: true,
             hot_reload_config: true,
+            yank_full_magnet: true,
 
             notifications: None,
             clipboard: None,
