@@ -94,7 +94,8 @@ impl Component for ActionsComponent {
             .clone()
             .fg(self.current_keycombo_color);
         let p = Paragraph::new(format!(
-            "Mode: {}\n\nMappings:\n{}\n\nPossible Actions:\n{}\n\nKeycombo: {}",
+            "rdt: {}\n\nMode: {}\n\nMappings:\n{}\n\nPossible Actions:\n{}\n\nKeycombo: {}",
+            ctx.render_delta_time,
             ctx.mode,
             self.actions.join("\n"),
             self.possible_actions.join("\n"),

@@ -7,10 +7,13 @@
 "?" = "WhichKey"
 "k" = "Up"
 "j" = "Down"
+"h" = "Left"
+"l" = "Right"
 "K" = [4, "Up"]
 "J" = [4, "Down"]
 "g" = "Top"
 "G" = "Bottom"
+"<esc>" = "ClearNotifications"
 
 [DownloadClient]
 "<esc>" = { "SetMode" = "Home" }

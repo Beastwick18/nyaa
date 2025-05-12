@@ -1,6 +1,5 @@
-use std::time::Duration;
-
 use color_eyre::Result;
+use crossterm::event::KeyEvent;
 use ratatui::{
     layout::{Alignment, Rect},
     style::{Color, Stylize as _},
@@ -12,7 +11,7 @@ use ratatui::{
 
 use crate::{
     action::{AppAction, UserAction},
-    animate::{translate::Translate, Animation, AnimationState, Direction, Smoothing},
+    animate::{translate::Translate, AnimationState, Direction, Smoothing},
     app::Context,
     components::borders,
     keys::{key_event_to_string, KeyComboStatus},
@@ -22,48 +21,40 @@ use crate::{
 use super::Component;
 
 pub struct WhichKeyComponent {
-    translate: Translate,
+    translate: AnimationState,
+    wait_state: AnimationState,
     current_keycombo: String,
     possible_actions: Vec<(String, String)>,
-    wait_duration: Duration,
-    current_time: Duration,
 }
 
 impl WhichKeyComponent {
-    pub fn new() -> Box<WhichKeyComponent> {
-        let wait_duration = Duration::from_secs(1);
+    pub fn boxed() -> Box<dyn Component> {
         Box::new(Self {
-            translate: AnimationState::new(0.12)
+            translate: AnimationState::new(10.0)
                 .playing(true)
                 .backwards()
-                .smoothing(Smoothing::EaseInAndOut)
-                .into(),
+                .smoothing(Smoothing::EaseInAndOut),
+            wait_state: AnimationState::from_secs(1.0).playing(true).backwards(),
             current_keycombo: String::new(),
             possible_actions: Vec::new(),
-            wait_duration,
-            current_time: wait_duration,
         })
     }
 }
 
 impl Component for WhichKeyComponent {
     fn update(&mut self, ctx: &Context, action: &AppAction) -> Result<Option<AppAction>> {
-        if let AppAction::UserAction(UserAction::WhichKey) = action {
-            self.current_time = Duration::ZERO;
-        }
-        if let AppAction::Tick = action {
-            self.translate
-                .state_mut()
-                .set_direction(match self.current_time.is_zero() {
-                    true => Direction::Forwards,
-                    false => Direction::Backwards,
-                });
-            self.translate.state_mut().update();
+        if action == &AppAction::UserAction(UserAction::WhichKey) {
+            self.wait_state.set_direction(Direction::Forwards);
+            self.wait_state.goto_end();
+        } else if action == &AppAction::Render {
+            self.wait_state.update(ctx.render_delta_time);
+            if self.wait_state.is_ending() {
+                self.translate.set_direction(Direction::Forwards);
+            }
+            self.translate.update(ctx.render_delta_time);
 
             if let Some(keymap) = ctx.config.keys.get(&ctx.mode) {
                 let events = if ctx.keycombo.status() == &KeyComboStatus::Pending {
-                    // Decrement time till WhichKey popup appears
-                    self.current_time = self.current_time.saturating_sub(Duration::from_millis(16));
                     Some(ctx.keycombo.events())
                 } else {
                     None
@@ -92,9 +83,13 @@ impl Component for WhichKeyComponent {
         Ok(None)
     }
 
-    fn on_key(&mut self, ctx: &Context, _key: &crossterm::event::KeyEvent) -> Result<()> {
+    fn on_key(&mut self, ctx: &Context, _key: &KeyEvent) -> Result<()> {
         if ctx.keycombo.status() != &KeyComboStatus::Pending {
-            self.current_time = self.wait_duration;
+            self.wait_state.goto_start();
+            self.wait_state.set_direction(Direction::Backwards);
+            self.translate.set_direction(Direction::Backwards);
+        } else {
+            self.wait_state.set_direction(Direction::Forwards);
         }
         Ok(())
     }
@@ -115,7 +110,9 @@ impl Component for WhichKeyComponent {
             height,
         };
 
-        let t_area = self.translate.start(bottom_right).stop(right).area();
+        let t_area: Rect = Translate::new(&self.translate, bottom_right.into(), right.into())
+            .area()
+            .into();
 
         let area = t_area.intersection(area);
         ClearOverlap.render(area, frame.buffer_mut());

@@ -7,7 +7,7 @@ use indexmap::IndexMap;
 use ratatui::style::Color;
 use serde::{Deserialize, Deserializer};
 
-use crate::{action::UserAction, app::Mode};
+use crate::{action::UserAction, app::Mode, color::to_rgb};
 
 // Keys that cannot be used in combos, and will cancel the current combo.
 // These keys may be used by themselves, as a single key keybind
@@ -68,14 +68,14 @@ impl KeyCombo {
 #[derive(Assoc, Clone, Copy, Default, PartialEq, Eq)]
 #[func(pub const fn color(&self) -> Color)]
 pub enum KeyComboStatus {
-    #[assoc(color = Color::White)]
+    #[assoc(color = to_rgb(Color::White))]
     Pending,
-    #[assoc(color = Color::Cyan)]
+    #[assoc(color = to_rgb(Color::Cyan))]
     Successful,
     #[default]
-    #[assoc(color = Color::DarkGray)]
+    #[assoc(color = to_rgb(Color::DarkGray))]
     Cancelled,
-    #[assoc(color = Color::Red)]
+    #[assoc(color = to_rgb(Color::Red))]
     Unmatched,
 }
 
@@ -94,21 +94,16 @@ pub enum OneOrManyActions {
 
 impl Display for OneOrManyActions {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            OneOrManyActions::One(user_action) => write!(f, "{:?}", user_action),
-            OneOrManyActions::Many(user_actions) => {
-                write!(
-                    f,
-                    "{}",
-                    user_actions
-                        .iter()
-                        .map(|a| format!("{:?}", a))
-                        .collect::<Vec<String>>()
-                        .join(", ")
-                )
-            }
-            OneOrManyActions::Repeat(n, user_action) => write!(f, "{n}×{:?}", user_action),
-        }
+        let s = match self {
+            OneOrManyActions::One(user_action) => user_action.name(),
+            OneOrManyActions::Many(user_actions) => user_actions
+                .iter()
+                .map(UserAction::name)
+                .collect::<Vec<String>>()
+                .join(", "),
+            OneOrManyActions::Repeat(n, user_action) => format!("{n}×{}", user_action.name()),
+        };
+        write!(f, "{}", s)
     }
 }
 
@@ -419,4 +414,54 @@ pub fn key_event_to_string(key_event: &KeyEvent) -> String {
     }
 
     key
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_empty_keyevent() {
+        assert!(parse_key_event("").is_err());
+    }
+
+    #[test]
+    fn test_empty_key_sequence() {
+        assert_eq!(parse_key_sequence("").unwrap(), vec![]);
+    }
+
+    #[test]
+    fn test_single_key_sequence() {
+        assert_eq!(
+            parse_key_sequence("x").unwrap(),
+            vec![KeyEvent::new(KeyCode::Char('x'), KeyModifiers::NONE)]
+        );
+    }
+
+    #[test]
+    fn test_single_key_sequence_modifier() {
+        assert_eq!(
+            parse_key_sequence("<Ctrl-x>").unwrap(),
+            vec![KeyEvent::new(KeyCode::Char('x'), KeyModifiers::CONTROL)]
+        );
+    }
+
+    #[test]
+    fn test_multiple_key_sequence_modifier() {
+        assert!(parse_key_sequence("<Ctrl-xyz>").is_err());
+    }
+
+    #[test]
+    fn test_complex_key_sequence() {
+        assert_eq!(
+            parse_key_sequence("<Ctrl-x>abc<Shift-y>").unwrap(),
+            vec![
+                KeyEvent::new(KeyCode::Char('x'), KeyModifiers::CONTROL),
+                KeyEvent::new(KeyCode::Char('a'), KeyModifiers::NONE),
+                KeyEvent::new(KeyCode::Char('b'), KeyModifiers::NONE),
+                KeyEvent::new(KeyCode::Char('c'), KeyModifiers::NONE),
+                KeyEvent::new(KeyCode::Char('Y'), KeyModifiers::SHIFT)
+            ]
+        );
+    }
 }

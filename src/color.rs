@@ -1,6 +1,6 @@
 use ratatui::style::Color;
 
-fn to_rgb(color: Color) -> Color {
+pub const fn to_rgb(color: Color) -> Color {
     match color {
         Color::Reset => Color::Reset,
         Color::Black => Color::Rgb(0, 0, 0),

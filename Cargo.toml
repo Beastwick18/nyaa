@@ -72,8 +72,8 @@ enum-assoc = "1.2.4"
 [features]
 captcha = ["dep:ratatui-image", "dep:image"]
 
-[cargo-features-manager.keep]
-image = ["png"]
+# [cargo-features-manager.keep]
+# image = ["png"]
 
 [target.'cfg(not(windows))'.dependencies]
 signal-hook = "0.3.17"
@@ -111,3 +111,6 @@ assets = [
 assets = [
   { source = "target/release/nyaa", dest = "/usr/bin/nyaa", mode = "755" },
 ]
+
+[package.metadata.packager]
+before-packaging-command = "cargo build --release"

@@ -30,7 +30,7 @@ impl ResultsComponent {
             results: None,
             table_state: TableState::default(),
             current_keycombo: String::new(),
-            current_keycombo_color: Color::White,
+            current_keycombo_color: Color::Rgb(255, 255, 255),
         }
     }
 }

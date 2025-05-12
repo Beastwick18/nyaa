@@ -1,4 +1,3 @@
-use rand::{random, rngs::SmallRng, Rng as _, SeedableRng as _};
 use ratatui::{
     buffer::Buffer,
     layout::{Position, Rect},
@@ -10,24 +9,19 @@ use super::{Animation, AnimationState};
 
 #[derive(Clone)]
 pub struct GrowthAnimation {
-    seed: SmallRng,
     growth: Growth,
     state: AnimationState,
 }
 
 impl GrowthAnimation {
     pub fn new(state: AnimationState, growth: Growth) -> Self {
-        Self {
-            seed: SmallRng::seed_from_u64(random()),
-            growth,
-            state,
-        }
+        Self { growth, state }
     }
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy)]
 pub enum Growth {
-    Random,
+    // Random,
     Circle,
     Center,
     Top,
@@ -42,14 +36,14 @@ impl Growth {
         area: Rect,
         pos: Position,
         state: AnimationState,
-        seed: &mut SmallRng,
+        // seed: &mut SmallRng,
     ) -> bool {
         match self {
-            Growth::Random => {
-                if seed.gen_bool(1.0 - state.get_smooth_time()) {
-                    return true;
-                }
-            }
+            // Growth::Random => {
+            //     if seed.random_bool(1.0 - state.get_smooth_time()) {
+            //         return true;
+            //     }
+            // }
             Growth::Circle => {
                 let cx = area.x as f64 + area.width as f64 / 2.0;
                 let cy = area.y as f64 + area.height as f64 / 2.0;
@@ -106,45 +100,9 @@ impl GrowthAnimation {
 }
 
 impl Animation for GrowthAnimation {
-    fn state(&self) -> AnimationState {
-        self.state
-    }
-
-    fn state_mut(&mut self) -> &mut AnimationState {
-        &mut self.state
-    }
-
     fn render_widget<W: Widget>(&self, widget: W, rect: Rect, buf: &mut Buffer) {
         if self.state.time <= 0.0 {
             return;
-        }
-
-        let area = rect.intersection(buf.area);
-        let mut other: Buffer = Buffer::empty(area);
-        widget.render(area, &mut other);
-
-        // Randomly merge more and more cells based on the animation time
-        if self.state.time < 1.0 {
-            let mut seed = self.seed.clone();
-            let size = other.area.area() as usize;
-            for i in 0..size {
-                let (x, y) = other.pos_of(i);
-
-                // Skip some cells
-                if self
-                    .growth
-                    .should_skip(other.area, (x, y).into(), self.state, &mut seed)
-                {
-                    continue;
-                }
-
-                // New index in content
-                let k = ((y.saturating_sub(buf.area.y)) * buf.area.width
-                    + x.saturating_sub(buf.area.x)) as usize;
-                buf.content[k] = other.content[i].clone();
-            }
-        } else {
-            buf.merge(&other);
         }
     }
 }

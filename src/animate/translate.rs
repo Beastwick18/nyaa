@@ -1,47 +1,24 @@
-use ratatui::{
-    buffer::Buffer,
-    layout::Rect,
-    widgets::{Clear, Widget},
-};
+use ratatui::{buffer::Buffer, layout::Rect, widgets::Widget};
 
-use super::{Animation, AnimationState, FloatRect};
+use super::{Animation, AnimationState, FloatRect, MaskedRenderer};
 
 #[derive(Copy, Clone)]
-pub struct Translate {
-    state: AnimationState,
-    start: Rect,
-    stop: Rect,
+pub struct Translate<'a> {
+    state: &'a AnimationState,
+    start: FloatRect,
+    stop: FloatRect,
 }
 
-impl Translate {
-    pub fn new(state: AnimationState) -> Self {
-        Self {
-            state,
-            start: Rect::default(),
-            stop: Rect::default(),
-        }
+impl<'a> Translate<'a> {
+    pub fn new(state: &'a AnimationState, start: FloatRect, stop: FloatRect) -> Self {
+        Self { state, start, stop }
     }
 }
 
-impl From<AnimationState> for Translate {
-    fn from(state: AnimationState) -> Self {
-        Self::new(state)
-    }
-}
-
-impl Translate {
-    pub fn start(mut self, start: Rect) -> Self {
-        self.start = start;
-        self
-    }
-
-    pub fn stop(mut self, stop: Rect) -> Self {
-        self.stop = stop;
-        self
-    }
-
-    pub fn then<'a>(&'a mut self, other: &'a mut Translate) -> &'a mut Translate {
-        if self.state.is_playing() {
+impl<'a> Translate<'a> {
+    /// Chain translations together
+    pub fn then(&'a self, other: &'a Translate<'a>) -> &'a Translate<'a> {
+        if !self.state.is_done() {
             self
         } else {
             other
@@ -68,7 +45,7 @@ impl Translate {
         }
     }
 
-    pub fn area(&self) -> Rect {
+    pub fn area(&self) -> FloatRect {
         let time = self.state.get_smooth_time();
 
         // If we've already reached the end and are going forwards, stop
@@ -81,25 +58,13 @@ impl Translate {
         }
         // Otherwise, translate
         else {
-            self.translate_rect(self.start.into(), self.stop.into())
-                .into()
+            self.translate_rect(self.start, self.stop)
         }
     }
 }
 
-impl Animation for Translate {
-    fn state(&self) -> AnimationState {
-        self.state
-    }
-
-    fn state_mut(&mut self) -> &mut AnimationState {
-        &mut self.state
-    }
-
-    fn render_widget<W: Widget>(&self, widget: W, area: Rect, buf: &mut Buffer) {
-        let rect = self.area().intersection(area);
-
-        Clear.render(rect, buf);
-        widget.render(rect, buf);
+impl Animation for Translate<'_> {
+    fn render_widget<W: Widget>(&self, widget: W, _area: Rect, buf: &mut Buffer) {
+        MaskedRenderer::render(widget, self.area(), None, buf);
     }
 }

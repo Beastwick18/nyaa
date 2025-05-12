@@ -8,11 +8,7 @@ use ratatui::{
 
 use crate::{
     action::AppAction,
-    animate::{
-        growth::{Growth, GrowthAnimation},
-        translate::Translate,
-        Animation, AnimationState, Direction, Smoothing,
-    },
+    animate::{translate::Translate, Animation, AnimationState, Direction, Smoothing},
     app::{Context, Mode},
     components,
     widgets::clear_overlap::ClearOverlap,
@@ -21,44 +17,42 @@ use crate::{
 use super::Component;
 
 pub struct DownloadClientComponent {
-    translate: Translate,
-    anim2: GrowthAnimation,
+    translate_state: AnimationState,
+    // grow_state: GrowthAnimation,
 }
 
 impl DownloadClientComponent {
-    pub fn new() -> Box<DownloadClientComponent> {
+    pub fn boxed() -> Box<dyn Component> {
         Box::new(Self {
-            translate: AnimationState::new(0.06)
+            translate_state: AnimationState::new(6.0)
                 .playing(true)
                 .backwards()
-                .smoothing(Smoothing::EaseInAndOut)
-                .into(),
-            anim2: GrowthAnimation::new(
-                AnimationState::new(0.04)
-                    .playing(true)
-                    .smoothing(Smoothing::EaseInAndOut)
-                    .backwards(),
-                Growth::Random,
-            ),
+                .smoothing(Smoothing::EaseInAndOut),
+            // grow_state: GrowthAnimation::new(
+            //     AnimationState::new(0.04)
+            //         .playing(true)
+            //         .smoothing(Smoothing::EaseInAndOut)
+            //         .backwards(),
+            //     Growth::Circle,
+            // ),
         })
     }
 }
 
 impl Component for DownloadClientComponent {
     fn update(&mut self, ctx: &Context, action: &AppAction) -> Result<Option<AppAction>> {
-        self.anim2.state_mut().set_direction(match ctx.mode {
-            Mode::DownloadClient => Direction::Forwards,
-            _ => Direction::Backwards,
-        });
+        if action == &AppAction::Render {
+            // self.grow_state.state_mut().set_direction(match ctx.mode {
+            //     Mode::DownloadClient => Direction::Forwards,
+            //     _ => Direction::Backwards,
+            // });
 
-        self.translate.state_mut().set_direction(match ctx.mode {
-            Mode::DownloadClient => Direction::Forwards,
-            _ => Direction::Backwards,
-        });
+            self.translate_state.set_direction(match ctx.mode {
+                Mode::DownloadClient => Direction::Forwards,
+                _ => Direction::Backwards,
+            });
 
-        if let AppAction::Tick = action {
-            self.anim2.state_mut().update();
-            self.translate.state_mut().update();
+            self.translate_state.update(ctx.render_delta_time);
         }
 
         Ok(None)
@@ -71,25 +65,17 @@ impl Component for DownloadClientComponent {
 
         ClearOverlap.render(center, frame.buffer_mut());
 
-        let bg = Block::new().bg(Color::Rgb(34, 36, 54));
-        let p = Paragraph::new("Testing :3. This is a really long paragraph. I don't know what I want to say, however I will continue typing.")
+        let bg = Block::new().bg(Color::Rgb(0, 36, 54));
+        let p = Paragraph::new("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.")
             .fg(Color::White)
             .block(bg)
-            .wrap(Wrap {trim: false});
-        self.anim2.render_widget(p, center, frame.buffer_mut());
-        // let anim = self
-        //     .translate
-        //     .start(center_bottom)
-        //     .stop(center)
-        //     .area()
-        //     .intersection(area);
-        // let inner = anim.inner(Margin {
-        //     horizontal: 1,
-        //     vertical: 1,
-        // });
-        // Clear.render(anim, frame.buffer_mut());
-        // bg.render(anim, frame.buffer_mut());
-        // p.render(inner, frame.buffer_mut());
+            .wrap(Wrap { trim: false });
+
+        Translate::new(&self.translate_state, center_bottom.into(), center.into()).render_widget(
+            p,
+            area,
+            frame.buffer_mut(),
+        );
 
         Ok(())
     }

@@ -1,11 +1,10 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, time::Instant};
 
 use color_eyre::Result;
-use crossterm::event::{KeyCode, KeyEvent};
+use crossterm::event::KeyEvent;
 use serde::Deserialize;
 use strum::Display;
 use tokio::sync::mpsc;
-use tracing::debug;
 
 use crate::{
     action::{AppAction, TaskAction, UserAction},
@@ -23,11 +22,11 @@ pub struct Context {
     pub mode: Mode,
     pub input_mode: InputMode,
     pub keycombo: KeyCombo,
-    // pub keycombo_multiplier: Option<u8>,
     pub source: Source,
     pub source_box: Box<dyn SourceTask>,
     pub last_keycombo: Option<KeyCombo>,
     pub results: Option<ResultTable>,
+    pub render_delta_time: f64,
 }
 
 impl Context {
@@ -41,6 +40,7 @@ impl Context {
             source_box: Box::new(NyaaSource),
             last_keycombo: None,
             results: None,
+            render_delta_time: 0.016,
         })
     }
 }
@@ -77,6 +77,8 @@ pub struct App {
     action_tx: mpsc::UnboundedSender<AppAction>,
     action_rx: mpsc::UnboundedReceiver<AppAction>,
     components: Vec<Box<dyn Component>>,
+    last_render_time: Instant,
+    last_update_time: Instant,
 }
 
 impl App {
@@ -93,6 +95,8 @@ impl App {
             action_tx,
             action_rx,
             components: vec![HomeComponent::new(), PopupsComponent::new()],
+            last_render_time: Instant::now(),
+            last_update_time: Instant::now(),
         })
     }
 
@@ -198,10 +202,6 @@ impl App {
 
     fn handle_actions(&mut self, tui: &mut Tui) -> Result<()> {
         while let Ok(action) = self.action_rx.try_recv() {
-            if action != AppAction::Tick && action != AppAction::Render {
-                // Special action
-                debug!("{action:?}");
-            }
             match &action {
                 AppAction::UserAction(u) => match u {
                     UserAction::Quit => self.should_quit = true,
@@ -211,7 +211,12 @@ impl App {
                 },
                 AppAction::Search(query) => self.search(query.clone()),
                 AppAction::Resume => self.should_suspend = false,
-                AppAction::Render => self.render(tui)?,
+                AppAction::Render => {
+                    let elapsed = self.last_render_time.elapsed().as_secs_f64();
+                    self.ctx.render_delta_time = elapsed;
+                    self.last_render_time = Instant::now();
+                    self.render(tui)?
+                }
                 AppAction::ClearScreen => tui.clear()?,
                 _ => {}
             }

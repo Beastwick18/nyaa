@@ -9,9 +9,7 @@ use ratatui::{
 
 use crate::{
     action::{AppAction, UserAction},
-    animate::{AnimationState, Direction, Smoothing},
-    app::{Context, Mode},
-    widgets::dim::Dim,
+    app::Context,
 };
 
 use super::{
@@ -23,7 +21,6 @@ pub struct HomeComponent {
     search: SearchComponent,
     results: ResultsComponent,
     actions_temp: ActionsComponent,
-    dim_state: AnimationState,
 }
 
 impl HomeComponent {
@@ -33,10 +30,6 @@ impl HomeComponent {
             search: SearchComponent::new(),
             results: ResultsComponent::new(),
             actions_temp: ActionsComponent::new(),
-            dim_state: AnimationState::new(0.04)
-                .playing(true)
-                .smoothing(Smoothing::EaseInAndOut)
-                .backwards(),
         })
     }
 }
@@ -46,13 +39,6 @@ impl Component for HomeComponent {
         self.results.update(ctx, action)?;
         self.actions_temp.update(ctx, action)?;
 
-        self.dim_state.set_direction(match ctx.mode {
-            Mode::Home => Direction::Backwards,
-            _ => Direction::Forwards,
-        });
-        if let AppAction::Tick = action {
-            self.dim_state.update();
-        }
         if let AppAction::UserAction(UserAction::Submit) = action {
             return Ok(Some(AppAction::Search("queriees".to_string())));
         }
@@ -77,10 +63,6 @@ impl Component for HomeComponent {
         self.search.render(ctx, frame, vlayout[0])?;
         self.results.render(ctx, frame, hlayout[0])?;
         self.actions_temp.render(ctx, frame, hlayout[1])?;
-
-        Dim::new(0.5)
-            .animated(self.dim_state)
-            .render(area, frame.buffer_mut());
 
         Ok(())
     }
