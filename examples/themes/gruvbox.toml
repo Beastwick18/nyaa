@@ -1,3 +1,5 @@
+#:schema ../../theme.schema.json
+
 name = "Gruvbox"
 bg = "#282828"
 fg = "#ebdbb2"

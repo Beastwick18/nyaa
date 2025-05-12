@@ -1,0 +1,10 @@
+#:schema ../config.schema.json
+
+theme = "Default"                # the theme to use by default
+default_source = "Nyaa"          # the source to use by default
+download_client = "qBittorrent"  # the download client to use by default
+date_format = "%Y-%m-%d %H:%M"   # date format for results (unset by default)
+request_proxy = "localhost:8118" # request proxy for sending requests through (unset by default)
+timeout = 30                     # request timeout for sources and clients (measured in seconds)
+scroll_padding = 6               # scroll padding for results table
+save_config_on_change = true     # save config when changing sources/themes

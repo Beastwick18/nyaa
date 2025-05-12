@@ -1,0 +1,2178 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "cli",
+    "description": "Schema for defining custom themes for the Nyaa TUI.",
+    "type": "object",
+    "properties": {
+        "name": {
+            "type": "string",
+            "description": "Name of the custom theme."
+        },
+        "bg": {
+            "type": "string",
+            "description": "Background color. Can be 'Reset' or a color value.",
+            "default": "Reset"
+        },
+        "fg": {
+            "type": "string",
+            "description": "Foreground color. Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+            "default": "White",
+            "oneOf": [
+                {
+                    "enum": [
+                        "Red",
+                        "Green",
+                        "Yellow",
+                        "Blue",
+                        "Magenta",
+                        "Cyan",
+                        "White",
+                        "LightBlack",
+                        "LightRed",
+                        "LightGreen",
+                        "LightYellow",
+                        "LightBlue",
+                        "LightMagenta",
+                        "LightCyan",
+                        "LightWhite"
+                    ]
+                },
+                {
+                    "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                }
+            ]
+        },
+        "border": {
+            "type": "string",
+            "description": "Border style. Can be 'None', 'Normal', 'Rounded', or 'Thick'.",
+            "default": "Rounded",
+            "enum": [
+                "Plain",
+                "Rounded",
+                "Double",
+                "Thick",
+                "QuadrantInside",
+                "QuadrantOutside"
+            ]
+        },
+        "border_color": {
+            "type": "string",
+            "description": "Border color. Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+            "default": "White",
+            "oneOf": [
+                {
+                    "enum": [
+                        "Red",
+                        "Green",
+                        "Yellow",
+                        "Blue",
+                        "Magenta",
+                        "Cyan",
+                        "White",
+                        "LightBlack",
+                        "LightRed",
+                        "LightGreen",
+                        "LightYellow",
+                        "LightBlue",
+                        "LightMagenta",
+                        "LightCyan",
+                        "LightWhite"
+                    ]
+                },
+                {
+                    "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                }
+            ]
+        },
+        "border_focused_color": {
+            "type": "string",
+            "description": "Border color when the element is focused. Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+            "default": "LightCyan",
+            "oneOf": [
+                {
+                    "enum": [
+                        "Red",
+                        "Green",
+                        "Yellow",
+                        "Blue",
+                        "Magenta",
+                        "Cyan",
+                        "White",
+                        "LightBlack",
+                        "LightRed",
+                        "LightGreen",
+                        "LightYellow",
+                        "LightBlue",
+                        "LightMagenta",
+                        "LightCyan",
+                        "LightWhite"
+                    ]
+                },
+                {
+                    "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                }
+            ]
+        },
+        "hl_bg": {
+            "type": "string",
+            "description": "Highlight background color (e.g., for selected items).",
+            "default": "#0f0f0f",
+            "oneOf": [
+                {
+                    "enum": [
+                        "Red",
+                        "Green",
+                        "Yellow",
+                        "Blue",
+                        "Magenta",
+                        "Cyan",
+                        "White",
+                        "LightBlack",
+                        "LightRed",
+                        "LightGreen",
+                        "LightYellow",
+                        "LightBlue",
+                        "LightMagenta",
+                        "LightCyan",
+                        "LightWhite"
+                    ]
+                },
+                {
+                    "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                }
+            ]
+        },
+        "solid_bg": {
+            "type": "string",
+            "description": "Solid background color. Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+            "default": "White",
+            "oneOf": [
+                {
+                    "enum": [
+                        "Red",
+                        "Green",
+                        "Yellow",
+                        "Blue",
+                        "Magenta",
+                        "Cyan",
+                        "White",
+                        "LightBlack",
+                        "LightRed",
+                        "LightGreen",
+                        "LightYellow",
+                        "LightBlue",
+                        "LightMagenta",
+                        "LightCyan",
+                        "LightWhite"
+                    ]
+                },
+                {
+                    "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                }
+            ]
+        },
+        "solid_fg": {
+            "type": "string",
+            "description": "Solid foreground color. Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+            "default": "Black",
+            "oneOf": [
+                {
+                    "enum": [
+                        "Red",
+                        "Green",
+                        "Yellow",
+                        "Blue",
+                        "Magenta",
+                        "Cyan",
+                        "White",
+                        "LightBlack",
+                        "LightRed",
+                        "LightGreen",
+                        "LightYellow",
+                        "LightBlue",
+                        "LightMagenta",
+                        "LightCyan",
+                        "LightWhite"
+                    ]
+                },
+                {
+                    "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                }
+            ]
+        },
+        "success": {
+            "type": "string",
+            "description": "Color for success messages. Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+            "default": "Green",
+            "oneOf": [
+                {
+                    "enum": [
+                        "Red",
+                        "Green",
+                        "Yellow",
+                        "Blue",
+                        "Magenta",
+                        "Cyan",
+                        "White",
+                        "LightBlack",
+                        "LightRed",
+                        "LightGreen",
+                        "LightYellow",
+                        "LightBlue",
+                        "LightMagenta",
+                        "LightCyan",
+                        "LightWhite"
+                    ]
+                },
+                {
+                    "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                }
+            ]
+        },
+        "error": {
+            "type": "string",
+            "description": "Color for error messages. Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+            "default": "#ff0000",
+            "oneOf": [
+                {
+                    "enum": [
+                        "Red",
+                        "Green",
+                        "Yellow",
+                        "Blue",
+                        "Magenta",
+                        "Cyan",
+                        "White",
+                        "LightBlack",
+                        "LightRed",
+                        "LightGreen",
+                        "LightYellow",
+                        "LightBlue",
+                        "LightMagenta",
+                        "LightCyan",
+                        "LightWhite"
+                    ]
+                },
+                {
+                    "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                }
+            ]
+        },
+        "info": {
+            "type": "string",
+            "description": "Color for info messages. Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+            "default": "Green",
+            "oneOf": [
+                {
+                    "enum": [
+                        "Red",
+                        "Green",
+                        "Yellow",
+                        "Blue",
+                        "Magenta",
+                        "Cyan",
+                        "White",
+                        "LightBlack",
+                        "LightRed",
+                        "LightGreen",
+                        "LightYellow",
+                        "LightBlue",
+                        "LightMagenta",
+                        "LightCyan",
+                        "LightWhite"
+                    ]
+                },
+                {
+                    "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                }
+            ]
+        },
+        "warning": {
+            "type": "string",
+            "description": "Color for warning messages. Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+            "default": "Yellow",
+            "oneOf": [
+                {
+                    "enum": [
+                        "Red",
+                        "Green",
+                        "Yellow",
+                        "Blue",
+                        "Magenta",
+                        "Cyan",
+                        "White",
+                        "LightBlack",
+                        "LightRed",
+                        "LightGreen",
+                        "LightYellow",
+                        "LightBlue",
+                        "LightMagenta",
+                        "LightCyan",
+                        "LightWhite"
+                    ]
+                },
+                {
+                    "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                }
+            ]
+        },
+        "remake": {
+            "type": "string",
+            "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+            "default": "Yellow",
+            "oneOf": [
+                {
+                    "enum": [
+                        "Red",
+                        "Green",
+                        "Yellow",
+                        "Blue",
+                        "Magenta",
+                        "Cyan",
+                        "White",
+                        "LightBlack",
+                        "LightRed",
+                        "LightGreen",
+                        "LightYellow",
+                        "LightBlue",
+                        "LightMagenta",
+                        "LightCyan",
+                        "LightWhite"
+                    ]
+                },
+                {
+                    "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                }
+            ]
+        },
+        "trusted": {
+            "type": "string",
+            "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+            "default": "Yellow",
+            "oneOf": [
+                {
+                    "enum": [
+                        "Red",
+                        "Green",
+                        "Yellow",
+                        "Blue",
+                        "Magenta",
+                        "Cyan",
+                        "White",
+                        "LightBlack",
+                        "LightRed",
+                        "LightGreen",
+                        "LightYellow",
+                        "LightBlue",
+                        "LightMagenta",
+                        "LightCyan",
+                        "LightWhite"
+                    ]
+                },
+                {
+                    "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                }
+            ]
+        },
+        "source": {
+            "type": "object",
+            "properties": {
+                "nyaa": {
+                    "type": "object",
+                    "properties": {
+                        "categories": {
+                            "type": "object",
+                            "properties": {
+                                "anime_english_translated": {
+                                    "type": "string",
+                                    "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                    "default": "Yellow",
+                                    "oneOf": [
+                                        {
+                                            "enum": [
+                                                "Red",
+                                                "Green",
+                                                "Yellow",
+                                                "Blue",
+                                                "Magenta",
+                                                "Cyan",
+                                                "White",
+                                                "LightBlack",
+                                                "LightRed",
+                                                "LightGreen",
+                                                "LightYellow",
+                                                "LightBlue",
+                                                "LightMagenta",
+                                                "LightCyan",
+                                                "LightWhite"
+                                            ]
+                                        },
+                                        {
+                                            "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                        }
+                                    ]
+                                },
+                                "anime_non_english_translated": {
+                                    "type": "string",
+                                    "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                    "default": "Yellow",
+                                    "oneOf": [
+                                        {
+                                            "enum": [
+                                                "Red",
+                                                "Green",
+                                                "Yellow",
+                                                "Blue",
+                                                "Magenta",
+                                                "Cyan",
+                                                "White",
+                                                "LightBlack",
+                                                "LightRed",
+                                                "LightGreen",
+                                                "LightYellow",
+                                                "LightBlue",
+                                                "LightMagenta",
+                                                "LightCyan",
+                                                "LightWhite"
+                                            ]
+                                        },
+                                        {
+                                            "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                        }
+                                    ]
+                                },
+                                "anime_raw": {
+                                    "type": "string",
+                                    "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                    "default": "Yellow",
+                                    "oneOf": [
+                                        {
+                                            "enum": [
+                                                "Red",
+                                                "Green",
+                                                "Yellow",
+                                                "Blue",
+                                                "Magenta",
+                                                "Cyan",
+                                                "White",
+                                                "LightBlack",
+                                                "LightRed",
+                                                "LightGreen",
+                                                "LightYellow",
+                                                "LightBlue",
+                                                "LightMagenta",
+                                                "LightCyan",
+                                                "LightWhite"
+                                            ]
+                                        },
+                                        {
+                                            "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                        }
+                                    ]
+                                },
+                                "anime_music_video": {
+                                    "type": "string",
+                                    "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                    "default": "Yellow",
+                                    "oneOf": [
+                                        {
+                                            "enum": [
+                                                "Red",
+                                                "Green",
+                                                "Yellow",
+                                                "Blue",
+                                                "Magenta",
+                                                "Cyan",
+                                                "White",
+                                                "LightBlack",
+                                                "LightRed",
+                                                "LightGreen",
+                                                "LightYellow",
+                                                "LightBlue",
+                                                "LightMagenta",
+                                                "LightCyan",
+                                                "LightWhite"
+                                            ]
+                                        },
+                                        {
+                                            "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                        }
+                                    ]
+                                },
+                                "audio_lossless": {
+                                    "type": "string",
+                                    "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                    "default": "Yellow",
+                                    "oneOf": [
+                                        {
+                                            "enum": [
+                                                "Red",
+                                                "Green",
+                                                "Yellow",
+                                                "Blue",
+                                                "Magenta",
+                                                "Cyan",
+                                                "White",
+                                                "LightBlack",
+                                                "LightRed",
+                                                "LightGreen",
+                                                "LightYellow",
+                                                "LightBlue",
+                                                "LightMagenta",
+                                                "LightCyan",
+                                                "LightWhite"
+                                            ]
+                                        },
+                                        {
+                                            "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                        }
+                                    ]
+                                },
+                                "audio_lossy": {
+                                    "type": "string",
+                                    "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                    "default": "Yellow",
+                                    "oneOf": [
+                                        {
+                                            "enum": [
+                                                "Red",
+                                                "Green",
+                                                "Yellow",
+                                                "Blue",
+                                                "Magenta",
+                                                "Cyan",
+                                                "White",
+                                                "LightBlack",
+                                                "LightRed",
+                                                "LightGreen",
+                                                "LightYellow",
+                                                "LightBlue",
+                                                "LightMagenta",
+                                                "LightCyan",
+                                                "LightWhite"
+                                            ]
+                                        },
+                                        {
+                                            "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                        }
+                                    ]
+                                },
+                                "literature_english_translated": {
+                                    "type": "string",
+                                    "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                    "default": "Yellow",
+                                    "oneOf": [
+                                        {
+                                            "enum": [
+                                                "Red",
+                                                "Green",
+                                                "Yellow",
+                                                "Blue",
+                                                "Magenta",
+                                                "Cyan",
+                                                "White",
+                                                "LightBlack",
+                                                "LightRed",
+                                                "LightGreen",
+                                                "LightYellow",
+                                                "LightBlue",
+                                                "LightMagenta",
+                                                "LightCyan",
+                                                "LightWhite"
+                                            ]
+                                        },
+                                        {
+                                            "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                        }
+                                    ]
+                                },
+                                "literature_non_english_translated": {
+                                    "type": "string",
+                                    "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                    "default": "Yellow",
+                                    "oneOf": [
+                                        {
+                                            "enum": [
+                                                "Red",
+                                                "Green",
+                                                "Yellow",
+                                                "Blue",
+                                                "Magenta",
+                                                "Cyan",
+                                                "White",
+                                                "LightBlack",
+                                                "LightRed",
+                                                "LightGreen",
+                                                "LightYellow",
+                                                "LightBlue",
+                                                "LightMagenta",
+                                                "LightCyan",
+                                                "LightWhite"
+                                            ]
+                                        },
+                                        {
+                                            "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                        }
+                                    ]
+                                },
+                                "literature_raw": {
+                                    "type": "string",
+                                    "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                    "default": "Yellow",
+                                    "oneOf": [
+                                        {
+                                            "enum": [
+                                                "Red",
+                                                "Green",
+                                                "Yellow",
+                                                "Blue",
+                                                "Magenta",
+                                                "Cyan",
+                                                "White",
+                                                "LightBlack",
+                                                "LightRed",
+                                                "LightGreen",
+                                                "LightYellow",
+                                                "LightBlue",
+                                                "LightMagenta",
+                                                "LightCyan",
+                                                "LightWhite"
+                                            ]
+                                        },
+                                        {
+                                            "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                        }
+                                    ]
+                                },
+                                "live_english_translated": {
+                                    "type": "string",
+                                    "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                    "default": "Yellow",
+                                    "oneOf": [
+                                        {
+                                            "enum": [
+                                                "Red",
+                                                "Green",
+                                                "Yellow",
+                                                "Blue",
+                                                "Magenta",
+                                                "Cyan",
+                                                "White",
+                                                "LightBlack",
+                                                "LightRed",
+                                                "LightGreen",
+                                                "LightYellow",
+                                                "LightBlue",
+                                                "LightMagenta",
+                                                "LightCyan",
+                                                "LightWhite"
+                                            ]
+                                        },
+                                        {
+                                            "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                        }
+                                    ]
+                                },
+                                "live_non_english_translated": {
+                                    "type": "string",
+                                    "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                    "default": "Yellow",
+                                    "oneOf": [
+                                        {
+                                            "enum": [
+                                                "Red",
+                                                "Green",
+                                                "Yellow",
+                                                "Blue",
+                                                "Magenta",
+                                                "Cyan",
+                                                "White",
+                                                "LightBlack",
+                                                "LightRed",
+                                                "LightGreen",
+                                                "LightYellow",
+                                                "LightBlue",
+                                                "LightMagenta",
+                                                "LightCyan",
+                                                "LightWhite"
+                                            ]
+                                        },
+                                        {
+                                            "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                        }
+                                    ]
+                                },
+                                "live_idol_promo_video": {
+                                    "type": "string",
+                                    "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                    "default": "Yellow",
+                                    "oneOf": [
+                                        {
+                                            "enum": [
+                                                "Red",
+                                                "Green",
+                                                "Yellow",
+                                                "Blue",
+                                                "Magenta",
+                                                "Cyan",
+                                                "White",
+                                                "LightBlack",
+                                                "LightRed",
+                                                "LightGreen",
+                                                "LightYellow",
+                                                "LightBlue",
+                                                "LightMagenta",
+                                                "LightCyan",
+                                                "LightWhite"
+                                            ]
+                                        },
+                                        {
+                                            "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                        }
+                                    ]
+                                },
+                                "live_raw": {
+                                    "type": "string",
+                                    "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                    "default": "Yellow",
+                                    "oneOf": [
+                                        {
+                                            "enum": [
+                                                "Red",
+                                                "Green",
+                                                "Yellow",
+                                                "Blue",
+                                                "Magenta",
+                                                "Cyan",
+                                                "White",
+                                                "LightBlack",
+                                                "LightRed",
+                                                "LightGreen",
+                                                "LightYellow",
+                                                "LightBlue",
+                                                "LightMagenta",
+                                                "LightCyan",
+                                                "LightWhite"
+                                            ]
+                                        },
+                                        {
+                                            "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                        }
+                                    ]
+                                },
+                                "picture_graphics": {
+                                    "type": "string",
+                                    "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                    "default": "Yellow",
+                                    "oneOf": [
+                                        {
+                                            "enum": [
+                                                "Red",
+                                                "Green",
+                                                "Yellow",
+                                                "Blue",
+                                                "Magenta",
+                                                "Cyan",
+                                                "White",
+                                                "LightBlack",
+                                                "LightRed",
+                                                "LightGreen",
+                                                "LightYellow",
+                                                "LightBlue",
+                                                "LightMagenta",
+                                                "LightCyan",
+                                                "LightWhite"
+                                            ]
+                                        },
+                                        {
+                                            "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                        }
+                                    ]
+                                },
+                                "picture_photos": {
+                                    "type": "string",
+                                    "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                    "default": "Yellow",
+                                    "oneOf": [
+                                        {
+                                            "enum": [
+                                                "Red",
+                                                "Green",
+                                                "Yellow",
+                                                "Blue",
+                                                "Magenta",
+                                                "Cyan",
+                                                "White",
+                                                "LightBlack",
+                                                "LightRed",
+                                                "LightGreen",
+                                                "LightYellow",
+                                                "LightBlue",
+                                                "LightMagenta",
+                                                "LightCyan",
+                                                "LightWhite"
+                                            ]
+                                        },
+                                        {
+                                            "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                        }
+                                    ]
+                                },
+                                "software_applications": {
+                                    "type": "string",
+                                    "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                    "default": "Yellow",
+                                    "oneOf": [
+                                        {
+                                            "enum": [
+                                                "Red",
+                                                "Green",
+                                                "Yellow",
+                                                "Blue",
+                                                "Magenta",
+                                                "Cyan",
+                                                "White",
+                                                "LightBlack",
+                                                "LightRed",
+                                                "LightGreen",
+                                                "LightYellow",
+                                                "LightBlue",
+                                                "LightMagenta",
+                                                "LightCyan",
+                                                "LightWhite"
+                                            ]
+                                        },
+                                        {
+                                            "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                        }
+                                    ]
+                                },
+                                "software_games": {
+                                    "type": "string",
+                                    "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                    "default": "Yellow",
+                                    "oneOf": [
+                                        {
+                                            "enum": [
+                                                "Red",
+                                                "Green",
+                                                "Yellow",
+                                                "Blue",
+                                                "Magenta",
+                                                "Cyan",
+                                                "White",
+                                                "LightBlack",
+                                                "LightRed",
+                                                "LightGreen",
+                                                "LightYellow",
+                                                "LightBlue",
+                                                "LightMagenta",
+                                                "LightCyan",
+                                                "LightWhite"
+                                            ]
+                                        },
+                                        {
+                                            "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                },
+                "torrentgalaxy": {
+                    "type": "object",
+                    "properties": {
+                        "properties": {
+                            "all_categories": {
+                                "type": "string",
+                                "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                "default": "Yellow",
+                                "oneOf": [
+                                    {
+                                        "enum": [
+                                            "Red",
+                                            "Green",
+                                            "Yellow",
+                                            "Blue",
+                                            "Magenta",
+                                            "Cyan",
+                                            "White",
+                                            "LightBlack",
+                                            "LightRed",
+                                            "LightGreen",
+                                            "LightYellow",
+                                            "LightBlue",
+                                            "LightMagenta",
+                                            "LightCyan",
+                                            "LightWhite"
+                                        ]
+                                    },
+                                    {
+                                        "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                    }
+                                ]
+                            },
+                            "movies_4k": {
+                                "type": "string",
+                                "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                "default": "Yellow",
+                                "oneOf": [
+                                    {
+                                        "enum": [
+                                            "Red",
+                                            "Green",
+                                            "Yellow",
+                                            "Blue",
+                                            "Magenta",
+                                            "Cyan",
+                                            "White",
+                                            "LightBlack",
+                                            "LightRed",
+                                            "LightGreen",
+                                            "LightYellow",
+                                            "LightBlue",
+                                            "LightMagenta",
+                                            "LightCyan",
+                                            "LightWhite"
+                                        ]
+                                    },
+                                    {
+                                        "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                    }
+                                ]
+                            },
+                            "movies_bollywood": {
+                                "type": "string",
+                                "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                "default": "Yellow",
+                                "oneOf": [
+                                    {
+                                        "enum": [
+                                            "Red",
+                                            "Green",
+                                            "Yellow",
+                                            "Blue",
+                                            "Magenta",
+                                            "Cyan",
+                                            "White",
+                                            "LightBlack",
+                                            "LightRed",
+                                            "LightGreen",
+                                            "LightYellow",
+                                            "LightBlue",
+                                            "LightMagenta",
+                                            "LightCyan",
+                                            "LightWhite"
+                                        ]
+                                    },
+                                    {
+                                        "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                    }
+                                ]
+                            },
+                            "movies_cam": {
+                                "type": "string",
+                                "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                "default": "Yellow",
+                                "oneOf": [
+                                    {
+                                        "enum": [
+                                            "Red",
+                                            "Green",
+                                            "Yellow",
+                                            "Blue",
+                                            "Magenta",
+                                            "Cyan",
+                                            "White",
+                                            "LightBlack",
+                                            "LightRed",
+                                            "LightGreen",
+                                            "LightYellow",
+                                            "LightBlue",
+                                            "LightMagenta",
+                                            "LightCyan",
+                                            "LightWhite"
+                                        ]
+                                    },
+                                    {
+                                        "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                    }
+                                ]
+                            },
+                            "movies_hd": {
+                                "type": "string",
+                                "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                "default": "Yellow",
+                                "oneOf": [
+                                    {
+                                        "enum": [
+                                            "Red",
+                                            "Green",
+                                            "Yellow",
+                                            "Blue",
+                                            "Magenta",
+                                            "Cyan",
+                                            "White",
+                                            "LightBlack",
+                                            "LightRed",
+                                            "LightGreen",
+                                            "LightYellow",
+                                            "LightBlue",
+                                            "LightMagenta",
+                                            "LightCyan",
+                                            "LightWhite"
+                                        ]
+                                    },
+                                    {
+                                        "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                    }
+                                ]
+                            },
+                            "movies_pack": {
+                                "type": "string",
+                                "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                "default": "Yellow",
+                                "oneOf": [
+                                    {
+                                        "enum": [
+                                            "Red",
+                                            "Green",
+                                            "Yellow",
+                                            "Blue",
+                                            "Magenta",
+                                            "Cyan",
+                                            "White",
+                                            "LightBlack",
+                                            "LightRed",
+                                            "LightGreen",
+                                            "LightYellow",
+                                            "LightBlue",
+                                            "LightMagenta",
+                                            "LightCyan",
+                                            "LightWhite"
+                                        ]
+                                    },
+                                    {
+                                        "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                    }
+                                ]
+                            },
+                            "movies_sd": {
+                                "type": "string",
+                                "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                "default": "Yellow",
+                                "oneOf": [
+                                    {
+                                        "enum": [
+                                            "Red",
+                                            "Green",
+                                            "Yellow",
+                                            "Blue",
+                                            "Magenta",
+                                            "Cyan",
+                                            "White",
+                                            "LightBlack",
+                                            "LightRed",
+                                            "LightGreen",
+                                            "LightYellow",
+                                            "LightBlue",
+                                            "LightMagenta",
+                                            "LightCyan",
+                                            "LightWhite"
+                                        ]
+                                    },
+                                    {
+                                        "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                    }
+                                ]
+                            },
+                            "tv_hd": {
+                                "type": "string",
+                                "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                "default": "Yellow",
+                                "oneOf": [
+                                    {
+                                        "enum": [
+                                            "Red",
+                                            "Green",
+                                            "Yellow",
+                                            "Blue",
+                                            "Magenta",
+                                            "Cyan",
+                                            "White",
+                                            "LightBlack",
+                                            "LightRed",
+                                            "LightGreen",
+                                            "LightYellow",
+                                            "LightBlue",
+                                            "LightMagenta",
+                                            "LightCyan",
+                                            "LightWhite"
+                                        ]
+                                    },
+                                    {
+                                        "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                    }
+                                ]
+                            },
+                            "tv_sd": {
+                                "type": "string",
+                                "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                "default": "Yellow",
+                                "oneOf": [
+                                    {
+                                        "enum": [
+                                            "Red",
+                                            "Green",
+                                            "Yellow",
+                                            "Blue",
+                                            "Magenta",
+                                            "Cyan",
+                                            "White",
+                                            "LightBlack",
+                                            "LightRed",
+                                            "LightGreen",
+                                            "LightYellow",
+                                            "LightBlue",
+                                            "LightMagenta",
+                                            "LightCyan",
+                                            "LightWhite"
+                                        ]
+                                    },
+                                    {
+                                        "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                    }
+                                ]
+                            },
+                            "tv_4k": {
+                                "type": "string",
+                                "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                "default": "Yellow",
+                                "oneOf": [
+                                    {
+                                        "enum": [
+                                            "Red",
+                                            "Green",
+                                            "Yellow",
+                                            "Blue",
+                                            "Magenta",
+                                            "Cyan",
+                                            "White",
+                                            "LightBlack",
+                                            "LightRed",
+                                            "LightGreen",
+                                            "LightYellow",
+                                            "LightBlue",
+                                            "LightMagenta",
+                                            "LightCyan",
+                                            "LightWhite"
+                                        ]
+                                    },
+                                    {
+                                        "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                    }
+                                ]
+                            },
+                            "tv_pack": {
+                                "type": "string",
+                                "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                "default": "Yellow",
+                                "oneOf": [
+                                    {
+                                        "enum": [
+                                            "Red",
+                                            "Green",
+                                            "Yellow",
+                                            "Blue",
+                                            "Magenta",
+                                            "Cyan",
+                                            "White",
+                                            "LightBlack",
+                                            "LightRed",
+                                            "LightGreen",
+                                            "LightYellow",
+                                            "LightBlue",
+                                            "LightMagenta",
+                                            "LightCyan",
+                                            "LightWhite"
+                                        ]
+                                    },
+                                    {
+                                        "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                    }
+                                ]
+                            },
+                            "tv_sports": {
+                                "type": "string",
+                                "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                "default": "Yellow",
+                                "oneOf": [
+                                    {
+                                        "enum": [
+                                            "Red",
+                                            "Green",
+                                            "Yellow",
+                                            "Blue",
+                                            "Magenta",
+                                            "Cyan",
+                                            "White",
+                                            "LightBlack",
+                                            "LightRed",
+                                            "LightGreen",
+                                            "LightYellow",
+                                            "LightBlue",
+                                            "LightMagenta",
+                                            "LightCyan",
+                                            "LightWhite"
+                                        ]
+                                    },
+                                    {
+                                        "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                    }
+                                ]
+                            },
+                            "anime": {
+                                "type": "string",
+                                "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                "default": "Yellow",
+                                "oneOf": [
+                                    {
+                                        "enum": [
+                                            "Red",
+                                            "Green",
+                                            "Yellow",
+                                            "Blue",
+                                            "Magenta",
+                                            "Cyan",
+                                            "White",
+                                            "LightBlack",
+                                            "LightRed",
+                                            "LightGreen",
+                                            "LightYellow",
+                                            "LightBlue",
+                                            "LightMagenta",
+                                            "LightCyan",
+                                            "LightWhite"
+                                        ]
+                                    },
+                                    {
+                                        "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                    }
+                                ]
+                            },
+                            "apps_mobile": {
+                                "type": "string",
+                                "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                "default": "Yellow",
+                                "oneOf": [
+                                    {
+                                        "enum": [
+                                            "Red",
+                                            "Green",
+                                            "Yellow",
+                                            "Blue",
+                                            "Magenta",
+                                            "Cyan",
+                                            "White",
+                                            "LightBlack",
+                                            "LightRed",
+                                            "LightGreen",
+                                            "LightYellow",
+                                            "LightBlue",
+                                            "LightMagenta",
+                                            "LightCyan",
+                                            "LightWhite"
+                                        ]
+                                    },
+                                    {
+                                        "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                    }
+                                ]
+                            },
+                            "apps_other": {
+                                "type": "string",
+                                "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                "default": "Yellow",
+                                "oneOf": [
+                                    {
+                                        "enum": [
+                                            "Red",
+                                            "Green",
+                                            "Yellow",
+                                            "Blue",
+                                            "Magenta",
+                                            "Cyan",
+                                            "White",
+                                            "LightBlack",
+                                            "LightRed",
+                                            "LightGreen",
+                                            "LightYellow",
+                                            "LightBlue",
+                                            "LightMagenta",
+                                            "LightCyan",
+                                            "LightWhite"
+                                        ]
+                                    },
+                                    {
+                                        "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                    }
+                                ]
+                            },
+                            "apps_windows": {
+                                "type": "string",
+                                "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                "default": "Yellow",
+                                "oneOf": [
+                                    {
+                                        "enum": [
+                                            "Red",
+                                            "Green",
+                                            "Yellow",
+                                            "Blue",
+                                            "Magenta",
+                                            "Cyan",
+                                            "White",
+                                            "LightBlack",
+                                            "LightRed",
+                                            "LightGreen",
+                                            "LightYellow",
+                                            "LightBlue",
+                                            "LightMagenta",
+                                            "LightCyan",
+                                            "LightWhite"
+                                        ]
+                                    },
+                                    {
+                                        "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                    }
+                                ]
+                            },
+                            "audiobooks": {
+                                "type": "string",
+                                "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                "default": "Yellow",
+                                "oneOf": [
+                                    {
+                                        "enum": [
+                                            "Red",
+                                            "Green",
+                                            "Yellow",
+                                            "Blue",
+                                            "Magenta",
+                                            "Cyan",
+                                            "White",
+                                            "LightBlack",
+                                            "LightRed",
+                                            "LightGreen",
+                                            "LightYellow",
+                                            "LightBlue",
+                                            "LightMagenta",
+                                            "LightCyan",
+                                            "LightWhite"
+                                        ]
+                                    },
+                                    {
+                                        "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                    }
+                                ]
+                            },
+                            "comics": {
+                                "type": "string",
+                                "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                "default": "Yellow",
+                                "oneOf": [
+                                    {
+                                        "enum": [
+                                            "Red",
+                                            "Green",
+                                            "Yellow",
+                                            "Blue",
+                                            "Magenta",
+                                            "Cyan",
+                                            "White",
+                                            "LightBlack",
+                                            "LightRed",
+                                            "LightGreen",
+                                            "LightYellow",
+                                            "LightBlue",
+                                            "LightMagenta",
+                                            "LightCyan",
+                                            "LightWhite"
+                                        ]
+                                    },
+                                    {
+                                        "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                    }
+                                ]
+                            },
+                            "ebooks": {
+                                "type": "string",
+                                "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                "default": "Yellow",
+                                "oneOf": [
+                                    {
+                                        "enum": [
+                                            "Red",
+                                            "Green",
+                                            "Yellow",
+                                            "Blue",
+                                            "Magenta",
+                                            "Cyan",
+                                            "White",
+                                            "LightBlack",
+                                            "LightRed",
+                                            "LightGreen",
+                                            "LightYellow",
+                                            "LightBlue",
+                                            "LightMagenta",
+                                            "LightCyan",
+                                            "LightWhite"
+                                        ]
+                                    },
+                                    {
+                                        "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                    }
+                                ]
+                            },
+                            "educational": {
+                                "type": "string",
+                                "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                "default": "Yellow",
+                                "oneOf": [
+                                    {
+                                        "enum": [
+                                            "Red",
+                                            "Green",
+                                            "Yellow",
+                                            "Blue",
+                                            "Magenta",
+                                            "Cyan",
+                                            "White",
+                                            "LightBlack",
+                                            "LightRed",
+                                            "LightGreen",
+                                            "LightYellow",
+                                            "LightBlue",
+                                            "LightMagenta",
+                                            "LightCyan",
+                                            "LightWhite"
+                                        ]
+                                    },
+                                    {
+                                        "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                    }
+                                ]
+                            },
+                            "magazines": {
+                                "type": "string",
+                                "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                "default": "Yellow",
+                                "oneOf": [
+                                    {
+                                        "enum": [
+                                            "Red",
+                                            "Green",
+                                            "Yellow",
+                                            "Blue",
+                                            "Magenta",
+                                            "Cyan",
+                                            "White",
+                                            "LightBlack",
+                                            "LightRed",
+                                            "LightGreen",
+                                            "LightYellow",
+                                            "LightBlue",
+                                            "LightMagenta",
+                                            "LightCyan",
+                                            "LightWhite"
+                                        ]
+                                    },
+                                    {
+                                        "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                    }
+                                ]
+                            },
+                            "documentaries": {
+                                "type": "string",
+                                "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                "default": "Yellow",
+                                "oneOf": [
+                                    {
+                                        "enum": [
+                                            "Red",
+                                            "Green",
+                                            "Yellow",
+                                            "Blue",
+                                            "Magenta",
+                                            "Cyan",
+                                            "White",
+                                            "LightBlack",
+                                            "LightRed",
+                                            "LightGreen",
+                                            "LightYellow",
+                                            "LightBlue",
+                                            "LightMagenta",
+                                            "LightCyan",
+                                            "LightWhite"
+                                        ]
+                                    },
+                                    {
+                                        "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                    }
+                                ]
+                            },
+                            "games_windows": {
+                                "type": "string",
+                                "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                "default": "Yellow",
+                                "oneOf": [
+                                    {
+                                        "enum": [
+                                            "Red",
+                                            "Green",
+                                            "Yellow",
+                                            "Blue",
+                                            "Magenta",
+                                            "Cyan",
+                                            "White",
+                                            "LightBlack",
+                                            "LightRed",
+                                            "LightGreen",
+                                            "LightYellow",
+                                            "LightBlue",
+                                            "LightMagenta",
+                                            "LightCyan",
+                                            "LightWhite"
+                                        ]
+                                    },
+                                    {
+                                        "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                    }
+                                ]
+                            },
+                            "games_other": {
+                                "type": "string",
+                                "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                "default": "Yellow",
+                                "oneOf": [
+                                    {
+                                        "enum": [
+                                            "Red",
+                                            "Green",
+                                            "Yellow",
+                                            "Blue",
+                                            "Magenta",
+                                            "Cyan",
+                                            "White",
+                                            "LightBlack",
+                                            "LightRed",
+                                            "LightGreen",
+                                            "LightYellow",
+                                            "LightBlue",
+                                            "LightMagenta",
+                                            "LightCyan",
+                                            "LightWhite"
+                                        ]
+                                    },
+                                    {
+                                        "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                    }
+                                ]
+                            },
+                            "music_albums": {
+                                "type": "string",
+                                "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                "default": "Yellow",
+                                "oneOf": [
+                                    {
+                                        "enum": [
+                                            "Red",
+                                            "Green",
+                                            "Yellow",
+                                            "Blue",
+                                            "Magenta",
+                                            "Cyan",
+                                            "White",
+                                            "LightBlack",
+                                            "LightRed",
+                                            "LightGreen",
+                                            "LightYellow",
+                                            "LightBlue",
+                                            "LightMagenta",
+                                            "LightCyan",
+                                            "LightWhite"
+                                        ]
+                                    },
+                                    {
+                                        "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                    }
+                                ]
+                            },
+                            "music_discography": {
+                                "type": "string",
+                                "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                "default": "Yellow",
+                                "oneOf": [
+                                    {
+                                        "enum": [
+                                            "Red",
+                                            "Green",
+                                            "Yellow",
+                                            "Blue",
+                                            "Magenta",
+                                            "Cyan",
+                                            "White",
+                                            "LightBlack",
+                                            "LightRed",
+                                            "LightGreen",
+                                            "LightYellow",
+                                            "LightBlue",
+                                            "LightMagenta",
+                                            "LightCyan",
+                                            "LightWhite"
+                                        ]
+                                    },
+                                    {
+                                        "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                    }
+                                ]
+                            },
+                            "music_lossless": {
+                                "type": "string",
+                                "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                "default": "Yellow",
+                                "oneOf": [
+                                    {
+                                        "enum": [
+                                            "Red",
+                                            "Green",
+                                            "Yellow",
+                                            "Blue",
+                                            "Magenta",
+                                            "Cyan",
+                                            "White",
+                                            "LightBlack",
+                                            "LightRed",
+                                            "LightGreen",
+                                            "LightYellow",
+                                            "LightBlue",
+                                            "LightMagenta",
+                                            "LightCyan",
+                                            "LightWhite"
+                                        ]
+                                    },
+                                    {
+                                        "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                    }
+                                ]
+                            },
+                            "music_video": {
+                                "type": "string",
+                                "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                "default": "Yellow",
+                                "oneOf": [
+                                    {
+                                        "enum": [
+                                            "Red",
+                                            "Green",
+                                            "Yellow",
+                                            "Blue",
+                                            "Magenta",
+                                            "Cyan",
+                                            "White",
+                                            "LightBlack",
+                                            "LightRed",
+                                            "LightGreen",
+                                            "LightYellow",
+                                            "LightBlue",
+                                            "LightMagenta",
+                                            "LightCyan",
+                                            "LightWhite"
+                                        ]
+                                    },
+                                    {
+                                        "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                    }
+                                ]
+                            },
+                            "music_singles": {
+                                "type": "string",
+                                "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                "default": "Yellow",
+                                "oneOf": [
+                                    {
+                                        "enum": [
+                                            "Red",
+                                            "Green",
+                                            "Yellow",
+                                            "Blue",
+                                            "Magenta",
+                                            "Cyan",
+                                            "White",
+                                            "LightBlack",
+                                            "LightRed",
+                                            "LightGreen",
+                                            "LightYellow",
+                                            "LightBlue",
+                                            "LightMagenta",
+                                            "LightCyan",
+                                            "LightWhite"
+                                        ]
+                                    },
+                                    {
+                                        "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                    }
+                                ]
+                            },
+                            "audio_other": {
+                                "type": "string",
+                                "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                "default": "Yellow",
+                                "oneOf": [
+                                    {
+                                        "enum": [
+                                            "Red",
+                                            "Green",
+                                            "Yellow",
+                                            "Blue",
+                                            "Magenta",
+                                            "Cyan",
+                                            "White",
+                                            "LightBlack",
+                                            "LightRed",
+                                            "LightGreen",
+                                            "LightYellow",
+                                            "LightBlue",
+                                            "LightMagenta",
+                                            "LightCyan",
+                                            "LightWhite"
+                                        ]
+                                    },
+                                    {
+                                        "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                    }
+                                ]
+                            },
+                            "pictures_other": {
+                                "type": "string",
+                                "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                "default": "Yellow",
+                                "oneOf": [
+                                    {
+                                        "enum": [
+                                            "Red",
+                                            "Green",
+                                            "Yellow",
+                                            "Blue",
+                                            "Magenta",
+                                            "Cyan",
+                                            "White",
+                                            "LightBlack",
+                                            "LightRed",
+                                            "LightGreen",
+                                            "LightYellow",
+                                            "LightBlue",
+                                            "LightMagenta",
+                                            "LightCyan",
+                                            "LightWhite"
+                                        ]
+                                    },
+                                    {
+                                        "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                    }
+                                ]
+                            },
+                            "training_other": {
+                                "type": "string",
+                                "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                "default": "Yellow",
+                                "oneOf": [
+                                    {
+                                        "enum": [
+                                            "Red",
+                                            "Green",
+                                            "Yellow",
+                                            "Blue",
+                                            "Magenta",
+                                            "Cyan",
+                                            "White",
+                                            "LightBlack",
+                                            "LightRed",
+                                            "LightGreen",
+                                            "LightYellow",
+                                            "LightBlue",
+                                            "LightMagenta",
+                                            "LightCyan",
+                                            "LightWhite"
+                                        ]
+                                    },
+                                    {
+                                        "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                    }
+                                ]
+                            },
+                            "other": {
+                                "type": "string",
+                                "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                "default": "Yellow",
+                                "oneOf": [
+                                    {
+                                        "enum": [
+                                            "Red",
+                                            "Green",
+                                            "Yellow",
+                                            "Blue",
+                                            "Magenta",
+                                            "Cyan",
+                                            "White",
+                                            "LightBlack",
+                                            "LightRed",
+                                            "LightGreen",
+                                            "LightYellow",
+                                            "LightBlue",
+                                            "LightMagenta",
+                                            "LightCyan",
+                                            "LightWhite"
+                                        ]
+                                    },
+                                    {
+                                        "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                    }
+                                ]
+                            },
+                            "xxx_4k": {
+                                "type": "string",
+                                "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                "default": "Yellow",
+                                "oneOf": [
+                                    {
+                                        "enum": [
+                                            "Red",
+                                            "Green",
+                                            "Yellow",
+                                            "Blue",
+                                            "Magenta",
+                                            "Cyan",
+                                            "White",
+                                            "LightBlack",
+                                            "LightRed",
+                                            "LightGreen",
+                                            "LightYellow",
+                                            "LightBlue",
+                                            "LightMagenta",
+                                            "LightCyan",
+                                            "LightWhite"
+                                        ]
+                                    },
+                                    {
+                                        "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                    }
+                                ]
+                            },
+                            "xxx_hd": {
+                                "type": "string",
+                                "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                "default": "Yellow",
+                                "oneOf": [
+                                    {
+                                        "enum": [
+                                            "Red",
+                                            "Green",
+                                            "Yellow",
+                                            "Blue",
+                                            "Magenta",
+                                            "Cyan",
+                                            "White",
+                                            "LightBlack",
+                                            "LightRed",
+                                            "LightGreen",
+                                            "LightYellow",
+                                            "LightBlue",
+                                            "LightMagenta",
+                                            "LightCyan",
+                                            "LightWhite"
+                                        ]
+                                    },
+                                    {
+                                        "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                    }
+                                ]
+                            },
+                            "xxx_sd": {
+                                "type": "string",
+                                "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                "default": "Yellow",
+                                "oneOf": [
+                                    {
+                                        "enum": [
+                                            "Red",
+                                            "Green",
+                                            "Yellow",
+                                            "Blue",
+                                            "Magenta",
+                                            "Cyan",
+                                            "White",
+                                            "LightBlack",
+                                            "LightRed",
+                                            "LightGreen",
+                                            "LightYellow",
+                                            "LightBlue",
+                                            "LightMagenta",
+                                            "LightCyan",
+                                            "LightWhite"
+                                        ]
+                                    },
+                                    {
+                                        "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                    }
+                                ]
+                            },
+                            "xxx_misc": {
+                                "type": "string",
+                                "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                                "default": "Yellow",
+                                "oneOf": [
+                                    {
+                                        "enum": [
+                                            "Red",
+                                            "Green",
+                                            "Yellow",
+                                            "Blue",
+                                            "Magenta",
+                                            "Cyan",
+                                            "White",
+                                            "LightBlack",
+                                            "LightRed",
+                                            "LightGreen",
+                                            "LightYellow",
+                                            "LightBlue",
+                                            "LightMagenta",
+                                            "LightCyan",
+                                            "LightWhite"
+                                        ]
+                                    },
+                                    {
+                                        "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                },
+                "sukebei": {
+                    "type": "object",
+                    "properties": {
+                        "art_anime": {
+                            "type": "string",
+                            "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                            "default": "Yellow",
+                            "oneOf": [
+                                {
+                                    "enum": [
+                                        "Red",
+                                        "Green",
+                                        "Yellow",
+                                        "Blue",
+                                        "Magenta",
+                                        "Cyan",
+                                        "White",
+                                        "LightBlack",
+                                        "LightRed",
+                                        "LightGreen",
+                                        "LightYellow",
+                                        "LightBlue",
+                                        "LightMagenta",
+                                        "LightCyan",
+                                        "LightWhite"
+                                    ]
+                                },
+                                {
+                                    "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                }
+                            ]
+                        },
+                        "art_doujinshi": {
+                            "type": "string",
+                            "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                            "default": "Yellow",
+                            "oneOf": [
+                                {
+                                    "enum": [
+                                        "Red",
+                                        "Green",
+                                        "Yellow",
+                                        "Blue",
+                                        "Magenta",
+                                        "Cyan",
+                                        "White",
+                                        "LightBlack",
+                                        "LightRed",
+                                        "LightGreen",
+                                        "LightYellow",
+                                        "LightBlue",
+                                        "LightMagenta",
+                                        "LightCyan",
+                                        "LightWhite"
+                                    ]
+                                },
+                                {
+                                    "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                }
+                            ]
+                        },
+                        "art_games": {
+                            "type": "string",
+                            "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                            "default": "Yellow",
+                            "oneOf": [
+                                {
+                                    "enum": [
+                                        "Red",
+                                        "Green",
+                                        "Yellow",
+                                        "Blue",
+                                        "Magenta",
+                                        "Cyan",
+                                        "White",
+                                        "LightBlack",
+                                        "LightRed",
+                                        "LightGreen",
+                                        "LightYellow",
+                                        "LightBlue",
+                                        "LightMagenta",
+                                        "LightCyan",
+                                        "LightWhite"
+                                    ]
+                                },
+                                {
+                                    "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                }
+                            ]
+                        },
+                        "art_manga": {
+                            "type": "string",
+                            "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                            "default": "Yellow",
+                            "oneOf": [
+                                {
+                                    "enum": [
+                                        "Red",
+                                        "Green",
+                                        "Yellow",
+                                        "Blue",
+                                        "Magenta",
+                                        "Cyan",
+                                        "White",
+                                        "LightBlack",
+                                        "LightRed",
+                                        "LightGreen",
+                                        "LightYellow",
+                                        "LightBlue",
+                                        "LightMagenta",
+                                        "LightCyan",
+                                        "LightWhite"
+                                    ]
+                                },
+                                {
+                                    "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                }
+                            ]
+                        },
+                        "art_pictures": {
+                            "type": "string",
+                            "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                            "default": "Yellow",
+                            "oneOf": [
+                                {
+                                    "enum": [
+                                        "Red",
+                                        "Green",
+                                        "Yellow",
+                                        "Blue",
+                                        "Magenta",
+                                        "Cyan",
+                                        "White",
+                                        "LightBlack",
+                                        "LightRed",
+                                        "LightGreen",
+                                        "LightYellow",
+                                        "LightBlue",
+                                        "LightMagenta",
+                                        "LightCyan",
+                                        "LightWhite"
+                                    ]
+                                },
+                                {
+                                    "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                }
+                            ]
+                        },
+                        "real_photos": {
+                            "type": "string",
+                            "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                            "default": "Yellow",
+                            "oneOf": [
+                                {
+                                    "enum": [
+                                        "Red",
+                                        "Green",
+                                        "Yellow",
+                                        "Blue",
+                                        "Magenta",
+                                        "Cyan",
+                                        "White",
+                                        "LightBlack",
+                                        "LightRed",
+                                        "LightGreen",
+                                        "LightYellow",
+                                        "LightBlue",
+                                        "LightMagenta",
+                                        "LightCyan",
+                                        "LightWhite"
+                                    ]
+                                },
+                                {
+                                    "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                }
+                            ]
+                        },
+                        "real_videos": {
+                            "type": "string",
+                            "description": "Can be 'Black', 'Red', 'Green', 'Yellow', 'Blue', 'Magenta', 'Cyan', 'White', 'LightBlack', 'LightRed', 'LightGreen', 'LightYellow', 'LightBlue', 'LightMagenta', 'LightCyan', 'LightWhite', or a hex color code.",
+                            "default": "Yellow",
+                            "oneOf": [
+                                {
+                                    "enum": [
+                                        "Red",
+                                        "Green",
+                                        "Yellow",
+                                        "Blue",
+                                        "Magenta",
+                                        "Cyan",
+                                        "White",
+                                        "LightBlack",
+                                        "LightRed",
+                                        "LightGreen",
+                                        "LightYellow",
+                                        "LightBlue",
+                                        "LightMagenta",
+                                        "LightCyan",
+                                        "LightWhite"
+                                    ]
+                                },
+                                {
+                                    "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "additionalProperties": false,
+    "required": [
+        "name"
+    ]
+}

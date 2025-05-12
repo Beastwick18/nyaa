@@ -1,0 +1,775 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Nyaa Configuration Schema",
+  "type": "object",
+  "properties": {
+      "default_category": {
+          "type": "string",
+          "description": "Default category for searches.",
+          "allOf": [
+              {
+                  "enum": [
+                      "Default",
+                      "Dracula",
+                      "Gruvbox",
+                      "Catppuccin Macchiato"
+                  ]
+              },
+              {
+                  "type": "string"
+              }
+          ]
+      },
+      "default_filter": {
+          "type": "string",
+          "description": "Default filter for searches."
+      },
+      "default_sort": {
+          "type": "string",
+          "description": "Default sort method for search results."
+      },
+      "default_search": {
+          "type": "string",
+          "description": "Default search query."
+      },
+      "theme": {
+          "type": "string",
+          "description": "Theme selected by default. Can be one of the built-in themes ('Default', 'Dracula', 'Gruvbox', 'Catppuccin Macchiato') or a user-defined theme.",
+          "default": "Default"
+      },
+      "default_source": {
+          "type": "string",
+          "description": "Default source for torrent searches.",
+          "enum": [
+              "Nyaa",
+              "TorrentGalaxy",
+              "Sukebei"
+          ],
+          "default": "Nyaa"
+      },
+      "download_client": {
+          "type": "string",
+          "description": "Default download client.",
+          "default": "command",
+          "enum": [
+              "qBittorrent",
+              "Transmission",
+              "rqbit",
+              "DownloadTorrentFile",
+              "default_app",
+              "command"
+          ]
+      },
+      "date_format": {
+          "type": "string",
+          "description": "Format string for displaying dates.",
+          "default": "%Y-%m-%d %H:%M"
+      },
+      "base_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Base URL for the application.",
+          "default": "https://nyaa.si/"
+      },
+      "timeout": {
+          "type": "integer",
+          "description": "Timeout for network requests in seconds.",
+          "default": 16
+      },
+      "clipboard": {
+          "type": "object",
+          "description": "Configuration for clipboard integration.",
+          "properties": {
+              "osc52": {
+                  "type": "boolean",
+                  "description": "By default, `cmd` is undefined so nyaa uses OSC52 to copy to the clipboard. It's a type of ANSI escape sequence supported by most terminals, and should just work.",
+                  "default": true
+              },
+              "selection": {
+                  "type": "array",
+                  "description": "For those using X11, you can change the option `x11_selection` to either `Clipboard`, `Primary`, or `Secondary` to change which selection X11 will copy the content into.",
+                  "enum": [
+                      "x11_selection",
+                      "Primary",
+                      "Secondary",
+                      "Clipboard"
+                  ]
+              },
+              "cmd": {
+                  "type": "string",
+                  "description": "For those using WSL, tmux, or any other non-standard clipboard manager, you can invoke a command on copy using the `cmd` and `shell_cmd` option. The placeholder `{content}` is used for substituting the text to copy into the command.",
+                  "examples": [
+                      "echo \"{content}\" | clip.exe",
+                      "tmux set-buffer \"{content}\""
+                  ]
+              },
+              "shell_cmd": {
+                  "type": "string",
+                  "description": "`shell_cmd` is optional when running a command, and only specifies which shell to run the command with. By default it is `sh -c` for linux and `powershell.exe -Command` for windows.",
+                  "examples": [
+                      "bash -c"
+                  ]
+              }
+          }
+      },
+      "notifications": {
+          "type": "object",
+          "description": "Notifications will pop up when certain events happen, like errors or source changes. Errors will persist until dismissed, while normal notifications will go away after some duration.",
+          "properties": {
+              "position": {
+                  "type": "string",
+                  "description": "`position` refers to which corner the notifications will show up. ",
+                  "enum": [
+                      "TopLeft",
+                      "TopRight",
+                      "BottomLeft",
+                      "BottomRight"
+                  ]
+              },
+              "duration": {
+                  "type": "number",
+                  "description": "Refers to how long notifications will persist (measured in seconds, not including time taken for animation).",
+                  "default": 3.0,
+                  "minimum": 0
+              },
+              "max_width": {
+                  "type": "integer",
+                  "description": "Refers to the maximum width (in columns) that notifications can be.",
+                  "default": 75
+              },
+              "animation_speed": {
+                  "type": "number",
+                  "description": "Refers to how fast notifications will animate (low values indicate slow animation, high values indicate fast animation).",
+                  "default": 4.0,
+                  "minimum": 0
+              }
+          }
+      },
+      "client": {
+          "type": "object",
+          "description": "Configuration for download clients.",
+          "properties": {
+              "command": {
+                  "type": "object",
+                  "properties": {
+                      "cmd": {
+                          "type": "string",
+                          "description": "Command-line command to use. Use '{torrent}' as a placeholder for the torrent file/URL.",
+                          "examples": [
+                              "transmission-remote -w /home/me/Downloads/Videos/ -a {torrent}",
+                              "aria2c {torrent}"
+                          ]
+                      },
+                      "shell_cmd": {
+                          "type": "string",
+                          "description": "Shell command to execute the command.  Defaults to 'sh -c' on Unix-like systems and 'cmd /c' on Windows.",
+                          "default": "sh -c"
+                      }
+                  },
+                  "required": [
+                      "cmd",
+                      "shell_cmd"
+                  ]
+              },
+              "default_app": {
+                  "description": "This \"client\" only opens the selected items magnet link using your default application.",
+                  "type": "object",
+                  "properties": {
+                      "use_magnet": {
+                          "type": "boolean",
+                          "default": true
+                      }
+                  }
+              },
+              "download": {
+                  "description": "If you've selected \"DownloadTorrentFile\" as your default download client, you will find this towards the bottom of your config (with only the required values present).",
+                  "type": "object",
+                  "properties": {
+                      "save_dir": {
+                          "type": "string"
+                      },
+                      "filename": {
+                          "type": "string",
+                          "default": "{file}",
+                          "description": "The name to save the file as. Available parameters are: `{file}` The file name stored in the source webpage (like 123456.torrent or Title.torrent), `{basename}` The basename of the file stored in the source webpage (like 123456 or Title), `{hash}` The torrent's hash"
+                      },
+                      "overwrite": {
+                          "type": "boolean",
+                          "default": true
+                      },
+                      "create_root_dir": {
+                          "type": "boolean",
+                          "default": true
+                      }
+                  },
+                  "required": [
+                      "save_dir"
+                  ]
+              },
+              "rqbit": {
+                  "description": "If you've selected rqbit as your default download client, you will find this towards the bottom of your config (with only the required values present).",
+                  "type": "object",
+                  "properties": {
+                      "base_url": {
+                          "type": "string",
+                          "examples": [
+                              "http://localhost:3030"
+                          ]
+                      },
+                      "use_magnet": {
+                          "type": "boolean",
+                          "default": true
+                      },
+                      "overwrite": {
+                          "type": "boolean",
+                          "default": false
+                      },
+                      "output_folder": {
+                          "type": "string",
+                          "examples": [
+                              "~/Downloads/"
+                          ]
+                      }
+                  },
+                  "required": [
+                      "base_url"
+                  ]
+              },
+              "transmission": {
+                  "type": "object",
+                  "description": "If you've selected Transmission as your default download client, you will find this towards the bottom of your config (with only the required values present).",
+                  "properties": {
+                      "base_url": {
+                          "type": "string",
+                          "examples": [
+                              "http://localhost:9091/transmission/rpc"
+                          ]
+                      },
+                      "username": {
+                          "type": "string",
+                          "examples": [
+                              "me"
+                          ]
+                      },
+                      "password": {
+                          "type": "string",
+                          "examples": [
+                              "T0p-53cr3t!"
+                          ]
+                      },
+                      "password_file": {
+                          "type": "string",
+                          "examples": [
+                              "/path/to/password.txt"
+                          ],
+                          "description": "The password can either be defined in `password_file` (a raw text file containing only the password) or hardcoded in `password`."
+                      },
+                      "use_magnet": {
+                          "type": "boolean"
+                      },
+                      "labels": {
+                          "type": "array",
+                          "items": {
+                              "type": "string"
+                          }
+                      },
+                      "paused": {
+                          "type": "boolean"
+                      },
+                      "peer_limit": {
+                          "type": "integer",
+                          "minimum": 1
+                      },
+                      "download_dir": {
+                          "type": "string",
+                          "examples": [
+                              "~/Downloads/"
+                          ]
+                      },
+                      "bandwidth_priority": {
+                          "type": "string",
+                          "enum": [
+                              "Low",
+                              "Normal",
+                              "High"
+                          ]
+                      }
+                  },
+                  "required": [
+                      "base_url"
+                  ]
+              },
+              "qBittorrent": {
+                  "type": "object",
+                  "description": "If you've selected qBittorrent as your default download client, you will find this towards the bottom of your config (with only the required values present).\nqBittorrent can connect to nyaa via its WebUI-API. Currently, only the ability to add torrents is implemented. This is also only intended to work on qBittorrent version >=4.1.",
+                  "required": [
+                      "base_url"
+                  ],
+                  "properties": {
+                      "base_url": {
+                          "type": "string",
+                          "examples": [
+                              "http://localhost:8080"
+                          ]
+                      },
+                      "username": {
+                          "type": "string",
+                          "examples": [
+                              "me"
+                          ]
+                      },
+                      "password": {
+                          "type": "string",
+                          "examples": [
+                              "T0p-53cr3t!"
+                          ]
+                      },
+                      "password_file": {
+                          "type": "string",
+                          "examples": [
+                              "/path/to/password.txt"
+                          ],
+                          "description": "The password can either be defined in `password_file` (a raw text file containing only the password) or hardcoded in `password`."
+                      },
+                      "use_magnet": {
+                          "type": "boolean"
+                      },
+                      "savepath": {
+                          "type": "string",
+                          "examples": [
+                              "~/Downloads/"
+                          ]
+                      },
+                      "category": {
+                          "type": "string",
+                          "examples": [
+                              "Category Name"
+                          ]
+                      },
+                      "tags": {
+                          "type": "array",
+                          "description": "Must not contain commas in any of the tags",
+                          "items": {
+                              "type": "string",
+                              "pattern": "^[a-zA-Z0-9 !#@\\-+_?:<>()&|]+$"
+                          },
+                          "examples": [
+                              "Tag one",
+                              "Tag two",
+                              "Movie",
+                              "TV",
+                              "Book-comics"
+                          ]
+                      },
+                      "skip_checking": {
+                          "type": "boolean"
+                      },
+                      "paused": {
+                          "type": "boolean"
+                      },
+                      "create_root_folder": {
+                          "type": "boolean"
+                      },
+                      "up_limit": {
+                          "type": "integer",
+                          "description": "Measured in Bytes/Sec",
+                          "minimum": -1
+                      },
+                      "down_limit": {
+                          "type": "integer",
+                          "description": "Measured in Bytes/Sec",
+                          "minimum": -1
+                      },
+                      "ratio_limit": {
+                          "type": "number",
+                          "minimum": 0,
+                          "examples": [
+                              0.5,
+                              1,
+                              2,
+                              10
+                          ]
+                      },
+                      "seeding_time_limit": {
+                          "type": "integer",
+                          "description": "Only works if auto_tmm is false, measured in minutes",
+                          "minimum": -1
+                      },
+                      "auto_tmm": {
+                          "type": "boolean"
+                      },
+                      "sequential_download": {
+                          "type": "boolean"
+                      },
+                      "prioritize_first_last_pieces": {
+                          "type": "boolean"
+                      }
+                  }
+              }
+          },
+          "required": []
+      },
+      "source": {
+          "type": "object",
+          "description": "Source-specific configurations. `default_sort`/`default_sort_dir`, `default_filter`, `default_category`, and `default_search` refer to the default sort/sort direction, filter, category, and search query that will be used once the source has loaded.",
+          "properties": {
+              "nyaa": {
+                  "type": "object",
+                  "description": "Configuration for Nyaa source.",
+                  "properties": {
+                      "base_url": {
+                          "type": "string",
+                          "format": "uri",
+                          "default": "https://nyaa.si"
+                      },
+                      "default_sort": {
+                          "type": "string",
+                          "enum": [
+                              "Date",
+                              "Downloads",
+                              "Seeders",
+                              "Leechers",
+                              "Comments",
+                              "Size"
+                          ]
+                      },
+                      "default_sort_dir": {
+                          "type": "string",
+                          "enum": [
+                              "Asc",
+                              "Desc"
+                          ]
+                      },
+                      "default_filter": {
+                          "type": "string",
+                          "enum": [
+                              "NoFilter",
+                              "Filter online streams",
+                              "Exclude XXX",
+                              "No wildcard"
+                          ]
+                      },
+                      "default_category": {
+                          "type": "string",
+                          "default": "AllCategories",
+                          "enum": [
+                              "AllCategories",
+                              "4kMovies",
+                              "AnimeEnBollywoodMoviesglishTranslated",
+                              "CamMovies",
+                              "HdMovies",
+                              "PackMovies",
+                              "SdMovies",
+                              "HdTV",
+                              "SdTV",
+                              "4kTV",
+                              "PacksTV",
+                              "SportsTV",
+                              "Anime",
+                              "AppsMobile",
+                              "AppsOther",
+                              "AppsWindows",
+                              "Audiobooks",
+                              "Comics",
+                              "Ebooks",
+                              "Educational",
+                              "Magazines",
+                              "Documentaries",
+                              "WindowsGames",
+                              "OtherGames",
+                              "AlbumsMusic",
+                              "DiscographyMusic",
+                              "LosslessMusic",
+                              "MusicVideo",
+                              "SinglesMusic",
+                              "AudioOther",
+                              "PicturesOther",
+                              "TrainingOther",
+                              "Other",
+                              "4kXXX",
+                              "HdXXX",
+                              "MiscXXX",
+                              "SdXXX"
+                          ]
+                      },
+                      "default_search": {
+                          "type": "string",
+                          "default": "",
+                          "examples": [
+                              "",
+                              "vostfr"
+                          ]
+                      },
+                      "rss": {
+                          "type": "boolean",
+                          "description": "Whether to use rss for searching",
+                          "default": false
+                      },
+                      "timeout": {
+                          "type": "integer",
+                          "minimum": 5,
+                          "default": 30,
+                          "description": "override the global timeout option (measured in seconds)"
+                      },
+                      "columns": {
+                          "type": "object",
+                          "properties": {
+                              "category": {
+                                  "type": "boolean",
+                                  "default": true
+                              },
+                              "title": {
+                                  "type": "boolean",
+                                  "default": true
+                              },
+                              "size": {
+                                  "type": "boolean",
+                                  "default": true
+                              },
+                              "date": {
+                                  "type": "boolean",
+                                  "default": true
+                              },
+                              "seeders": {
+                                  "type": "boolean",
+                                  "default": true
+                              },
+                              "leechers": {
+                                  "type": "boolean",
+                                  "default": true
+                              },
+                              "downloads": {
+                                  "type": "boolean",
+                                  "default": true
+                              }
+                          }
+                      }
+                  }
+              },
+              "torrentgalaxy": {
+                  "type": "object",
+                  "description": "Configuration for TorrentGalaxy source.",
+                  "properties": {
+                      "base_url": {
+                          "type": "string",
+                          "format": "uri",
+                          "default": "https://nyaa.si"
+                      },
+                      "default_sort": {
+                          "type": "string",
+                          "enum": [
+                              "Date",
+                              "Downloads",
+                              "Seeders",
+                              "Leechers",
+                              "Comments",
+                              "Size"
+                          ]
+                      },
+                      "default_sort_dir": {
+                          "type": "string",
+                          "enum": [
+                              "Asc",
+                              "Desc"
+                          ]
+                      },
+                      "default_filter": {
+                          "type": "string",
+                          "description": "`NoFilter`, `TrustedOnly` (green posts), `NoRemakes` (No remakes: no red posts)",
+                          "enum": [
+                              "NoFilter",
+                              "TrustedOnly",
+                              "NoRemakes"
+                          ]
+                      },
+                      "default_category": {
+                          "type": "string",
+                          "default": "AllCategories",
+                          "enum": [
+                              "AllCategories",
+                              "AllArt",
+                              "ArtAnime",
+                              "ArtDoujinshi",
+                              "ArtGames",
+                              "ArtManga",
+                              "ArtPictures",
+                              "AllReal",
+                              "RealPhotos",
+                              "RealVideos"
+                          ]
+                      },
+                      "default_search": {
+                          "type": "string",
+                          "default": ""
+                      },
+                      "rss": {
+                          "type": "boolean",
+                          "description": "Whether to use rss for searching",
+                          "default": false
+                      },
+                      "timeout": {
+                          "type": "integer",
+                          "minimum": 5,
+                          "default": 30,
+                          "description": "override the global timeout option (measured in seconds)"
+                      },
+                      "columns": {
+                          "type": "object",
+                          "properties": {
+                              "category": {
+                                  "type": "boolean",
+                                  "default": true
+                              },
+                              "title": {
+                                  "type": "boolean",
+                                  "default": true
+                              },
+                              "size": {
+                                  "type": "boolean",
+                                  "default": true
+                              },
+                              "date": {
+                                  "type": "boolean",
+                                  "default": true
+                              },
+                              "seeders": {
+                                  "type": "boolean",
+                                  "default": true
+                              },
+                              "leechers": {
+                                  "type": "boolean",
+                                  "default": true
+                              },
+                              "downloads": {
+                                  "type": "boolean",
+                                  "default": true
+                              }
+                          }
+                      }
+                  }
+              },
+              "sukebei": {
+                  "type": "object",
+                  "description": "Configuration for Sukebei source.",
+                  "properties": {
+                      "base_url": {
+                          "type": "string",
+                          "format": "uri",
+                          "default": "https://nyaa.si"
+                      },
+                      "default_sort": {
+                          "type": "string",
+                          "enum": [
+                              "Date",
+                              "Downloads",
+                              "Seeders",
+                              "Leechers",
+                              "Comments",
+                              "Size"
+                          ]
+                      },
+                      "default_sort_dir": {
+                          "type": "string",
+                          "enum": [
+                              "Asc",
+                              "Desc"
+                          ]
+                      },
+                      "default_filter": {
+                          "type": "string",
+                          "description": "`NoFilter`, `TrustedOnly` (green posts), `NoRemakes` (No remakes: no red posts)",
+                          "enum": [
+                              "NoFilter",
+                              "TrustedOnly",
+                              "NoRemakes"
+                          ]
+                      },
+                      "default_category": {
+                          "type": "string",
+                          "default": "AllCategories",
+                          "enum": [
+                              "AllCategories",
+                              "AllAnime",
+                              "AnimeEnglishTranslated",
+                              "AnimeNonEnglishTranslated",
+                              "AnimeRaw",
+                              "AnimeMusicVideo",
+                              "AllAudio",
+                              "AudioLossless",
+                              "AudioLossy",
+                              "AllLiterature",
+                              "LitEnglishTranslated",
+                              "LitNonEnglishTranslated",
+                              "LitRaw",
+                              "AllLiveAction",
+                              "LiveEnglishTranslated",
+                              "LiveNonEnglishTranslated",
+                              "LiveIdolPromoVideo",
+                              "LiveRaw",
+                              "AllPictures",
+                              "PicGraphics",
+                              "PicPhotos",
+                              "AllSoftware",
+                              "SoftApplications",
+                              "SoftGames"
+                          ]
+                      },
+                      "default_search": {
+                          "type": "string",
+                          "default": "",
+                          "examples": [
+                              "",
+                              "vostfr"
+                          ]
+                      },
+                      "rss": {
+                          "type": "boolean",
+                          "description": "Whether to use rss for searching",
+                          "default": false
+                      },
+                      "timeout": {
+                          "type": "integer",
+                          "minimum": 5,
+                          "default": 30,
+                          "description": "override the global timeout option (measured in seconds)"
+                      },
+                      "columns": {
+                          "type": "object",
+                          "properties": {
+                              "category": {
+                                  "type": "boolean",
+                                  "default": true
+                              },
+                              "title": {
+                                  "type": "boolean",
+                                  "default": true
+                              },
+                              "size": {
+                                  "type": "boolean",
+                                  "default": true
+                              },
+                              "date": {
+                                  "type": "boolean",
+                                  "default": true
+                              },
+                              "seeders": {
+                                  "type": "boolean",
+                                  "default": true
+                              },
+                              "leechers": {
+                                  "type": "boolean",
+                                  "default": true
+                              },
+                              "downloads": {
+                                  "type": "boolean",
+                                  "default": true
+                              }
+                          }
+                      }
+                  }
+              }
+          }
+      }
+  },
+  "required": []
+}
