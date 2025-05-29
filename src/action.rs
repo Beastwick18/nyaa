@@ -13,6 +13,8 @@ pub enum AppAction {
     Resume,
     ClearScreen,
     Error(String),
+    Warning(String),
+    Info(String),
     Task(TaskAction),
     Search(String),
     UserAction(UserAction),
@@ -47,6 +49,12 @@ pub enum UserAction {
     #[assoc(name = format!("{self}({_0})"))]
     SetMode(Mode),
     WhichKey,
+    #[assoc(name = format!("{self}({_0})"))]
+    NotifyInfo(String),
+    #[assoc(name = format!("{self}({_0})"))]
+    NotifyError(String),
+    #[assoc(name = format!("{self}({_0})"))]
+    NotifyWarning(String),
     ClearNotifications,
 }
 

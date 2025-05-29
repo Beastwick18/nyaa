@@ -14,7 +14,9 @@ use crate::{
 
 use super::Component;
 
+pub mod category;
 pub mod download_client;
+pub mod filter;
 pub mod notification;
 pub mod which_key;
 

@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use ratatui::{buffer::Buffer, layout::Rect, widgets::Widget};
 
 pub mod growth;
@@ -14,7 +12,7 @@ pub trait Animation {
 pub struct MaskedRenderer;
 
 impl MaskedRenderer {
-    pub fn render(widget: impl Widget, area: FloatRect, mask: Option<&[bool]>, buf: &mut Buffer) {
+    pub fn render(widget: impl Widget, area: FloatRect, _mask: Option<&[bool]>, buf: &mut Buffer) {
         let (widget_x, screen_x) = if area.x < 0.0 {
             (
                 0,

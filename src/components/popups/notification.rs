@@ -10,9 +10,17 @@ use crate::{
     action::{AppAction, UserAction},
     animate::{translate::Translate, Animation, AnimationState, FloatRect, Smoothing},
     app::Context,
+    color::to_rgb,
 };
 
 use super::Component;
+
+#[derive(Clone, Copy)]
+pub enum NotificationType {
+    Error,
+    Warning,
+    Info,
+}
 
 #[derive(Default)]
 pub struct NotificationContainer {
@@ -23,36 +31,34 @@ impl NotificationContainer {
     pub fn boxed() -> Box<dyn Component> {
         Box::new(Self::default())
     }
+
+    fn add_notification(&mut self, notification: Notification) {
+        for n in self.notifications.iter_mut() {
+            n.add_offset(notification.height() as i16);
+        }
+        self.notifications.push(notification);
+    }
 }
 
 impl Component for NotificationContainer {
     fn update(&mut self, ctx: &Context, action: &AppAction) -> Result<Option<AppAction>> {
-        if action == &AppAction::UserAction(UserAction::ClearNotifications) {
-            for n in self.notifications.iter_mut() {
-                n.dismiss();
+        // Create notifications from actions
+        match action {
+            AppAction::Error(err) | AppAction::UserAction(UserAction::NotifyError(err)) => {
+                self.add_notification(Notification::new(err, true, NotificationType::Error));
             }
-        }
-
-        if action == &AppAction::UserAction(UserAction::Down) {
-            let new_notification = Notification::new(
-                "This is some example text, I am typing something here",
-                false,
-            );
-            for n in self.notifications.iter_mut() {
-                n.add_offset(new_notification.height() as i16);
+            AppAction::Warning(warn) | AppAction::UserAction(UserAction::NotifyWarning(warn)) => {
+                self.add_notification(Notification::new(warn, false, NotificationType::Warning));
             }
-            self.notifications.push(new_notification);
-        }
-
-        if action == &AppAction::UserAction(UserAction::Up) {
-            let new_notification = Notification::new(
-                "This is some example text, I am typing something here",
-                true,
-            );
-            for n in self.notifications.iter_mut() {
-                n.add_offset(new_notification.height() as i16);
+            AppAction::Info(info) | AppAction::UserAction(UserAction::NotifyInfo(info)) => {
+                self.add_notification(Notification::new(info, false, NotificationType::Info));
             }
-            self.notifications.push(new_notification);
+            AppAction::UserAction(UserAction::ClearNotifications) => {
+                for n in self.notifications.iter_mut() {
+                    n.dismiss();
+                }
+            }
+            _ => {}
         }
 
         // Separate out all finished notifications
@@ -66,6 +72,7 @@ impl Component for NotificationContainer {
         // Clear all finished notifications
         self.notifications.retain(|n| !n.is_done());
 
+        // Remove offset from notifications when one is dismissed
         for n in self.notifications.iter_mut() {
             for d in done.iter() {
                 if n.offset() > d.offset() {
@@ -100,19 +107,16 @@ struct Notification {
     height: u16,
     lines: Vec<String>,
     persist: bool,
+    notif_type: NotificationType,
 }
 
 impl Notification {
-    fn new(message: impl Into<String>, persist: bool) -> Notification {
-        // let message = "".to_string();
-        let max_width = 32;
-        let lines: Vec<String> = textwrap::wrap(&message.into(), max_width)
-            .into_iter()
-            .map(|s| s.to_string())
-            .collect();
-        let width = lines.iter().map(String::len).max().unwrap_or(1) as u16 + 2;
-        let height = lines.len() as u16 + 2;
-
+    fn new(
+        message: impl Into<String>,
+        persist: bool,
+        notif_type: NotificationType,
+    ) -> Notification {
+        let (width, height, lines) = Self::breakup_text(&message.into());
         Self {
             enter_state: AnimationState::from_secs(0.15)
                 .playing(true)
@@ -137,7 +141,19 @@ impl Notification {
             height,
             lines,
             persist,
+            notif_type,
         }
+    }
+
+    fn breakup_text(msg: &str) -> (u16, u16, Vec<String>) {
+        let max_width = 32;
+        let lines: Vec<String> = textwrap::wrap(msg, max_width)
+            .into_iter()
+            .map(|s| s.to_string())
+            .collect();
+        let width = lines.iter().map(String::len).max().unwrap_or(1) as u16 + 2;
+        let height = lines.len() as u16 + 2;
+        (width, height, lines)
     }
 
     fn is_done(&self) -> bool {
@@ -197,7 +213,17 @@ impl Component for Notification {
     }
 
     fn render(&mut self, _ctx: &Context, frame: &mut Frame, area: Rect) -> Result<()> {
-        let bg = Block::new().bg(Color::Rgb(0, 36, 54)).borders(Borders::ALL);
+        // TODO: Add with themes
+        let color = match self.notif_type {
+            NotificationType::Error => to_rgb(Color::Red),
+            NotificationType::Warning => to_rgb(Color::Yellow),
+            NotificationType::Info => to_rgb(Color::Cyan),
+        };
+
+        let bg = Block::new()
+            .fg(color)
+            .bg(Color::Rgb(34, 36, 54))
+            .borders(Borders::ALL);
         let p = Paragraph::new(self.lines.join("\n"))
             .fg(Color::White)
             .block(bg);

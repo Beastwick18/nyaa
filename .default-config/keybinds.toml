@@ -14,6 +14,9 @@
 "g" = "Top"
 "G" = "Bottom"
 "<esc>" = "ClearNotifications"
+"z" = { "NotifyInfo" = "Test info" }
+"x" = { "NotifyWarning" = "Test warning" }
+"c" = { "NotifyError" = "Test error" }
 
 [DownloadClient]
 "<esc>" = { "SetMode" = "Home" }
