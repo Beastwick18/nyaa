@@ -53,31 +53,36 @@ impl Component for WhichKeyComponent {
             }
             self.translate.update(ctx.render_delta_time);
 
-            if let Some(keymap) = ctx.config.keys.get(&ctx.mode) {
-                let events = if ctx.keycombo.status() == &KeyComboStatus::Pending {
-                    Some(ctx.keycombo.events())
-                } else {
-                    None
-                };
+            let possible_actions = if ctx.keycombo.status() == &KeyComboStatus::Pending {
+                self.current_keycombo = ctx
+                    .keycombo
+                    .events()
+                    .iter()
+                    .map(key_event_to_string)
+                    .collect::<String>();
 
-                self.current_keycombo = events
-                    .map(|e| e.iter().map(key_event_to_string).collect::<String>())
-                    .unwrap_or_default();
+                ctx.config
+                    .keys
+                    .possible_actions(ctx.keycombo.events(), &ctx.mode, &ctx.input_mode)
+            } else {
+                self.current_keycombo.clear();
 
-                self.possible_actions = keymap
-                    .into_iter()
-                    .filter(|(keys, _action)| events.is_none() || keys.starts_with(events.unwrap()))
-                    .map(|(keys, action)| {
-                        (
-                            keys.iter()
-                                .map(key_event_to_string)
-                                .skip(self.current_keycombo.len())
-                                .collect::<String>(),
-                            action.to_string(),
-                        )
-                    })
-                    .collect();
-            }
+                ctx.config
+                    .keys
+                    .possible_actions(&[], &ctx.mode, &ctx.input_mode)
+            };
+
+            self.possible_actions = possible_actions
+                .map(|(keys, action)| {
+                    (
+                        keys.iter()
+                            .map(key_event_to_string)
+                            .skip(self.current_keycombo.len())
+                            .collect::<String>(),
+                        action.to_string(),
+                    )
+                })
+                .collect();
         }
 
         Ok(None)

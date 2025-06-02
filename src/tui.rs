@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use color_eyre::Result;
 
-use crossterm::cursor::{self};
+use crossterm::cursor::{self, SetCursorStyle};
 use crossterm::event::{
     DisableBracketedPaste, EnableBracketedPaste, Event, EventStream, KeyEvent, KeyEventKind,
     MouseEvent,
@@ -26,6 +26,7 @@ pub struct Tui {
     pub event_tx: UnboundedSender<TuiEvent>,
     pub frame_rate: f64,
     pub tick_rate: f64,
+    pub cursor_style: SetCursorStyle,
 }
 
 pub enum TuiEvent {
@@ -53,6 +54,7 @@ impl Tui {
             event_tx,
             frame_rate: 60.0,
             tick_rate: 60.0,
+            cursor_style: SetCursorStyle::BlinkingBar,
         })
     }
 
@@ -152,6 +154,7 @@ impl Tui {
             EnterAlternateScreen,
             EnableBracketedPaste,
             cursor::Hide,
+            self.cursor_style
         )?;
 
         self.start();
@@ -194,6 +197,16 @@ impl Tui {
 
     pub async fn next_event(&mut self) -> Option<TuiEvent> {
         self.event_rx.recv().await
+    }
+
+    pub fn hide_cursor(&mut self) -> Result<()> {
+        self.terminal.hide_cursor()?;
+        Ok(())
+    }
+
+    pub fn show_cursor(&mut self) -> Result<()> {
+        self.terminal.show_cursor()?;
+        Ok(())
     }
 }
 

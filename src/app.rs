@@ -1,9 +1,10 @@
 use std::{path::PathBuf, time::Instant};
 
 use color_eyre::Result;
-use crossterm::event::KeyEvent;
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use enum_assoc::Assoc;
 use serde::Deserialize;
-use strum::Display;
+use strum::{Display, EnumIter};
 use tokio::sync::mpsc;
 
 use crate::{
@@ -13,7 +14,7 @@ use crate::{
     config::Config,
     keys::{self, KeyCombo, KeyComboStatus},
     result::ResultTable,
-    sources::{nyaa::NyaaSource, Source, SourceTask, SourceTaskRunner},
+    sources::{Source, SourceTaskRunner},
     tui::{Tui, TuiEvent},
 };
 
@@ -23,8 +24,6 @@ pub struct Context {
     pub input_mode: InputMode,
     pub keycombo: KeyCombo,
     pub source: Source,
-    pub source_box: Box<dyn SourceTask>,
-    pub last_keycombo: Option<KeyCombo>,
     pub results: Option<ResultTable>,
     pub render_delta_time: f64,
 }
@@ -34,22 +33,26 @@ impl Context {
         Ok(Self {
             config: Config::new(config_path)?,
             mode: Mode::default(),
-            input_mode: InputMode::default(),
+            input_mode: Mode::default().default_input_mode(),
             keycombo: KeyCombo::default(),
             source: Source::Nyaa,
-            source_box: Box::new(NyaaSource),
-            last_keycombo: None,
             results: None,
-            render_delta_time: 0.016,
+            render_delta_time: 1.0 / 60.0,
         })
     }
 }
 
-#[derive(Deserialize, Default, Display, Debug, Hash, PartialEq, Eq, Copy, Clone)]
+#[derive(
+    Deserialize, Default, Display, Debug, Hash, PartialEq, Eq, Copy, Clone, Assoc, EnumIter,
+)]
+#[func(pub fn input_modes(&self) -> Vec<InputMode> { vec![InputMode::Normal] })]
+#[func(pub fn default_input_mode(&self) -> InputMode { InputMode::Normal })]
 pub enum Mode {
     #[default]
     Home,
     DownloadClient,
+    Categories,
+    #[assoc(input_modes = vec![InputMode::Insert], default_input_mode = InputMode::Insert)]
     Search,
 }
 
@@ -148,10 +151,6 @@ impl App {
     fn handle_key_event(&mut self, key: KeyEvent) -> Result<()> {
         let action_tx = self.action_tx.clone();
 
-        let Some(keymap) = self.ctx.config.keys.get(&self.ctx.mode) else {
-            return Ok(());
-        };
-
         // Check for keys that may not be used in combos (resets current key combo).
         // Do not cancel if keycombo is *only* the cancelling key
         if self.ctx.keycombo.status() == &KeyComboStatus::Pending
@@ -159,6 +158,13 @@ impl App {
         {
             self.ctx.keycombo.push_key(key);
             self.ctx.keycombo.set_status(KeyComboStatus::Cancelled);
+        } else if self.ctx.input_mode == InputMode::Insert
+            && key.modifiers == KeyModifiers::NONE
+            && matches!(key.code, KeyCode::Char(c) if c.is_ascii_digit())
+        {
+            self.ctx.keycombo.set_status(KeyComboStatus::Inserted);
+            self.ctx.keycombo.clear();
+            self.ctx.keycombo.push_key(key);
         } else {
             // If no pending keycombo, reset to now be pending
             if self.ctx.keycombo.status() != &KeyComboStatus::Pending {
@@ -168,7 +174,13 @@ impl App {
 
             self.ctx.keycombo.push_key(key);
 
-            if let Some(action) = keymap.get(self.ctx.keycombo.events()) {
+            let action = self.ctx.config.keys.action(
+                self.ctx.keycombo.events(),
+                &self.ctx.mode,
+                &self.ctx.input_mode,
+            );
+
+            if let Some(action) = action {
                 let mult = action
                     .multiplier()
                     .saturating_mul(self.ctx.keycombo.repeat().unwrap_or(1));
@@ -185,12 +197,24 @@ impl App {
                     }
                 }
                 self.ctx.keycombo.set_status(KeyComboStatus::Successful);
-            } else if !keymap
-                .keys()
-                .any(|k| k.starts_with(self.ctx.keycombo.events()))
+            } else if self
+                .ctx
+                .config
+                .keys
+                .possible_actions(
+                    self.ctx.keycombo.events(),
+                    &self.ctx.mode,
+                    &self.ctx.input_mode,
+                )
+                .next()
+                .is_none()
             {
-                // No possible action with current keycombo
-                self.ctx.keycombo.set_status(KeyComboStatus::Unmatched);
+                if self.ctx.input_mode == InputMode::Insert {
+                    self.ctx.keycombo.set_status(KeyComboStatus::Inserted);
+                } else {
+                    // No possible action with current keycombo
+                    self.ctx.keycombo.set_status(KeyComboStatus::Unmatched);
+                }
             }
         }
 
@@ -206,7 +230,10 @@ impl App {
                 AppAction::UserAction(u) => match u {
                     UserAction::Quit => self.should_quit = true,
                     UserAction::Suspend => self.should_suspend = true,
-                    UserAction::SetMode(m) => self.ctx.mode = *m,
+                    UserAction::SetMode(m) => {
+                        self.ctx.mode = *m;
+                        self.ctx.input_mode = self.ctx.mode.default_input_mode();
+                    }
                     _ => {}
                 },
                 AppAction::Search(query) => self.search(query.clone()),
@@ -240,6 +267,12 @@ impl App {
     }
 
     fn render(&mut self, tui: &mut Tui) -> Result<()> {
+        if self.ctx.input_mode == InputMode::Insert {
+            tui.show_cursor()?;
+        } else {
+            tui.hide_cursor()?;
+        }
+
         tui.draw(|frame| {
             for component in self.components.iter_mut() {
                 if let Err(err) = component.render(&self.ctx, frame, frame.area()) {

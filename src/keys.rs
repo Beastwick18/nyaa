@@ -6,16 +6,66 @@ use enum_assoc::Assoc;
 use indexmap::IndexMap;
 use ratatui::style::Color;
 use serde::{Deserialize, Deserializer};
+use strum::IntoEnumIterator;
 
-use crate::{action::UserAction, app::Mode, color::to_rgb};
+use crate::{
+    action::UserAction,
+    app::{InputMode, Mode},
+    color::to_rgb,
+};
 
 // Keys that cannot be used in combos, and will cancel the current combo.
 // These keys may be used by themselves, as a single key keybind
 pub static NON_COMBO: &[KeyCode] = &[KeyCode::Esc];
 
+#[derive(Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum ModeOrDefault {
+    #[serde(rename = "_")]
+    Default,
+    #[serde(untagged)]
+    Mode(Mode),
+}
+
 /// KeyBindings are a collection of *key*-*user action* pairs, seperated by mode
 #[derive(Clone, Debug, Default, Deref, DerefMut)]
-pub struct KeyBindings(pub IndexMap<Mode, IndexMap<Vec<KeyEvent>, OneOrManyActions>>);
+// pub struct KeyBindings(pub IndexMap<Mode, IndexMap<Vec<KeyEvent>, OneOrManyActions>>);
+pub struct KeyBindings(pub IndexMap<InputMode, IndexMap<Mode, Keymap>>);
+#[derive(Clone, Debug, Default, Deref, DerefMut)]
+pub struct KeyBindingsWithDefaults(pub IndexMap<InputMode, IndexMap<ModeOrDefault, Keymap>>);
+
+#[derive(Clone, Debug, Default, Deref, DerefMut)]
+pub struct Keymap(pub IndexMap<Vec<KeyEvent>, OneOrManyActions>);
+
+impl KeyBindings {
+    pub fn keymap(&self, mode: &Mode, input_mode: &InputMode) -> &Keymap {
+        self.get(input_mode).and_then(|x| x.get(mode)).unwrap()
+    }
+
+    pub fn action(
+        &self,
+        keycombo: &Vec<KeyEvent>,
+        mode: &Mode,
+        input_mode: &InputMode,
+    ) -> Option<&OneOrManyActions> {
+        self.keymap(mode, input_mode).get(keycombo)
+    }
+
+    pub fn possible_actions<'a>(
+        &'a self,
+        keycombo: &'a [KeyEvent],
+        mode: &Mode,
+        input_mode: &InputMode,
+    ) -> impl Iterator<
+        Item = (
+            &'a std::vec::Vec<crossterm::event::KeyEvent>,
+            &'a OneOrManyActions,
+        ),
+    > {
+        self.keymap(mode, input_mode)
+            .iter()
+            .filter(|(events, _action)| events.starts_with(keycombo))
+    }
+}
 
 #[derive(Default, Clone)]
 pub struct KeyCombo {
@@ -75,26 +125,36 @@ pub enum KeyComboStatus {
     #[default]
     #[assoc(color = to_rgb(Color::DarkGray))]
     Cancelled,
+    #[assoc(color = to_rgb(Color::DarkGray))]
+    Inserted, // handled by insert mode
     #[assoc(color = to_rgb(Color::Red))]
     Unmatched,
 }
 
-#[derive(Assoc, Clone, Debug, Deserialize)]
+#[derive(Assoc, Clone, Debug, Deserialize, PartialEq, Eq)]
 #[func(pub fn multiplier(&self) -> u8)]
 #[func(pub fn actions(&self) -> Vec<UserAction>)]
-#[serde(untagged)]
 pub enum OneOrManyActions {
+    #[assoc(multiplier = 1, actions = vec![])]
+    Nop, // Do nothing
+
+    #[serde(untagged)]
     #[assoc(multiplier = 1, actions = vec![_0.clone()])]
-    One(UserAction),
+    One(UserAction), // Single action
+
+    #[serde(untagged)]
     #[assoc(multiplier = 1, actions = _0.clone())]
-    Many(Vec<UserAction>),
+    Many(Vec<UserAction>), // Sequence of actions
+
+    #[serde(untagged)]
     #[assoc(multiplier = *_0, actions = vec![_1.clone()])]
-    Repeat(u8, UserAction),
+    Repeat(u8, UserAction), // Action with multiplier
 }
 
 impl Display for OneOrManyActions {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let s = match self {
+            OneOrManyActions::Nop => OneOrManyActions::Nop.to_string(),
             OneOrManyActions::One(user_action) => user_action.name(),
             OneOrManyActions::Many(user_actions) => user_actions
                 .iter()
@@ -107,81 +167,67 @@ impl Display for OneOrManyActions {
     }
 }
 
-// #[derive(Clone, Debug, Deserialize)]
-// #[serde(untagged)]
-// pub enum UserActionWrapped {
-//     Unit(UserAction),
-//     // Other(String), // TODO: Parse custom syntax, like "Action(arg1, ...)"
-// }
-
 impl<'de> Deserialize<'de> for KeyBindings {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
-        let parsed_map =
-            IndexMap::<Mode, IndexMap<String, OneOrManyActions>>::deserialize(deserializer)?;
+        // Deserialize as KeyBindingsWithDefaults
+        let parsed_map = IndexMap::<
+            InputMode,
+            IndexMap<ModeOrDefault, IndexMap<String, OneOrManyActions>>,
+        >::deserialize(deserializer)?;
 
+        // Parse keybinds
         let keybindings = parsed_map
             .into_iter()
-            .map(|(mode, inner_map)| {
-                let converted_inner_map = inner_map
+            .map(|(mode, mode_map)| {
+                let input_mode_mapped = mode_map
                     .into_iter()
-                    .map(|(key_str, cmd)| (parse_key_sequence(&key_str).unwrap(), cmd))
+                    .map(|(input_mode, inner_map)| {
+                        let converted_inner_map = inner_map
+                            .into_iter()
+                            .map(|(key_str, cmd)| (parse_key_sequence(&key_str).unwrap(), cmd))
+                            .collect();
+                        (input_mode, Keymap(converted_inner_map))
+                    })
                     .collect();
-                (mode, converted_inner_map)
+                (mode, input_mode_mapped)
             })
             .collect();
+        let keybindings = KeyBindingsWithDefaults(keybindings);
 
-        Ok(KeyBindings(keybindings))
+        // Go through each input mode, and extend default keybinds into each Mode's keybinds
+        let mut combined_keybindings = KeyBindings::default();
+        for (input_mode, mode_bindings) in keybindings.iter() {
+            let general_action = mode_bindings
+                .get(&ModeOrDefault::Default)
+                .cloned()
+                .unwrap_or_default();
+            let mut new_mode_bindings = IndexMap::new();
+
+            for (mode, keymap) in mode_bindings.iter() {
+                if let ModeOrDefault::Mode(mode) = mode {
+                    let mut cloned_general_action = general_action.clone();
+                    cloned_general_action.extend(keymap.0.clone());
+                    new_mode_bindings.insert(*mode, cloned_general_action);
+                }
+            }
+
+            // Use general keybinds for missing modes
+            for mode in Mode::iter() {
+                if !new_mode_bindings.contains_key(&mode) {
+                    let cloned_general_action = general_action.clone();
+                    new_mode_bindings.insert(mode, cloned_general_action);
+                }
+            }
+
+            combined_keybindings.insert(*input_mode, new_mode_bindings);
+        }
+
+        Ok(combined_keybindings)
     }
 }
-
-// fn parse_wrapped_actions(cmd: UserActionWrapped) -> Result<UserAction, String> {
-//     Ok(match cmd {
-//         UserActionWrapped::Unit(unit) => unit,
-//         // UserActionWrapped::Other(other) => parse_other_action_simple(other)?,
-//     })
-// }
-
-// fn parse_other_action_simple(other: String) -> Result<UserAction, String> {
-//     let tokens = other.split_ascii_whitespace().collect::<Vec<&str>>();
-//     match tokens.as_slice() {
-//         [key, val] => {
-//             let mut table = toml::Table::new();
-//             table.insert(key.to_string(), toml::Value::String(val.to_string()));
-//             Ok(table.try_into().unwrap())
-//         }
-//         _ => Err("UserAction is not properly formatted".to_string()),
-//     }
-// }
-
-// // TODO: More complex case
-// fn parse_other_action(other: String) -> UserAction {
-//     // TODO: more complex parsing, with handling of quotes
-//     let mut tokens = other
-//         .split_whitespace()
-//         .map(ToString::to_string)
-//         .collect::<Vec<String>>();
-//
-//     let val = tokens.pop().unwrap(); // TODO: handle invalid cases
-//     let key = tokens.pop().unwrap();
-//
-//     let mut initial_table = toml::Table::new();
-//     initial_table.insert(key, toml::Value::String(val));
-//     let mut table: toml::Value = toml::Value::Table(initial_table);
-//
-//     while let Some(new_key) = tokens.pop() {
-//         let mut new_table = toml::Table::new();
-//         new_table.insert(new_key, table.clone());
-//         table = toml::Value::Table(new_table);
-//     }
-//
-//     match table {
-//         toml::Value::Table(m) => m.try_into().unwrap(),
-//         _ => panic!("ermmmm"),
-//     }
-// }
 
 fn parse_key_event(raw: &str) -> Result<KeyEvent, String> {
     // let raw_lower = raw.to_ascii_lowercase();
@@ -241,7 +287,7 @@ fn parse_key_code_with_modifiers(
     let lower = raw.to_ascii_lowercase();
     let c = match lower.as_str() {
         "esc" => KeyCode::Esc,
-        "enter" => KeyCode::Enter,
+        "enter" | "cr" => KeyCode::Enter,
         "left" => KeyCode::Left,
         "right" => KeyCode::Right,
         "up" => KeyCode::Up,
@@ -256,7 +302,9 @@ fn parse_key_code_with_modifiers(
             KeyCode::BackTab
         }
         "backspace" => KeyCode::Backspace,
+        "bs" => KeyCode::Backspace,
         "delete" => KeyCode::Delete,
+        "del" => KeyCode::Delete,
         "insert" => KeyCode::Insert,
         "f1" => KeyCode::F(1),
         "f2" => KeyCode::F(2),
@@ -271,17 +319,11 @@ fn parse_key_code_with_modifiers(
         "f11" => KeyCode::F(11),
         "f12" => KeyCode::F(12),
         "space" => KeyCode::Char(' '),
-        "hyphen" => KeyCode::Char('-'),
-        "minus" => KeyCode::Char('-'),
+        "hyphen" | "minus" | "-" => KeyCode::Char('-'),
         "lt" => KeyCode::Char('<'),
         "gt" => KeyCode::Char('>'),
-        "tab" => {
-            if modifiers.contains(KeyModifiers::SHIFT) {
-                KeyCode::BackTab
-            } else {
-                KeyCode::Tab
-            }
-        }
+        "tab" if modifiers.contains(KeyModifiers::SHIFT) => KeyCode::BackTab,
+        "tab" => KeyCode::Tab,
         c if c.len() == 1 => {
             let mut c = raw.chars().next().unwrap();
             if c.is_ascii_uppercase() {
@@ -462,6 +504,68 @@ mod tests {
                 KeyEvent::new(KeyCode::Char('c'), KeyModifiers::NONE),
                 KeyEvent::new(KeyCode::Char('Y'), KeyModifiers::SHIFT)
             ]
+        );
+    }
+
+    #[test]
+    fn test_parse_toml() {
+        let raw_toml = r#"
+            [Insert._]
+            "a" = { "NotifyInfo" = "Message 1" }
+            "b" = { "NotifyInfo" = "Message 1" }
+
+            [Normal._]
+            "c" = { "NotifyInfo" = "Message 2" }
+            "d" = { "NotifyInfo" = "Message 2" }
+
+            [Insert.Search]
+            "b" = { "NotifyInfo" = "Message 1 override" }
+            "e" = { "NotifyInfo" = "Message 1 unique" }
+
+            [Normal.Home]
+            "d" = { "NotifyInfo" = "Message 2 override" }
+            "f" = { "NotifyInfo" = "Message 2 unique" }
+        "#;
+
+        let keys: KeyBindings = toml::from_str(raw_toml).unwrap();
+
+        let get_action = |im, m, ch| {
+            keys.get(&im)
+                .unwrap()
+                .get(&m)
+                .unwrap()
+                .get(&vec![KeyEvent::new(KeyCode::Char(ch), KeyModifiers::NONE)])
+                .unwrap()
+        };
+
+        assert_eq!(
+            get_action(InputMode::Insert, Mode::Search, 'a'),
+            &OneOrManyActions::One(UserAction::NotifyInfo("Message 1".to_string()))
+        );
+
+        assert_eq!(
+            get_action(InputMode::Insert, Mode::Search, 'b'),
+            &OneOrManyActions::One(UserAction::NotifyInfo("Message 1 override".to_string()))
+        );
+
+        assert_eq!(
+            get_action(InputMode::Normal, Mode::Home, 'c'),
+            &OneOrManyActions::One(UserAction::NotifyInfo("Message 2".to_string()))
+        );
+
+        assert_eq!(
+            get_action(InputMode::Normal, Mode::Home, 'd'),
+            &OneOrManyActions::One(UserAction::NotifyInfo("Message 2 override".to_string()))
+        );
+
+        assert_eq!(
+            get_action(InputMode::Insert, Mode::Search, 'e'),
+            &OneOrManyActions::One(UserAction::NotifyInfo("Message 1 unique".to_string()))
+        );
+
+        assert_eq!(
+            get_action(InputMode::Normal, Mode::Home, 'f'),
+            &OneOrManyActions::One(UserAction::NotifyInfo("Message 2 unique".to_string()))
         );
     }
 }

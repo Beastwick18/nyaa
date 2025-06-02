@@ -9,7 +9,7 @@ use ratatui::{
 
 use crate::{
     action::{AppAction, UserAction},
-    app::Context,
+    app::{Context, Mode},
 };
 
 use super::{
@@ -39,14 +39,21 @@ impl Component for HomeComponent {
         self.results.update(ctx, action)?;
         self.actions_temp.update(ctx, action)?;
 
-        if let AppAction::UserAction(UserAction::Submit) = action {
+        if action == &AppAction::UserAction(UserAction::Submit) {
             return Ok(Some(AppAction::Search("queriees".to_string())));
+        }
+
+        if ctx.mode == Mode::Search {
+            self.search.update(ctx, action)?;
         }
 
         Ok(None)
     }
 
     fn on_key(&mut self, ctx: &Context, key: &KeyEvent) -> Result<()> {
+        if ctx.mode == Mode::Search {
+            self.search.on_key(ctx, key)?;
+        }
         self.results.on_key(ctx, key)?;
         Ok(())
     }

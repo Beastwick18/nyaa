@@ -84,7 +84,7 @@ impl Component for ResultsComponent {
         Ok(None)
     }
 
-    fn render(&mut self, _ctx: &Context, frame: &mut Frame, area: Rect) -> Result<()> {
+    fn render(&mut self, ctx: &Context, frame: &mut Frame, area: Rect) -> Result<()> {
         let mut block = Block::new()
             .fg(Color::Rgb(255, 255, 255))
             .borders(Borders::ALL);
@@ -102,9 +102,10 @@ impl Component for ResultsComponent {
                 combo,
                 format!(" {}", vr).fg(Color::Rgb(255, 255, 255)),
             ]);
-
-            block = block.title_bottom(keycombo.right_aligned());
+            block = block.title_bottom(keycombo.right_aligned())
         };
+
+        block = block.title_bottom(format!("{}.{}", ctx.mode, ctx.input_mode));
 
         frame.render_widget(block, area);
 

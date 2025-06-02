@@ -1,3 +1,4 @@
+use category::Categories;
 use color_eyre::Result;
 use crossterm::event::KeyEvent;
 use download_client::DownloadClientComponent;
@@ -40,6 +41,7 @@ impl PopupsComponent {
                 PopupMode::Some(Mode::DownloadClient),
                 DownloadClientComponent::boxed(),
             ),
+            (PopupMode::Some(Mode::Categories), Categories::boxed()),
             (PopupMode::All, WhichKeyComponent::boxed()),
         ];
         Box::new(Self {

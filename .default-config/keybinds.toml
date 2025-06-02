@@ -1,9 +1,7 @@
-[Home]
-"q" = "Quit"
-"<C-z>" = "Suspend"
-"d" = { "SetMode" = "DownloadClient" }
-"<enter>" = "Submit"
-"asdf" = ["Down", "Down", "Up"]
+# Default keybinds for all normal modes, can be overridden
+[Normal._]
+"<esc>" = { "SetMode" = "Home" }
+"q" = { "SetMode" = "Home" }
 "?" = "WhichKey"
 "k" = "Up"
 "j" = "Down"
@@ -13,12 +11,37 @@
 "J" = [4, "Down"]
 "g" = "Top"
 "G" = "Bottom"
-"<esc>" = "ClearNotifications"
-"z" = { "NotifyInfo" = "Test info" }
-"x" = { "NotifyWarning" = "Test warning" }
-"c" = { "NotifyError" = "Test error" }
+"<enter>" = "Submit"
+"<C-z>" = "Suspend"
 
-[DownloadClient]
+# Default keybinds for all insert modes, can be overridden
+[Insert._]
 "<esc>" = { "SetMode" = "Home" }
-"q" = { "SetMode" = "Home" }
+"<C-k>" = "DeleteTillEnd"
+"<C-a>" = "GoToStart"
+"<C-e>" = "GoToEnd"
+"<C-b>" = "GoToPrevChar"
+"<C-f>" = "GoToNextChar"
+"<A-b>" = "GoToPrevWord"
+"<A-f>" = "GoToNextWord"
+"<BS>" = "DeletePrevChar"
+"<C-d>" = "DeleteNextChar"
+"<A-BS>" = "DeletePrevWord"
+"<C-c>" = "DeleteLine"
+"<C-w>" = "DeleteNextWord"
+
+[Normal.Home]
+"<esc>" = "ClearNotifications"
+"q" = "Quit"
+"d" = { "SetMode" = "DownloadClient" }
+"asdf" = ["Down", "Down", "Up"]
+"test--" = { "NotifyInfo" = "Test info" }
+"x" = { "NotifyWarning" = "Test warning" }
+"c" = { "SetMode" = "Categories" }
+"/" = { "SetMode" = "Search" }
+
+[Normal.DownloadClient]
 "d" = { "SetMode" = "Home" }
+
+[Normal.Categories]
+"c" = { "SetMode" = "Home" }

@@ -38,9 +38,26 @@ impl Component for ActionsComponent {
         ctx: &Context,
         _action: &AppAction,
     ) -> Result<Option<crate::action::AppAction>> {
-        if let Some(keymap) = ctx.config.keys.get(&ctx.mode) {
-            self.actions = keymap
-                .iter()
+        let keymap = ctx.config.keys.keymap(&ctx.mode, &ctx.input_mode);
+        self.actions = keymap
+            .iter()
+            .map(|(keys, action)| {
+                format!(
+                    "{} => {:?}",
+                    keys.iter()
+                        .map(key_event_to_string)
+                        .collect::<Vec<String>>()
+                        .join(""),
+                    action
+                )
+            })
+            .collect();
+
+        if ctx.keycombo.status() == &KeyComboStatus::Pending {
+            self.possible_actions = ctx
+                .config
+                .keys
+                .possible_actions(ctx.keycombo.events(), &ctx.mode, &ctx.input_mode)
                 .map(|(keys, action)| {
                     format!(
                         "{} => {:?}",
@@ -52,23 +69,6 @@ impl Component for ActionsComponent {
                     )
                 })
                 .collect();
-
-            if ctx.keycombo.status() == &KeyComboStatus::Pending {
-                self.possible_actions = keymap
-                    .iter()
-                    .filter(|(keys, _action)| keys.starts_with(ctx.keycombo.events()))
-                    .map(|(keys, action)| {
-                        format!(
-                            "{} => {:?}",
-                            keys.iter()
-                                .map(key_event_to_string)
-                                .collect::<Vec<String>>()
-                                .join(""),
-                            action
-                        )
-                    })
-                    .collect();
-            }
         }
         let (mult, keycombo, keycombo_color) = (
             ctx.keycombo.repeat(),

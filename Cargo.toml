@@ -40,7 +40,7 @@ crossterm = { version = "0.28.1", features = ["event-stream"] }
 unicode-width = "0.1.13"
 toml = "0.8.14"
 directories = "5.0.1"
-serde = { version = "1.0.203", default-features = false }
+serde = { version = "1.0.219", default-features = false }
 scraper = { version = "0.19.0", default-features = false }
 rss = { version = "2.0.8", default-features = false }
 chrono = { version = "0.4.38", features = ["clock"], default-features = false }
@@ -64,6 +64,7 @@ tracing-error = "0.2.0"
 derive_more = { version = "1.0.0", features = ["deref", "deref_mut"] }
 rand = { version = "0.9.0", features = ["small_rng"] }
 enum-assoc = "1.2.4"
+tui-input = { version = "0.12.1", features = ["serde"] }
 
 # [lib]
 # name = "nyaa"

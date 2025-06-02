@@ -28,13 +28,6 @@ impl DownloadClientComponent {
                 .playing(true)
                 .backwards()
                 .smoothing(Smoothing::EaseInAndOut),
-            // grow_state: GrowthAnimation::new(
-            //     AnimationState::new(0.04)
-            //         .playing(true)
-            //         .smoothing(Smoothing::EaseInAndOut)
-            //         .backwards(),
-            //     Growth::Circle,
-            // ),
         })
     }
 }
@@ -42,11 +35,6 @@ impl DownloadClientComponent {
 impl Component for DownloadClientComponent {
     fn update(&mut self, ctx: &Context, action: &AppAction) -> Result<Option<AppAction>> {
         if action == &AppAction::Render {
-            // self.grow_state.state_mut().set_direction(match ctx.mode {
-            //     Mode::DownloadClient => Direction::Forwards,
-            //     _ => Direction::Backwards,
-            // });
-
             self.translate_state.set_direction(match ctx.mode {
                 Mode::DownloadClient => Direction::Forwards,
                 _ => Direction::Backwards,
