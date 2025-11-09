@@ -1,14 +1,14 @@
 use color_eyre::Result;
-use crossterm::event::KeyEvent;
+use crossterm::event::{KeyEvent, MouseEvent};
 use ratatui::{
     layout::{Constraint, Flex, Layout, Rect},
     widgets::Borders,
     Frame,
 };
+use tokio::sync::mpsc::UnboundedSender;
 
 use crate::{action::AppAction, app::Context};
 
-pub mod actions_temp;
 pub mod home;
 pub mod popups;
 pub mod results;
@@ -16,8 +16,21 @@ pub mod search;
 
 // TODO: simple component for now
 pub trait Component {
-    fn update(&mut self, ctx: &Context, action: &AppAction) -> Result<Option<AppAction>>;
+    fn update(
+        &mut self,
+        ctx: &Context,
+        action: &AppAction,
+        action_tx: UnboundedSender<AppAction>,
+    ) -> Result<()>;
     fn on_key(&mut self, _ctx: &Context, _key: &KeyEvent) -> Result<()> {
+        Ok(())
+    }
+    fn on_mouse(
+        &mut self,
+        _ctx: &Context,
+        _mouse: &MouseEvent,
+        _action_tx: UnboundedSender<AppAction>,
+    ) -> Result<()> {
         Ok(())
     }
     fn render(&mut self, ctx: &Context, frame: &mut Frame, area: Rect) -> Result<()>;

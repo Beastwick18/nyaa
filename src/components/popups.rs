@@ -4,18 +4,21 @@ use crossterm::event::KeyEvent;
 use download_client::DownloadClientComponent;
 use notification::NotificationContainer;
 use ratatui::{layout::Rect, widgets::Widget, Frame};
+use tokio::sync::mpsc::UnboundedSender;
 use which_key::WhichKeyComponent;
 
 use crate::{
     action::AppAction,
     animate::{AnimationState, Direction, Smoothing},
     app::{Context, Mode},
+    components::popups::debug::Debug,
     widgets::dim::Dim,
 };
 
 use super::Component;
 
 pub mod category;
+pub mod debug;
 pub mod download_client;
 pub mod filter;
 pub mod notification;
@@ -43,6 +46,7 @@ impl PopupsComponent {
             ),
             (PopupMode::Some(Mode::Categories), Categories::boxed()),
             (PopupMode::All, WhichKeyComponent::boxed()),
+            (PopupMode::All, Debug::boxed()),
         ];
         Box::new(Self {
             popups,
@@ -55,7 +59,12 @@ impl PopupsComponent {
 }
 
 impl Component for PopupsComponent {
-    fn update(&mut self, ctx: &Context, action: &AppAction) -> Result<Option<AppAction>> {
+    fn update(
+        &mut self,
+        ctx: &Context,
+        action: &AppAction,
+        action_tx: UnboundedSender<AppAction>,
+    ) -> Result<()> {
         if &AppAction::Render == action {
             let direction = match self
                 .popups
@@ -68,23 +77,30 @@ impl Component for PopupsComponent {
 
             self.dim_state.set_direction(direction);
 
-            // self.dim_state.set_direction(match ctx.mode {
-            //     Mode::Home => Direction::Backwards,
-            //     _ => Direction::Forwards,
-            // });
-
             self.dim_state.update(ctx.render_delta_time);
         }
 
         for (_, popup) in self.popups.iter_mut() {
-            popup.update(ctx, action)?;
+            popup.update(ctx, action, action_tx.clone())?;
         }
-        Ok(None)
+        Ok(())
     }
 
     fn on_key(&mut self, ctx: &Context, key: &KeyEvent) -> Result<()> {
         for (_, popup) in self.popups.iter_mut() {
             popup.on_key(ctx, key)?;
+        }
+        Ok(())
+    }
+
+    fn on_mouse(
+        &mut self,
+        ctx: &Context,
+        mouse: &crossterm::event::MouseEvent,
+        action_tx: UnboundedSender<AppAction>,
+    ) -> Result<()> {
+        for (_, popup) in self.popups.iter_mut() {
+            popup.on_mouse(ctx, mouse, action_tx.clone())?;
         }
         Ok(())
     }

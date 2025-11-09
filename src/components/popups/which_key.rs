@@ -8,6 +8,7 @@ use ratatui::{
     widgets::{Block, Clear, List, Widget as _},
     Frame,
 };
+use tokio::sync::mpsc::UnboundedSender;
 
 use crate::{
     action::{AppAction, UserAction},
@@ -42,7 +43,12 @@ impl WhichKeyComponent {
 }
 
 impl Component for WhichKeyComponent {
-    fn update(&mut self, ctx: &Context, action: &AppAction) -> Result<Option<AppAction>> {
+    fn update(
+        &mut self,
+        ctx: &Context,
+        action: &AppAction,
+        _action_tx: UnboundedSender<AppAction>,
+    ) -> Result<()> {
         if action == &AppAction::UserAction(UserAction::WhichKey) {
             self.wait_state.set_direction(Direction::Forwards);
             self.wait_state.goto_end();
@@ -85,7 +91,7 @@ impl Component for WhichKeyComponent {
                 .collect();
         }
 
-        Ok(None)
+        Ok(())
     }
 
     fn on_key(&mut self, ctx: &Context, _key: &KeyEvent) -> Result<()> {

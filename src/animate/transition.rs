@@ -1,6 +1,6 @@
 use ratatui::style::Color;
 
-use crate::color;
+use crate::color::{self, ColorRgbExt as _};
 
 use super::AnimationState;
 
@@ -25,12 +25,12 @@ impl<'a> Transition<'a> {
     fn transition_color(&self, from: impl Into<Color>, to: impl Into<Color>) -> Color {
         let time = self.state.get_smooth_time();
 
-        let (from_r, from_g, from_b) = match color::to_rgb(from.into()) {
+        let (from_r, from_g, from_b) = match Into::<Color>::into(from).to_rgb() {
             Color::Rgb(r, g, b) => (r, g, b),
             _ => return Color::Reset,
         };
 
-        let (to_r, to_g, to_b) = match color::to_rgb(to.into()) {
+        let (to_r, to_g, to_b) = match Into::<Color>::into(to).to_rgb() {
             Color::Rgb(r, g, b) => (r, g, b),
             _ => return Color::Reset,
         };

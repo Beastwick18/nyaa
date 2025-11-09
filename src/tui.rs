@@ -6,8 +6,8 @@ use color_eyre::Result;
 
 use crossterm::cursor::{self, SetCursorStyle};
 use crossterm::event::{
-    DisableBracketedPaste, EnableBracketedPaste, Event, EventStream, KeyEvent, KeyEventKind,
-    MouseEvent,
+    DisableBracketedPaste, DisableMouseCapture, EnableBracketedPaste, EnableMouseCapture, Event,
+    EventStream, KeyEvent, KeyEventKind, MouseEvent,
 };
 use crossterm::terminal::{EnterAlternateScreen, LeaveAlternateScreen};
 use futures::{FutureExt as _, StreamExt as _};
@@ -39,7 +39,7 @@ pub enum TuiEvent {
     Key(KeyEvent),
     Mouse(MouseEvent),
     Resize(u16, u16),
-    Paste(String),
+    // Paste(String),
     Error,
 }
 
@@ -129,7 +129,7 @@ impl Tui {
                         Event::Resize(x, y) => TuiEvent::Resize(x, y),
                         Event::FocusLost => TuiEvent::FocusLost,
                         Event::FocusGained => TuiEvent::FocusGained,
-                        Event::Paste(s) => TuiEvent::Paste(s),
+                        // Event::Paste(s) => TuiEvent::Paste(s),
                         _ => continue,
                     }
                     Some(Err(_)) => TuiEvent::Error,
@@ -153,6 +153,7 @@ impl Tui {
             stdout(),
             EnterAlternateScreen,
             EnableBracketedPaste,
+            EnableMouseCapture,
             cursor::Hide,
             self.cursor_style
         )?;
@@ -168,6 +169,7 @@ impl Tui {
             crossterm::execute!(
                 stdout(),
                 DisableBracketedPaste,
+                DisableMouseCapture,
                 LeaveAlternateScreen,
                 cursor::Show,
                 cursor::SetCursorStyle::DefaultUserShape
@@ -175,17 +177,6 @@ impl Tui {
             crossterm::terminal::disable_raw_mode()?;
         }
         Ok(())
-    }
-
-    // In event of panic, abort TUI session
-    pub fn abort() {
-        let _ = crossterm::execute!(
-            stdout(),
-            DisableBracketedPaste,
-            LeaveAlternateScreen,
-            cursor::Show
-        );
-        let _ = crossterm::terminal::disable_raw_mode();
     }
 
     pub fn suspend(&mut self) -> Result<()> {

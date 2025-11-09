@@ -11,7 +11,7 @@ use strum::IntoEnumIterator;
 use crate::{
     action::UserAction,
     app::{InputMode, Mode},
-    color::to_rgb,
+    color::ColorRgbExt,
 };
 
 // Keys that cannot be used in combos, and will cancel the current combo.
@@ -116,18 +116,18 @@ impl KeyCombo {
 }
 
 #[derive(Assoc, Clone, Copy, Default, PartialEq, Eq)]
-#[func(pub const fn color(&self) -> Color)]
+#[func(pub fn color(&self) -> Color)]
 pub enum KeyComboStatus {
-    #[assoc(color = to_rgb(Color::White))]
+    #[assoc(color = Color::White.to_rgb())]
     Pending,
-    #[assoc(color = to_rgb(Color::Cyan))]
+    #[assoc(color = Color::Cyan.to_rgb())]
     Successful,
     #[default]
-    #[assoc(color = to_rgb(Color::DarkGray))]
+    #[assoc(color = Color::DarkGray.to_rgb())]
     Cancelled,
-    #[assoc(color = to_rgb(Color::DarkGray))]
+    #[assoc(color = Color::DarkGray.to_rgb())]
     Inserted, // handled by insert mode
-    #[assoc(color = to_rgb(Color::Red))]
+    #[assoc(color = Color::Red.to_rgb())]
     Unmatched,
 }
 
@@ -163,7 +163,7 @@ impl Display for OneOrManyActions {
                 .join(", "),
             OneOrManyActions::Repeat(n, user_action) => format!("{n}×{}", user_action.name()),
         };
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
 
@@ -200,25 +200,25 @@ impl<'de> Deserialize<'de> for KeyBindings {
         // Go through each input mode, and extend default keybinds into each Mode's keybinds
         let mut combined_keybindings = KeyBindings::default();
         for (input_mode, mode_bindings) in keybindings.iter() {
-            let general_action = mode_bindings
+            let default_action = mode_bindings
                 .get(&ModeOrDefault::Default)
                 .cloned()
                 .unwrap_or_default();
             let mut new_mode_bindings = IndexMap::new();
 
+            // Override default keybinds with defined mode-specific keybinds
             for (mode, keymap) in mode_bindings.iter() {
                 if let ModeOrDefault::Mode(mode) = mode {
-                    let mut cloned_general_action = general_action.clone();
-                    cloned_general_action.extend(keymap.0.clone());
-                    new_mode_bindings.insert(*mode, cloned_general_action);
+                    let mut cloned_default_action = default_action.clone();
+                    cloned_default_action.extend(keymap.0.clone());
+                    new_mode_bindings.insert(*mode, cloned_default_action);
                 }
             }
 
-            // Use general keybinds for missing modes
+            // Use default keybinds for missing modes
             for mode in Mode::iter() {
                 if !new_mode_bindings.contains_key(&mode) {
-                    let cloned_general_action = general_action.clone();
-                    new_mode_bindings.insert(mode, cloned_general_action);
+                    new_mode_bindings.insert(mode, default_action.clone());
                 }
             }
 

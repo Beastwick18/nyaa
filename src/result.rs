@@ -234,7 +234,7 @@ impl From<ResultHeaderCell> for ResultCell {
         };
         let content = match rhead.cell.alignment {
             Alignment::Left => content.clone(),
-            Alignment::Center => format!("{}{}", padding, content),
+            Alignment::Center => format!("{padding}{content}"),
             Alignment::Right => content.clone(),
         };
         rhead.cell.content = content;

@@ -1,7 +1,7 @@
 use std::{path::PathBuf, time::Instant};
 
 use color_eyre::Result;
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent};
 use enum_assoc::Assoc;
 use serde::Deserialize;
 use strum::{Display, EnumIter};
@@ -13,7 +13,6 @@ use crate::{
     components::{home::HomeComponent, popups::PopupsComponent, Component},
     config::Config,
     keys::{self, KeyCombo, KeyComboStatus},
-    result::ResultTable,
     sources::{Source, SourceTaskRunner},
     tui::{Tui, TuiEvent},
 };
@@ -24,8 +23,8 @@ pub struct Context {
     pub input_mode: InputMode,
     pub keycombo: KeyCombo,
     pub source: Source,
-    pub results: Option<ResultTable>,
     pub render_delta_time: f64,
+    pub show_debug: bool,
 }
 
 impl Context {
@@ -36,8 +35,8 @@ impl Context {
             input_mode: Mode::default().default_input_mode(),
             keycombo: KeyCombo::default(),
             source: Source::Nyaa,
-            results: None,
             render_delta_time: 1.0 / 60.0,
+            show_debug: false,
         })
     }
 }
@@ -63,16 +62,6 @@ pub enum InputMode {
     Insert,
 }
 
-// impl Mode {
-//     pub fn get_input_mode(&self) -> InputMode {
-//         match self {
-//             Self::Home => InputMode::Normal,
-//             Self::DownloadClient => InputMode::Normal,
-//             Self::Search => InputMode::Insert,
-//         }
-//     }
-// }
-
 pub struct App {
     ctx: Context,
     should_quit: bool,
@@ -81,7 +70,6 @@ pub struct App {
     action_rx: mpsc::UnboundedReceiver<AppAction>,
     components: Vec<Box<dyn Component>>,
     last_render_time: Instant,
-    last_update_time: Instant,
 }
 
 impl App {
@@ -99,7 +87,6 @@ impl App {
             action_rx,
             components: vec![HomeComponent::new(), PopupsComponent::new()],
             last_render_time: Instant::now(),
-            last_update_time: Instant::now(),
         })
     }
 
@@ -112,6 +99,7 @@ impl App {
         // Initialize components
 
         let action_tx = self.action_tx.clone();
+        self.search(String::new());
         loop {
             self.handle_events(&mut tui).await?;
             self.handle_actions(&mut tui)?;
@@ -143,6 +131,7 @@ impl App {
             TuiEvent::Render => action_tx.send(AppAction::Render)?,
             TuiEvent::Resize(x, y) => action_tx.send(AppAction::Resize(x, y))?,
             TuiEvent::Key(key) => self.handle_key_event(key)?,
+            TuiEvent::Mouse(mouse) => self.handle_mouse_event(mouse)?,
             _ => {}
         };
         Ok(())
@@ -224,10 +213,20 @@ impl App {
         Ok(())
     }
 
+    fn handle_mouse_event(&mut self, mouse: MouseEvent) -> Result<()> {
+        let action_tx = self.action_tx.clone();
+
+        for component in self.components.iter_mut() {
+            component.on_mouse(&self.ctx, &mouse, action_tx.clone())?;
+        }
+        Ok(())
+    }
+
     fn handle_actions(&mut self, tui: &mut Tui) -> Result<()> {
         while let Ok(action) = self.action_rx.try_recv() {
             match &action {
                 AppAction::UserAction(u) => match u {
+                    UserAction::ToggleDebug => self.ctx.show_debug = !self.ctx.show_debug,
                     UserAction::Quit => self.should_quit = true,
                     UserAction::Suspend => self.should_suspend = true,
                     UserAction::SetMode(m) => {
@@ -248,9 +247,7 @@ impl App {
                 _ => {}
             }
             for component in self.components.iter_mut() {
-                if let Some(action) = component.update(&self.ctx, &action)? {
-                    self.action_tx.send(action)?;
-                }
+                component.update(&self.ctx, &action, self.action_tx.clone())?
             }
         }
         Ok(())
@@ -278,7 +275,7 @@ impl App {
                 if let Err(err) = component.render(&self.ctx, frame, frame.area()) {
                     let _ = self
                         .action_tx
-                        .send(AppAction::Error(format!("Failed to draw: {:?}", err)));
+                        .send(AppAction::Error(format!("Failed to draw: {err:?}")));
                 }
             }
         })?;

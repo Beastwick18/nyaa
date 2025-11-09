@@ -11,17 +11,21 @@
 "J" = [4, "Down"]
 "g" = "Top"
 "G" = "Bottom"
-"<enter>" = "Submit"
 "<C-z>" = "Suspend"
+"<f3>" = "ToggleDebug"
 
 # Default keybinds for all insert modes, can be overridden
 [Insert._]
 "<esc>" = { "SetMode" = "Home" }
 "<C-k>" = "DeleteTillEnd"
 "<C-a>" = "GoToStart"
+"<up>" = "GoToStart"
 "<C-e>" = "GoToEnd"
+"<down>" = "GoToEnd"
 "<C-b>" = "GoToPrevChar"
 "<C-f>" = "GoToNextChar"
+"<left>" = "GoToPrevChar"
+"<right>" = "GoToNextChar"
 "<A-b>" = "GoToPrevWord"
 "<A-f>" = "GoToNextWord"
 "<BS>" = "DeletePrevChar"
@@ -29,6 +33,7 @@
 "<A-BS>" = "DeletePrevWord"
 "<C-c>" = "DeleteLine"
 "<C-w>" = "DeleteNextWord"
+"<enter>" = ["Submit", { "SetMode" = "Home" }]
 
 [Normal.Home]
 "<esc>" = "ClearNotifications"

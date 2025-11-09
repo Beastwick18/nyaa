@@ -65,6 +65,7 @@ derive_more = { version = "1.0.0", features = ["deref", "deref_mut"] }
 rand = { version = "0.9.0", features = ["small_rng"] }
 enum-assoc = "1.2.4"
 tui-input = { version = "0.12.1", features = ["serde"] }
+bitflags = "2.10.0"
 
 # [lib]
 # name = "nyaa"

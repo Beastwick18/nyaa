@@ -3,7 +3,6 @@ use std::error::Error;
 #[derive(Default)]
 pub struct Args {
     pub config_path: Option<String>,
-    pub debug_info: Option<String>,
 }
 
 static HELP_MSG: &str = "\
@@ -15,9 +14,9 @@ Usage:
   nyaa --version
 
 Options:
--h --help        Show this screen
--v -V --version  Show version
--c --config      Set the directory to look for config files [default: \"~/.config/nyaa\"]";
+-h, --help         Show this message
+-v, -V, --version  Show version
+-c, --config       Set the directory to look for config files [default: \"~/.config/nyaa\"]";
 
 pub fn read_args() -> Result<Args, Box<dyn Error>> {
     use lexopt::prelude::*;
@@ -43,7 +42,7 @@ pub fn read_args() -> Result<Args, Box<dyn Error>> {
                 std::process::exit(0);
             }
             Short('h') | Long("help") => {
-                println!("{}", HELP_MSG);
+                println!("{HELP_MSG}");
                 std::process::exit(0);
             }
             _ => return Err(arg.unexpected().into()),

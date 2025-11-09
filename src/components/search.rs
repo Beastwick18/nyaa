@@ -6,12 +6,13 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph, Widget},
     Frame,
 };
+use tokio::sync::mpsc::UnboundedSender;
 use tui_input::{Input, InputRequest};
 
 use crate::{
     action::{AppAction, UserAction},
     app::{Context, InputMode, Mode},
-    color::to_rgb,
+    color::ColorRgbExt,
     keys::KeyComboStatus,
 };
 
@@ -30,11 +31,22 @@ impl SearchComponent {
 }
 
 impl Component for SearchComponent {
-    fn update(&mut self, _ctx: &Context, action: &AppAction) -> Result<Option<AppAction>> {
-        if let AppAction::UserAction(UserAction::Insert(insert_action)) = action {
-            self.input.handle(*insert_action);
+    fn update(
+        &mut self,
+        _ctx: &Context,
+        action: &AppAction,
+        action_tx: UnboundedSender<AppAction>,
+    ) -> Result<()> {
+        match action {
+            AppAction::UserAction(UserAction::Insert(insert_action)) => {
+                self.input.handle(*insert_action);
+            }
+            AppAction::UserAction(UserAction::Submit) => {
+                action_tx.send(AppAction::Search(self.input.to_string()));
+            }
+            _ => {}
         }
-        Ok(None)
+        Ok(())
     }
 
     fn on_key(&mut self, ctx: &Context, key: &KeyEvent) -> Result<()> {
@@ -60,10 +72,15 @@ impl Component for SearchComponent {
             Mode::Search => Color::Cyan,
             _ => Color::White,
         };
-        let block = Block::new().fg(to_rgb(bg)).borders(Borders::ALL);
-        Paragraph::new(self.input.value())
+        let block = Block::new().fg(bg.to_rgb()).borders(Borders::ALL);
+        let (value, color) = if self.input.value().is_empty() {
+            ("Search...", Color::Gray.to_rgb())
+        } else {
+            (self.input.value(), Color::White.to_rgb())
+        };
+        Paragraph::new(value)
             .block(block)
-            .fg(Color::Rgb(255, 255, 255))
+            .fg(color)
             .render(area, frame.buffer_mut());
         Ok(())
     }

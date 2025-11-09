@@ -5,12 +5,13 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph},
     Frame,
 };
+use tokio::sync::mpsc::UnboundedSender;
 
 use crate::{
     action::{AppAction, UserAction},
     animate::{translate::Translate, Animation, AnimationState, FloatRect, Smoothing},
     app::Context,
-    color::to_rgb,
+    color::ColorRgbExt,
 };
 
 use super::Component;
@@ -41,7 +42,12 @@ impl NotificationContainer {
 }
 
 impl Component for NotificationContainer {
-    fn update(&mut self, ctx: &Context, action: &AppAction) -> Result<Option<AppAction>> {
+    fn update(
+        &mut self,
+        ctx: &Context,
+        action: &AppAction,
+        action_tx: UnboundedSender<AppAction>,
+    ) -> Result<()> {
         // Create notifications from actions
         match action {
             AppAction::Error(err) | AppAction::UserAction(UserAction::NotifyError(err)) => {
@@ -82,9 +88,9 @@ impl Component for NotificationContainer {
         }
 
         for n in self.notifications.iter_mut() {
-            n.update(ctx, action)?;
+            n.update(ctx, action, action_tx.clone())?;
         }
-        Ok(None)
+        Ok(())
     }
 
     fn render(&mut self, ctx: &Context, frame: &mut Frame, area: Rect) -> Result<()> {
@@ -116,9 +122,9 @@ impl Notification {
         persist: bool,
         notif_type: NotificationType,
     ) -> Notification {
-        let (width, height, lines) = Self::breakup_text(&message.into());
+        let (width, height, lines) = Self::break_text(&message.into());
         Self {
-            enter_state: AnimationState::from_secs(0.15)
+            enter_state: AnimationState::from_secs(0.12)
                 .playing(true)
                 .forwards()
                 .smoothing(Smoothing::EaseOut),
@@ -133,7 +139,7 @@ impl Notification {
             between_state: AnimationState::from_secs(0.15)
                 .playing(true)
                 .forwards()
-                .smoothing(Smoothing::EaseOut)
+                .smoothing(Smoothing::Linear)
                 .ending(),
             prev_offset: 0,
             offset: 0,
@@ -145,7 +151,7 @@ impl Notification {
         }
     }
 
-    fn breakup_text(msg: &str) -> (u16, u16, Vec<String>) {
+    fn break_text(msg: &str) -> (u16, u16, Vec<String>) {
         let max_width = 32;
         let lines: Vec<String> = textwrap::wrap(msg, max_width)
             .into_iter()
@@ -190,7 +196,12 @@ impl Notification {
 }
 
 impl Component for Notification {
-    fn update(&mut self, ctx: &Context, action: &AppAction) -> Result<Option<AppAction>> {
+    fn update(
+        &mut self,
+        ctx: &Context,
+        action: &AppAction,
+        _action_tx: UnboundedSender<AppAction>,
+    ) -> Result<()> {
         if action == &AppAction::Render {
             if self.persist {
                 self.enter_state
@@ -209,15 +220,15 @@ impl Component for Notification {
             };
         }
 
-        Ok(None)
+        Ok(())
     }
 
     fn render(&mut self, _ctx: &Context, frame: &mut Frame, area: Rect) -> Result<()> {
         // TODO: Add with themes
         let color = match self.notif_type {
-            NotificationType::Error => to_rgb(Color::Red),
-            NotificationType::Warning => to_rgb(Color::Yellow),
-            NotificationType::Info => to_rgb(Color::Cyan),
+            NotificationType::Error => Color::Red.to_rgb(),
+            NotificationType::Warning => Color::Yellow.to_rgb(),
+            NotificationType::Info => Color::Cyan.to_rgb(),
         };
 
         let bg = Block::new()

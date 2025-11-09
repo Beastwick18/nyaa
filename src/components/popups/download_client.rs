@@ -5,6 +5,7 @@ use ratatui::{
     widgets::{Block, Paragraph, Widget as _, Wrap},
     Frame,
 };
+use tokio::sync::mpsc::UnboundedSender;
 
 use crate::{
     action::AppAction,
@@ -33,7 +34,12 @@ impl DownloadClientComponent {
 }
 
 impl Component for DownloadClientComponent {
-    fn update(&mut self, ctx: &Context, action: &AppAction) -> Result<Option<AppAction>> {
+    fn update(
+        &mut self,
+        ctx: &Context,
+        action: &AppAction,
+        _action_tx: UnboundedSender<AppAction>,
+    ) -> Result<()> {
         if action == &AppAction::Render {
             self.translate_state.set_direction(match ctx.mode {
                 Mode::DownloadClient => Direction::Forwards,
@@ -43,7 +49,7 @@ impl Component for DownloadClientComponent {
             self.translate_state.update(ctx.render_delta_time);
         }
 
-        Ok(None)
+        Ok(())
     }
 
     fn render(&mut self, _ctx: &Context, frame: &mut Frame, area: Rect) -> Result<()> {

@@ -6,21 +6,19 @@ use ratatui::{
     widgets::{Block, Widget as _},
     Frame,
 };
+use tokio::sync::mpsc::UnboundedSender;
 
 use crate::{
-    action::{AppAction, UserAction},
+    action::AppAction,
     app::{Context, Mode},
 };
 
-use super::{
-    actions_temp::ActionsComponent, results::ResultsComponent, search::SearchComponent, Component,
-};
+use super::{results::ResultsComponent, search::SearchComponent, Component};
 
 pub struct HomeComponent {
     search_size: u16,
     search: SearchComponent,
     results: ResultsComponent,
-    actions_temp: ActionsComponent,
 }
 
 impl HomeComponent {
@@ -29,25 +27,24 @@ impl HomeComponent {
             search_size: 3,
             search: SearchComponent::new(),
             results: ResultsComponent::new(),
-            actions_temp: ActionsComponent::new(),
         })
     }
 }
 
 impl Component for HomeComponent {
-    fn update(&mut self, ctx: &Context, action: &AppAction) -> Result<Option<AppAction>> {
-        self.results.update(ctx, action)?;
-        self.actions_temp.update(ctx, action)?;
-
-        if action == &AppAction::UserAction(UserAction::Submit) {
-            return Ok(Some(AppAction::Search("queriees".to_string())));
-        }
+    fn update(
+        &mut self,
+        ctx: &Context,
+        action: &AppAction,
+        action_tx: UnboundedSender<AppAction>,
+    ) -> Result<()> {
+        self.results.update(ctx, action, action_tx.clone())?;
 
         if ctx.mode == Mode::Search {
-            self.search.update(ctx, action)?;
+            return self.search.update(ctx, action, action_tx.clone());
         }
 
-        Ok(None)
+        Ok(())
     }
 
     fn on_key(&mut self, ctx: &Context, key: &KeyEvent) -> Result<()> {
@@ -65,11 +62,9 @@ impl Component for HomeComponent {
 
         let vlayout = Layout::vertical([Constraint::Length(self.search_size), Constraint::Fill(1)])
             .split(area);
-        let hlayout = Layout::horizontal([Constraint::Percentage(50), Constraint::Percentage(50)])
-            .split(vlayout[1]);
+        let hlayout = Layout::horizontal([Constraint::Percentage(100)]).split(vlayout[1]);
         self.search.render(ctx, frame, vlayout[0])?;
         self.results.render(ctx, frame, hlayout[0])?;
-        self.actions_temp.render(ctx, frame, hlayout[1])?;
 
         Ok(())
     }

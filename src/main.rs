@@ -10,10 +10,12 @@ mod components;
 mod config;
 mod errors;
 mod keys;
+mod mouse;
 mod result;
 mod sources;
 mod themes;
 mod tui;
+mod utils;
 mod widgets;
 
 #[tokio::main()]
