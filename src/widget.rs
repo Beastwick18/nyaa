@@ -140,7 +140,7 @@ pub fn centered_rect(mut x_len: u16, mut y_len: u16, r: Rect) -> Rect {
     .split(popup_layout[1])[1]
 }
 
-pub fn border_block(theme: &Theme, focused: bool) -> Block {
+pub fn border_block(theme: &Theme, focused: bool) -> Block<'_> {
     Block::new()
         .border_style(match focused {
             true => style!(fg:theme.border_focused_color),
