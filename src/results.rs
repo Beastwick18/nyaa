@@ -84,7 +84,7 @@ impl<S: PartialEq + Copy> ResultColumn<S> {
                             name.replace_range(
                                 name.char_indices()
                                     .nth(idx + 2)
-                                    .map(|(pos, ch)| (pos..pos + ch.len_utf8()))
+                                    .map(|(pos, ch)| pos..pos + ch.len_utf8())
                                     .unwrap(),
                                 match dir {
                                     SortDir::Asc => "▲",
