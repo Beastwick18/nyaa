@@ -22,7 +22,7 @@ strip = "none"
 lto = true
 
 [dependencies]
-reqwest = { version = "0.12.5", features = ["cookies", "gzip", "json"], default-features = false }
+reqwest = { version = "0.12.5", features = ["cookies", "gzip", "json", "native-tls"], default-features = false }
 tokio = { version = "1.38.0", features = ["macros", "rt-multi-thread"] }
 urlencoding = "2.1.3"
 ratatui = { version = "0.28.0", default-features = false, features = ["crossterm"] }
