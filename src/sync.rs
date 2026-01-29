@@ -11,7 +11,7 @@ use tokio::sync::mpsc;
 use crate::{
     app::LoadType,
     client::{Client, ClientConfig, DownloadClientResult},
-    config::CONFIG_FILE,
+    config::{ExcludeConfig, CONFIG_FILE},
     results::Results,
     source::{Item, SourceConfig, SourceExtraConfig, SourceResponse, SourceResults, Sources},
     theme::{Theme, THEMES_PATH},
@@ -30,6 +30,7 @@ pub trait EventSync {
         config: SourceConfig,
         theme: Theme,
         extra: SourceExtraConfig,
+        exclude: Option<ExcludeConfig>,
     ) -> impl std::future::Future<Output = ()> + std::marker::Send + 'static;
     fn download(
         self,
@@ -99,14 +100,22 @@ impl EventSync for AppSync {
         config: SourceConfig,
         theme: Theme,
         extra: SourceExtraConfig,
+        exclude: Option<ExcludeConfig>,
     ) {
         let res = src.load(load_type, &client, &search, &config, &extra).await;
         let fmt = match res {
-            Ok(SourceResponse::Results(res)) => Ok(SourceResults::Results(Results::new(
-                search.clone(),
-                res.clone(),
-                src.format_table(&res.items, &search, &config, &theme),
-            ))),
+            Ok(SourceResponse::Results(mut res)) => {
+                if let Some(exc) = exclude {
+                    let filter = exc.into_filter();
+                    res.items.retain(|item| !filter.should_exclude(&item.title));
+                    res.total_results = res.items.len();
+                }
+                Ok(SourceResults::Results(Results::new(
+                    search.clone(),
+                    res.clone(),
+                    src.format_table(&res.items, &search, &config, &theme),
+                )))
+            }
             #[cfg(feature = "captcha")]
             Ok(SourceResponse::Captcha(c)) => Ok(SourceResults::Captcha(c)),
             Err(e) => Err(e),

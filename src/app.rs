@@ -408,6 +408,7 @@ impl App {
                     ctx.config.sources.clone(),
                     ctx.theme.clone(),
                     ctx.config.clone().into(),
+                    ctx.config.exclude.clone(),
                 ));
                 last_load_abort = Some(task.abort_handle());
                 continue; // Redraw
