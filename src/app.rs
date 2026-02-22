@@ -13,9 +13,11 @@ use crate::{
     components::{home::HomeComponent, popups::PopupsComponent, Component},
     config::Config,
     keys::{self, KeyCombo, KeyComboStatus},
-    sources::{Source, SourceTaskRunner},
+    sources::{Source, SourceTaskRunner, SourceTaskState},
     tui::{Tui, TuiEvent},
 };
+
+const TICK_RATE: f64 = 45.0;
 
 pub struct Context {
     pub config: Config,
@@ -23,6 +25,7 @@ pub struct Context {
     pub input_mode: InputMode,
     pub keycombo: KeyCombo,
     pub source: Source,
+    pub source_state: SourceTaskState,
     pub render_delta_time: f64,
     pub show_debug: bool,
 }
@@ -35,7 +38,8 @@ impl Context {
             input_mode: Mode::default().default_input_mode(),
             keycombo: KeyCombo::default(),
             source: Source::Nyaa,
-            render_delta_time: 1.0 / 60.0,
+            source_state: SourceTaskState::default(),
+            render_delta_time: 1.0 / TICK_RATE,
             show_debug: false,
         })
     }
@@ -51,6 +55,7 @@ pub enum Mode {
     Home,
     DownloadClient,
     Categories,
+    Filters,
     #[assoc(input_modes = vec![InputMode::Insert], default_input_mode = InputMode::Insert)]
     Search,
 }
@@ -92,8 +97,8 @@ impl App {
 
     pub async fn run(&mut self) -> Result<()> {
         let mut tui = Tui::new()?
-            .tick_rate(60.0) // TODO: Eliminate or gather from config
-            .frame_rate(60.0); // TODO: Eliminate or gather from config
+            .tick_rate(TICK_RATE) // TODO: Eliminate or gather from config
+            .frame_rate(TICK_RATE); // TODO: Eliminate or gather from config
         tui.enter()?;
 
         // Initialize components
@@ -236,6 +241,7 @@ impl App {
                     _ => {}
                 },
                 AppAction::Search(query) => self.search(query.clone()),
+                AppAction::SetFilter(filter) => self.ctx.source_state.filter_idx = *filter,
                 AppAction::Resume => self.should_suspend = false,
                 AppAction::Render => {
                     let elapsed = self.last_render_time.elapsed().as_secs_f64();
@@ -256,9 +262,10 @@ impl App {
     fn search(&self, query: String) {
         let action_tx = self.action_tx.clone();
         let source = self.ctx.source;
+        let state = self.ctx.source_state;
 
         tokio::spawn(async move {
-            let results = SourceTaskRunner::run(source, query).await;
+            let results = SourceTaskRunner::run(source, query, state).await;
             let _ = action_tx.send(AppAction::Task(TaskAction::SourceResults(results)));
         });
     }

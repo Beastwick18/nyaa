@@ -8,22 +8,23 @@ use ratatui::{
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ResultItem {
-    id: String,                   // Unique ID
-    name: String,                 // Name of torrent on website
-    magnet_link: Option<String>,  // Torrents magnet link
-    torrent_link: Option<String>, // Link to torrent file
-    post_link: Option<String>,    // Link to forum post
-    filename: String,             // Filename on website
-    seeders: u16,                 // Number of seeders
-    leechers: u16,                // Number of leechers
-    downloads: u16,               // Total downloads
-    size: usize,                  // Size of file in bytes
+    pub id: String,                   // Unique ID
+    pub name: String,                 // Name of torrent on website
+    pub magnet_link: Option<String>,  // Torrents magnet link
+    pub torrent_link: Option<String>, // Link to torrent file
+    pub post_link: Option<String>,    // Link to forum post
+    pub filename: String,             // Filename on website
+    pub seeders: u16,                 // Number of seeders
+    pub leechers: u16,                // Number of leechers
+    pub downloads: u16,               // Total downloads
+    pub size: usize,                  // Size of file in bytes
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Results {
     pub items: Vec<ResultItem>,
     pub table: ResultTable,
+    pub total_items: Option<usize>,
 }
 
 #[derive(Clone, Default, Deref, DerefMut)]
@@ -65,6 +66,11 @@ impl ResultCell {
         A: Into<Alignment>,
     {
         self.alignment = alignment.into();
+        self
+    }
+
+    pub fn center(mut self) -> Self {
+        self.alignment = Alignment::Center;
         self
     }
 
@@ -260,6 +266,15 @@ impl<S: Into<String>> From<S> for ResultCell {
         Self {
             content: s.into(),
             ..Default::default()
+        }
+    }
+}
+
+impl From<ResultCell> for ResultHeaderCell {
+    fn from(s: ResultCell) -> Self {
+        Self {
+            cell: s,
+            status: None,
         }
     }
 }

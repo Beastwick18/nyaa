@@ -11,7 +11,7 @@ use crate::{
     action::AppAction,
     animate::{AnimationState, Direction, Smoothing},
     app::{Context, Mode},
-    components::popups::debug::Debug,
+    components::popups::{debug::Debug, filter::Filters},
     widgets::dim::Dim,
 };
 
@@ -45,6 +45,7 @@ impl PopupsComponent {
                 DownloadClientComponent::boxed(),
             ),
             (PopupMode::Some(Mode::Categories), Categories::boxed()),
+            (PopupMode::Some(Mode::Filters), Filters::boxed()),
             (PopupMode::All, WhichKeyComponent::boxed()),
             (PopupMode::All, Debug::boxed()),
         ];

@@ -1,18 +1,19 @@
 use color_eyre::Result;
+use crossterm::event::{MouseButton, MouseEvent, MouseEventKind};
 use ratatui::{
+    Frame,
     layout::{Margin, Rect},
     style::{Color, Style, Stylize as _},
     symbols::line,
     text::Line,
     widgets::{Block, Borders, Paragraph, Table, TableState},
-    Frame,
 };
 use tokio::sync::mpsc::UnboundedSender;
 
 use crate::{
     action::{AppAction, TaskAction, UserAction},
     animate::AnimationState,
-    app::Context,
+    app::{Context, Mode},
     color::ColorRgbExt,
     keys,
     result::Results,
@@ -28,6 +29,7 @@ pub struct ResultsComponent {
     current_keycombo: String,
     current_keycombo_color: Color,
     loading_state: AnimationState,
+    last_area: Rect,
 }
 
 impl ResultsComponent {
@@ -38,6 +40,7 @@ impl ResultsComponent {
             current_keycombo: String::new(),
             current_keycombo_color: Color::Rgb(255, 255, 255),
             loading_state: AnimationState::new(1.0).playing(true).forwards(),
+            last_area: Rect::default(),
         }
     }
 }
@@ -58,34 +61,6 @@ impl Component for ResultsComponent {
             self.loading_state.goto_start();
         }
 
-        match action {
-            AppAction::Task(TaskAction::SourceResults(results)) => match results {
-                Ok(results) => {
-                    self.results.clone_from(results);
-                    self.table_state.select_first();
-                }
-                Err(msg) => {
-                    action_tx.send(AppAction::Error(msg.to_string()))?;
-                }
-            },
-            AppAction::Search(_) => {
-                self.results = None;
-            }
-            AppAction::UserAction(UserAction::Up) => {
-                self.table_state.select_previous();
-            }
-            AppAction::UserAction(UserAction::Down) => {
-                self.table_state.select_next();
-            }
-            AppAction::UserAction(UserAction::Top) => {
-                self.table_state.select_first();
-            }
-            AppAction::UserAction(UserAction::Bottom) => {
-                self.table_state.select_last();
-            }
-            _ => {}
-        }
-
         let mult = ctx
             .keycombo
             .repeat()
@@ -103,6 +78,55 @@ impl Component for ResultsComponent {
         self.current_keycombo = format!("{mult}{keycombo}");
         self.current_keycombo_color = keycombo_color;
 
+        match action {
+            AppAction::Task(TaskAction::SourceResults(results)) => match results {
+                Ok(results) => {
+                    self.results.clone_from(results);
+                    self.table_state.select_first();
+                }
+                Err(msg) => {
+                    action_tx.send(AppAction::Error(msg.to_string()))?;
+                }
+            },
+            AppAction::Search(_) => self.results = None,
+            _ => {}
+        }
+
+        if ctx.mode != Mode::Home {
+            return Ok(());
+        }
+
+        match action {
+            AppAction::UserAction(UserAction::Up) => self.table_state.select_previous(),
+            AppAction::UserAction(UserAction::Down) => self.table_state.select_next(),
+            AppAction::UserAction(UserAction::Top) => self.table_state.select_first(),
+            AppAction::UserAction(UserAction::Bottom) => self.table_state.select_last(),
+            _ => {}
+        }
+
+        Ok(())
+    }
+
+    fn on_mouse(
+        &mut self,
+        ctx: &Context,
+        event: &MouseEvent,
+        _action_tx: UnboundedSender<AppAction>,
+    ) -> Result<()> {
+        if ctx.mode != Mode::Home {
+            return Ok(());
+        }
+
+        if event.kind == MouseEventKind::Down(MouseButton::Left) {
+            let pos = (event.column, event.row).into();
+
+            if self.last_area.inner(Margin::new(1, 1)).contains(pos) {
+                let area = self.last_area;
+                let rel_y = event.row - area.y - 1;
+                self.table_state
+                    .select(Some(rel_y as usize + self.table_state.offset()));
+            }
+        }
         Ok(())
     }
 
@@ -158,6 +182,7 @@ impl Component for ResultsComponent {
             frame.render_widget(paragraph, center);
         }
 
+        self.last_area = area;
         Ok(())
     }
 }

@@ -1,7 +1,7 @@
 use ratatui::{
     buffer::Buffer,
     layout::{Position, Rect},
-    widgets::Widget,
+    widgets::{StatefulWidget, Widget},
 };
 use serde::{Deserialize, Serialize};
 
@@ -100,7 +100,19 @@ impl GrowthAnimation {
 }
 
 impl Animation for GrowthAnimation {
-    fn render_widget<W: Widget>(&self, widget: W, rect: Rect, buf: &mut Buffer) {
+    fn render_widget<W: Widget>(&self, _widget: W, _rect: Rect, _buf: &mut Buffer) {
+        if self.state.time <= 0.0 {
+            return;
+        }
+    }
+
+    fn render_stateful_widget<W: StatefulWidget>(
+        &self,
+        _widget: W,
+        _rect: Rect,
+        _buf: &mut Buffer,
+        _state: &mut W::State,
+    ) {
         if self.state.time <= 0.0 {
             return;
         }

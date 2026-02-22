@@ -1,10 +1,10 @@
 use color_eyre::Result;
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
+    Frame,
     layout::{Position, Rect},
     style::{Color, Stylize},
     widgets::{Block, Borders, Paragraph, Widget},
-    Frame,
 };
 use tokio::sync::mpsc::UnboundedSender;
 use tui_input::{Input, InputRequest};
@@ -42,7 +42,7 @@ impl Component for SearchComponent {
                 self.input.handle(*insert_action);
             }
             AppAction::UserAction(UserAction::Submit) => {
-                action_tx.send(AppAction::Search(self.input.to_string()));
+                action_tx.send(AppAction::Search(self.input.to_string()))?;
             }
             _ => {}
         }
@@ -53,10 +53,9 @@ impl Component for SearchComponent {
         if ctx.mode == Mode::Search
             && ctx.input_mode == InputMode::Insert
             && ctx.keycombo.status() == &KeyComboStatus::Inserted
+            && let KeyCode::Char(c) = key.code
         {
-            if let KeyCode::Char(c) = key.code {
-                self.input.handle(InputRequest::InsertChar(c));
-            }
+            self.input.handle(InputRequest::InsertChar(c));
         }
         Ok(())
     }

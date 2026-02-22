@@ -1,4 +1,8 @@
-use ratatui::{buffer::Buffer, layout::Rect, widgets::Widget};
+use ratatui::{
+    buffer::Buffer,
+    layout::Rect,
+    widgets::{StatefulWidget, Widget},
+};
 
 pub mod growth;
 pub mod transition;
@@ -6,41 +10,97 @@ pub mod translate;
 
 pub trait Animation {
     fn render_widget<W: Widget>(&self, widget: W, rect: Rect, buf: &mut Buffer);
+
+    fn render_stateful_widget<W: StatefulWidget>(
+        &self,
+        widget: W,
+        rect: Rect,
+        buf: &mut Buffer,
+        state: &mut W::State,
+    );
 }
 
 #[derive(Clone, Copy)]
 pub struct MaskedRenderer;
 
-impl MaskedRenderer {
-    pub fn render(widget: impl Widget, area: FloatRect, _mask: Option<&[bool]>, buf: &mut Buffer) {
-        let (widget_x, screen_x) = if area.x < 0.0 {
-            (
-                0,
-                (area.x.floor() as i32 + buf.area.x as i32).unsigned_abs() as u16,
-            )
-        } else {
-            (area.x as u16, 0)
-        };
+pub fn get_widget_area(area: FloatRect, buf: &Buffer) -> Option<(u16, u16, Rect)> {
+    let (widget_x, screen_x) = if area.x < 0.0 {
+        (
+            0,
+            (area.x.floor() as i32 + buf.area.x as i32).unsigned_abs() as u16,
+        )
+    } else {
+        (area.x as u16, 0)
+    };
 
-        let (widget_y, screen_y) = if area.y < 0.0 {
-            (
-                0,
-                (area.y.floor() as i32 + buf.area.y as i32).unsigned_abs() as u16,
-            )
-        } else {
-            (area.y as u16, 0)
-        };
+    let (widget_y, screen_y) = if area.y < 0.0 {
+        (
+            0,
+            (area.y.floor() as i32 + buf.area.y as i32).unsigned_abs() as u16,
+        )
+    } else {
+        (area.y as u16, 0)
+    };
 
-        let widget_area = Rect::new(widget_x, widget_y, area.width as u16, area.height as u16);
-        let screen_area = Rect::new(screen_x, screen_y, buf.area.width, buf.area.height);
+    let widget_area = Rect::new(widget_x, widget_y, area.width as u16, area.height as u16);
+    let screen_area = Rect::new(screen_x, screen_y, buf.area.width, buf.area.height);
 
-        let widget_screen_intersection = widget_area.intersection(screen_area);
+    let widget_screen_intersection = widget_area.intersection(screen_area);
 
-        // if not visible
-        if widget_screen_intersection.is_empty() {
-            return;
+    // if not visible
+    if widget_screen_intersection.is_empty() {
+        return None;
+    }
+
+    Some((screen_x, screen_y, widget_area))
+}
+
+pub fn copy_to_buf(source: &Buffer, dest: &mut Buffer, offset_x: u16, offset_y: u16) {
+    let mut dest_offset = dest.area;
+    dest_offset.x = offset_x;
+    dest_offset.y = offset_y;
+    let intersection_area = source.area.intersection(dest_offset);
+
+    // skip some cells based on intersection
+    let size = source.area.area() as usize;
+    for i in 0..size {
+        let (x, y) = source.pos_of(i);
+        if !intersection_area.contains((x, y).into()) {
+            continue;
         }
 
+        let (x, y) = (x - offset_x, y - offset_y);
+        let k = ((y.saturating_sub(dest.area.y)) * dest.area.width + x.saturating_sub(dest.area.x))
+            as usize;
+        dest.content[k] = source.content[i].clone();
+    }
+
+    dest.area.x = 0;
+    dest.area.y = 0;
+}
+
+impl MaskedRenderer {
+    pub fn render_stateful<W>(
+        widget: W,
+        area: FloatRect,
+        _mask: Option<&[bool]>,
+        buf: &mut Buffer,
+        state: &mut W::State,
+    ) where
+        W: StatefulWidget,
+    {
+        let Some((screen_x, screen_y, widget_area)) = get_widget_area(area, buf) else {
+            return;
+        };
+
+        // Render entire widget to empty buffer
+        let mut widget_buffer = Buffer::empty(widget_area);
+        widget.render(widget_area, &mut widget_buffer, state);
+
+        copy_to_buf(&widget_buffer, buf, screen_x, screen_y);
+    }
+
+    pub fn render(widget: impl Widget, area: FloatRect, _mask: Option<&[bool]>, buf: &mut Buffer) {
         // w.xy < 0 ? w.xy = (0,0) & screen.xy = w.xy.abs()
         // +---+--------------+
         // | w |              |
@@ -57,27 +117,15 @@ impl MaskedRenderer {
         // |              |
         // +--------------+
         //
+        let Some((screen_x, screen_y, widget_area)) = get_widget_area(area, buf) else {
+            return;
+        };
 
         // Render entire widget to empty buffer
         let mut widget_buffer = Buffer::empty(widget_area);
         widget.render(widget_area, &mut widget_buffer);
 
-        // skip some cells based on intersection
-        let size = widget_buffer.area.area() as usize;
-        for i in 0..size {
-            let (x, y) = widget_buffer.pos_of(i);
-            if !widget_screen_intersection.contains((x, y).into()) {
-                continue;
-            }
-
-            let (x, y) = (x - screen_x, y - screen_y);
-            let k = ((y.saturating_sub(buf.area.y)) * buf.area.width + x.saturating_sub(buf.area.x))
-                as usize;
-            buf.content[k] = widget_buffer.content[i].clone();
-        }
-
-        buf.area.x = 0;
-        buf.area.y = 0;
+        copy_to_buf(&widget_buffer, buf, screen_x, screen_y);
     }
 }
 

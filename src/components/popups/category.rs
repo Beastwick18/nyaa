@@ -15,20 +15,11 @@ use crate::{
     color::ColorRgbExt,
     components,
     mouse::drag::{DragEdge, DragExt, DragState},
+    sources::SourceTask,
     widgets::clear_overlap::ClearOverlap,
 };
 
 use super::Component;
-
-// TODO: To be defined by each source
-pub enum CategoriesTest {
-    AllCategories,
-    Anime,
-    Music,
-    Games,
-}
-
-pub enum AnimeCategory {}
 
 pub struct Categories {
     translate_state: AnimationState,
@@ -81,9 +72,8 @@ impl Component for Categories {
         Ok(())
     }
 
-    fn render(&mut self, _ctx: &Context, frame: &mut Frame, area: Rect) -> Result<()> {
+    fn render(&mut self, ctx: &Context, frame: &mut Frame, area: Rect) -> Result<()> {
         let center = components::centered_rect(area, 50, 10).drag(&self.drag, area);
-        // let center = self.drag.drag(center, area);
 
         let mut center_bottom = components::centered_rect(area, 50, 10);
         center_bottom.y = area.height + area.y;
@@ -91,7 +81,7 @@ impl Component for Categories {
         ClearOverlap.render(center, frame.buffer_mut());
 
         let bg = Block::new().bg(Color::Rgb(0, 36, 54)).borders(Borders::ALL);
-        let p = Paragraph::new("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.")
+        let p = Paragraph::new(ctx.source.source().filters().join(","))
             .fg(Color::White.to_rgb())
             .block(bg)
             .wrap(Wrap { trim: false });

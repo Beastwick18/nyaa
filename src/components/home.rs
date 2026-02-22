@@ -1,10 +1,10 @@
 use color_eyre::Result;
 use crossterm::event::KeyEvent;
 use ratatui::{
+    Frame,
     layout::{Constraint, Layout, Rect},
     style::{Color, Stylize},
     widgets::{Block, Widget as _},
-    Frame,
 };
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -13,7 +13,7 @@ use crate::{
     app::{Context, Mode},
 };
 
-use super::{results::ResultsComponent, search::SearchComponent, Component};
+use super::{Component, results::ResultsComponent, search::SearchComponent};
 
 pub struct HomeComponent {
     search_size: u16,
@@ -52,6 +52,17 @@ impl Component for HomeComponent {
             self.search.on_key(ctx, key)?;
         }
         self.results.on_key(ctx, key)?;
+        Ok(())
+    }
+
+    fn on_mouse(
+        &mut self,
+        ctx: &Context,
+        mouse: &crossterm::event::MouseEvent,
+        action_tx: UnboundedSender<AppAction>,
+    ) -> Result<()> {
+        self.results.on_mouse(ctx, mouse, action_tx)?;
+
         Ok(())
     }
 

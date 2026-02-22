@@ -13,6 +13,7 @@
 "G" = "Bottom"
 "<C-z>" = "Suspend"
 "<f3>" = "ToggleDebug"
+"<enter>" = "Submit"
 
 # Default keybinds for all insert modes, can be overridden
 [Insert._]
@@ -43,6 +44,7 @@
 "test--" = { "NotifyInfo" = "Test info" }
 "x" = { "NotifyWarning" = "Test warning" }
 "c" = { "SetMode" = "Categories" }
+"f" = { "SetMode" = "Filters" }
 "/" = { "SetMode" = "Search" }
 
 [Normal.DownloadClient]
@@ -50,3 +52,6 @@
 
 [Normal.Categories]
 "c" = { "SetMode" = "Home" }
+
+[Normal.Filters]
+"f" = { "SetMode" = "Home" }

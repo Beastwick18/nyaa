@@ -14,7 +14,6 @@ pub mod popups;
 pub mod results;
 pub mod search;
 
-// TODO: simple component for now
 pub trait Component {
     fn update(
         &mut self,

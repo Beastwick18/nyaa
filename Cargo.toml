@@ -1,8 +1,8 @@
 [package]
 name = "nyaa"
 version = "0.9.1"
-edition = "2021"
-rust-version = "1.75"
+edition = "2024"
+rust-version = "1.90"
 categories = ["command-line-utilities"]
 keywords = ["tui", "cli", "nyaa", "torrent", "download"]
 description = "A tui tool for browsing and downloading torrents from nyaa.si"
@@ -66,6 +66,8 @@ rand = { version = "0.9.0", features = ["small_rng"] }
 enum-assoc = "1.2.4"
 tui-input = { version = "0.12.1", features = ["serde"] }
 bitflags = "2.10.0"
+strum_macros = "0.27.2"
+async-trait = "0.1.89"
 
 # [lib]
 # name = "nyaa"

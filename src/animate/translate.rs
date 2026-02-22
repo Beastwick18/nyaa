@@ -67,4 +67,14 @@ impl Animation for Translate<'_> {
     fn render_widget<W: Widget>(&self, widget: W, _area: Rect, buf: &mut Buffer) {
         MaskedRenderer::render(widget, self.area(), None, buf);
     }
+
+    fn render_stateful_widget<W: ratatui::prelude::StatefulWidget>(
+        &self,
+        widget: W,
+        _area: Rect,
+        buf: &mut Buffer,
+        state: &mut W::State,
+    ) {
+        MaskedRenderer::render_stateful(widget, self.area(), None, buf, state);
+    }
 }

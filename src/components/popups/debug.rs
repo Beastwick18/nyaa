@@ -1,17 +1,17 @@
 use color_eyre::Result;
 use crossterm::event::{MouseButton, MouseEvent, MouseEventKind};
 use ratatui::{
+    Frame,
     layout::Rect,
     style::{Color, Stylize as _},
     widgets::{Block, Borders, Clear, Paragraph, Widget as _},
-    Frame,
 };
 use tokio::sync::mpsc::UnboundedSender;
 
 use crate::{
     action::AppAction,
     app::Context,
-    keys::{self, key_event_to_string, KeyComboStatus},
+    keys::{self, KeyComboStatus, key_event_to_string},
     mouse::drag::{DragExt, DragState},
     widgets::clear_overlap::ClearOverlap,
 };
@@ -89,14 +89,13 @@ impl Component for Debug {
 
         self.drag.on_mouse(event);
 
-        if let MouseEventKind::Down(MouseButton::Right) = event.kind {
-            if self
+        if let MouseEventKind::Down(MouseButton::Right) = event.kind
+            && self
                 .drag
                 .last_area()
                 .contains((event.column, event.row).into())
-            {
-                self.drag.reset();
-            }
+        {
+            self.drag.reset();
         }
 
         Ok(())
