@@ -45,6 +45,8 @@
 "x" = { "NotifyWarning" = "Test warning" }
 "c" = { "SetMode" = "Categories" }
 "f" = { "SetMode" = "Filters" }
+"s" = [{ "SetMode" = "Sorts" }, "Left"]
+"S" = [{ "SetMode" = "Sorts" }, "Right"]
 "/" = { "SetMode" = "Search" }
 
 [Normal.DownloadClient]
@@ -55,3 +57,6 @@
 
 [Normal.Filters]
 "f" = { "SetMode" = "Home" }
+
+[Normal.Sorts]
+"s" = { "SetMode" = "Home" }

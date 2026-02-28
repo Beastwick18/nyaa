@@ -1,3 +1,5 @@
+use std::ops::Add;
+
 use color_eyre::Result;
 use crossterm::event::{MouseButton, MouseEvent, MouseEventKind};
 use ratatui::{
@@ -39,7 +41,10 @@ impl ResultsComponent {
             table_state: TableState::default(),
             current_keycombo: String::new(),
             current_keycombo_color: Color::Rgb(255, 255, 255),
-            loading_state: AnimationState::new(1.0).playing(true).forwards(),
+            loading_state: AnimationState::new(1.0)
+                .playing(true)
+                .forwards()
+                .repeating(true),
             last_area: Rect::default(),
         }
     }
@@ -88,7 +93,7 @@ impl Component for ResultsComponent {
                     action_tx.send(AppAction::Error(msg.to_string()))?;
                 }
             },
-            AppAction::Search(_) => self.results = None,
+            AppAction::Search => self.results = None,
             _ => {}
         }
 
@@ -111,29 +116,59 @@ impl Component for ResultsComponent {
         &mut self,
         ctx: &Context,
         event: &MouseEvent,
-        _action_tx: UnboundedSender<AppAction>,
+        action_tx: UnboundedSender<AppAction>,
     ) -> Result<()> {
-        if ctx.mode != Mode::Home {
-            return Ok(());
-        }
+        if self.last_area.contains((event.column, event.row).into()) {
+            match event.kind {
+                MouseEventKind::Down(MouseButton::Left)
+                | MouseEventKind::Drag(MouseButton::Left) => {
+                    if ctx.mode == Mode::Search {
+                        action_tx.send(AppAction::UserAction(UserAction::SetMode(Mode::Home)))?;
+                    }
 
-        if event.kind == MouseEventKind::Down(MouseButton::Left) {
-            let pos = (event.column, event.row).into();
+                    let pos = (event.column, event.row).into();
 
-            if self.last_area.inner(Margin::new(1, 1)).contains(pos) {
-                let area = self.last_area;
-                let rel_y = event.row - area.y - 1;
-                self.table_state
-                    .select(Some(rel_y as usize + self.table_state.offset()));
+                    if self.last_area.inner(Margin::new(1, 1)).contains(pos)
+                        && matches!(ctx.mode, Mode::Home | Mode::Search)
+                    {
+                        let area = self.last_area;
+                        let rel_y = event.row - area.y - 1;
+                        self.table_state
+                            .select(Some(rel_y as usize + self.table_state.offset()));
+                    }
+                }
+                MouseEventKind::ScrollDown => {
+                    *self.table_state.offset_mut() += 1;
+                    self.table_state.select(
+                        self.table_state
+                            .offset()
+                            .max(self.table_state.selected().unwrap_or_default())
+                            .into(),
+                    );
+                }
+                MouseEventKind::ScrollUp => {
+                    *self.table_state.offset_mut() = self.table_state.offset().saturating_sub(1);
+                    self.table_state.select(
+                        self.table_state
+                            .offset()
+                            .add(self.last_area.height.saturating_sub(2) as usize)
+                            .min(self.table_state.selected().unwrap_or_default())
+                            .into(),
+                    );
+                }
+                _ => {}
             }
         }
         Ok(())
     }
 
     fn render(&mut self, ctx: &Context, frame: &mut Frame, area: Rect) -> Result<()> {
-        let mut block = Block::new()
-            .fg(Color::Rgb(255, 255, 255))
-            .borders(Borders::ALL);
+        let bg = match ctx.mode {
+            Mode::Home => Color::Cyan,
+            _ => Color::White,
+        }
+        .to_rgb();
+        let mut block = Block::new().fg(bg).borders(Borders::ALL);
         let vr = line::NORMAL.vertical_right;
         let vl = line::NORMAL.vertical_left;
         if !self.current_keycombo.is_empty() {
@@ -141,20 +176,17 @@ impl Component for ResultsComponent {
                 .current_keycombo
                 .as_str()
                 .fg(self.current_keycombo_color);
-            let keycombo = Line::from_iter([
-                format!("{vl} ").fg(Color::Rgb(255, 255, 255)),
-                combo,
-                format!(" {vr}").fg(Color::Rgb(255, 255, 255)),
-            ]);
+            let keycombo =
+                Line::from_iter([format!("{vl} ").fg(bg), combo, format!(" {vr}").fg(bg)]);
             block = block.title_bottom(keycombo.right_aligned())
         };
 
         let mode = Line::from_iter([
-            format!("{vl} ").fg(Color::Rgb(255, 255, 255)),
+            format!("{vl} ").fg(bg),
             ctx.input_mode.to_string().fg(Color::Cyan.to_rgb()),
             ".".to_string().fg(Color::White.to_rgb()),
             ctx.mode.to_string().fg(Color::Cyan.to_rgb()),
-            format!(" {vr}").fg(Color::Rgb(255, 255, 255)),
+            format!(" {vr}").fg(bg),
         ]);
         block = block.title_bottom(mode);
 
@@ -177,7 +209,7 @@ impl Component for ResultsComponent {
                 .floor() as usize;
             let loading_char = LOADING_CHARS[loading_frame.min(LOADING_CHARS.len() - 1)];
             let text = format!("{loading_char} Loading...");
-            let paragraph = Paragraph::new(text.as_str());
+            let paragraph = Paragraph::new(text.as_str().fg(Color::White.to_rgb()));
             let center = super::centered_rect(area, text.len() as u16, 1);
             frame.render_widget(paragraph, center);
         }

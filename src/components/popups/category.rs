@@ -1,16 +1,16 @@
 use color_eyre::Result;
 use crossterm::event::MouseEvent;
 use ratatui::{
+    Frame,
     layout::Rect,
     style::{Color, Stylize as _},
     widgets::{Block, Borders, Paragraph, Widget as _, Wrap},
-    Frame,
 };
 use tokio::sync::mpsc::UnboundedSender;
 
 use crate::{
     action::AppAction,
-    animate::{translate::Translate, Animation, AnimationState, Direction, Smoothing},
+    animate::{Animation, AnimationState, Direction, Smoothing, translate::Translate},
     app::{Context, Mode},
     color::ColorRgbExt,
     components,
@@ -78,8 +78,6 @@ impl Component for Categories {
         let mut center_bottom = components::centered_rect(area, 50, 10);
         center_bottom.y = area.height + area.y;
 
-        ClearOverlap.render(center, frame.buffer_mut());
-
         let bg = Block::new().bg(Color::Rgb(0, 36, 54)).borders(Borders::ALL);
         let p = Paragraph::new(ctx.source.source().filters().join(","))
             .fg(Color::White.to_rgb())
@@ -87,7 +85,9 @@ impl Component for Categories {
             .wrap(Wrap { trim: false });
 
         let translate = Translate::new(&self.translate_state, center_bottom.into(), center.into());
-        self.drag.set_last_area(translate.area().into());
+        let translate_area = Into::<Rect>::into(translate.area()).intersection(area);
+        self.drag.set_last_area(translate_area);
+        ClearOverlap.render(translate_area, frame.buffer_mut());
         translate.render_widget(p, area, frame.buffer_mut());
 
         Ok(())

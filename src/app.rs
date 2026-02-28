@@ -10,7 +10,7 @@ use tokio::sync::mpsc;
 use crate::{
     action::{AppAction, TaskAction, UserAction},
     cli::Args,
-    components::{home::HomeComponent, popups::PopupsComponent, Component},
+    components::{Component, home::HomeComponent, popups::PopupsComponent},
     config::Config,
     keys::{self, KeyCombo, KeyComboStatus},
     sources::{Source, SourceTaskRunner, SourceTaskState},
@@ -56,6 +56,7 @@ pub enum Mode {
     DownloadClient,
     Categories,
     Filters,
+    Sorts,
     #[assoc(input_modes = vec![InputMode::Insert], default_input_mode = InputMode::Insert)]
     Search,
 }
@@ -104,7 +105,7 @@ impl App {
         // Initialize components
 
         let action_tx = self.action_tx.clone();
-        self.search(String::new());
+        self.search(); // Empty search to get initial results
         loop {
             self.handle_events(&mut tui).await?;
             self.handle_actions(&mut tui)?;
@@ -213,7 +214,7 @@ impl App {
         }
 
         for component in self.components.iter_mut() {
-            component.on_key(&self.ctx, &key)?;
+            component.on_key(&self.ctx, &key, action_tx.clone())?;
         }
         Ok(())
     }
@@ -240,8 +241,13 @@ impl App {
                     }
                     _ => {}
                 },
-                AppAction::Search(query) => self.search(query.clone()),
+                AppAction::Search => self.search(),
+                AppAction::SetSearch(search) => self.ctx.source_state.search.clone_from(search),
                 AppAction::SetFilter(filter) => self.ctx.source_state.filter_idx = *filter,
+                AppAction::SetSort(sort, dir) => {
+                    self.ctx.source_state.sort_dir = *dir;
+                    self.ctx.source_state.sort_idx = *sort;
+                }
                 AppAction::Resume => self.should_suspend = false,
                 AppAction::Render => {
                     let elapsed = self.last_render_time.elapsed().as_secs_f64();
@@ -259,13 +265,13 @@ impl App {
         Ok(())
     }
 
-    fn search(&self, query: String) {
+    fn search(&self) {
         let action_tx = self.action_tx.clone();
         let source = self.ctx.source;
-        let state = self.ctx.source_state;
+        let state = self.ctx.source_state.clone();
 
         tokio::spawn(async move {
-            let results = SourceTaskRunner::run(source, query, state).await;
+            let results = SourceTaskRunner::run(source, state).await;
             let _ = action_tx.send(AppAction::Task(TaskAction::SourceResults(results)));
         });
     }

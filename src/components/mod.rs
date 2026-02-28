@@ -1,9 +1,9 @@
 use color_eyre::Result;
 use crossterm::event::{KeyEvent, MouseEvent};
 use ratatui::{
+    Frame,
     layout::{Constraint, Flex, Layout, Rect},
     widgets::Borders,
-    Frame,
 };
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -21,7 +21,12 @@ pub trait Component {
         action: &AppAction,
         action_tx: UnboundedSender<AppAction>,
     ) -> Result<()>;
-    fn on_key(&mut self, _ctx: &Context, _key: &KeyEvent) -> Result<()> {
+    fn on_key(
+        &mut self,
+        _ctx: &Context,
+        _key: &KeyEvent,
+        _action_tx: UnboundedSender<AppAction>,
+    ) -> Result<()> {
         Ok(())
     }
     fn on_mouse(

@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use derive_more::{Deref, DerefMut};
 use ratatui::{
     layout::{Alignment, Constraint},
@@ -45,10 +47,10 @@ pub struct ResultCell {
 impl ResultCell {
     pub fn new<S>(content: S) -> Self
     where
-        S: Into<String>,
+        S: Display,
     {
         Self {
-            content: content.into(),
+            content: content.to_string(),
             ..Default::default()
         }
     }
@@ -80,6 +82,10 @@ impl ResultCell {
     {
         self.alignment = alignment.into();
     }
+
+    pub fn into_header(self) -> ResultHeaderCell {
+        self.into()
+    }
 }
 
 impl<'a> Stylize<'a, ResultCell> for ResultCell {
@@ -105,6 +111,13 @@ impl<'a> Stylize<'a, ResultCell> for ResultCell {
 
     fn remove_modifier(mut self, modifier: ratatui::prelude::Modifier) -> Self {
         self.style = self.style.remove_modifier(modifier);
+        self
+    }
+}
+
+impl ResultHeaderCell {
+    pub fn set_status(mut self, ch: Option<char>) -> Self {
+        self.status = ch;
         self
     }
 }
@@ -261,10 +274,10 @@ where
     }
 }
 
-impl<S: Into<String>> From<S> for ResultCell {
+impl<S: Display> From<S> for ResultCell {
     fn from(s: S) -> Self {
         Self {
-            content: s.into(),
+            content: s.to_string(),
             ..Default::default()
         }
     }
@@ -275,15 +288,6 @@ impl From<ResultCell> for ResultHeaderCell {
         Self {
             cell: s,
             status: None,
-        }
-    }
-}
-
-impl<S: Into<ResultCell>> From<(S, Option<char>)> for ResultHeaderCell {
-    fn from(s: (S, Option<char>)) -> Self {
-        Self {
-            cell: s.0.into(),
-            status: s.1,
         }
     }
 }

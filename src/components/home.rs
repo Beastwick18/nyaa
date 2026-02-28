@@ -47,11 +47,16 @@ impl Component for HomeComponent {
         Ok(())
     }
 
-    fn on_key(&mut self, ctx: &Context, key: &KeyEvent) -> Result<()> {
+    fn on_key(
+        &mut self,
+        ctx: &Context,
+        key: &KeyEvent,
+        action_tx: UnboundedSender<AppAction>,
+    ) -> Result<()> {
         if ctx.mode == Mode::Search {
-            self.search.on_key(ctx, key)?;
+            self.search.on_key(ctx, key, action_tx.clone())?;
         }
-        self.results.on_key(ctx, key)?;
+        self.results.on_key(ctx, key, action_tx)?;
         Ok(())
     }
 
@@ -61,7 +66,8 @@ impl Component for HomeComponent {
         mouse: &crossterm::event::MouseEvent,
         action_tx: UnboundedSender<AppAction>,
     ) -> Result<()> {
-        self.results.on_mouse(ctx, mouse, action_tx)?;
+        self.results.on_mouse(ctx, mouse, action_tx.clone())?;
+        self.search.on_mouse(ctx, mouse, action_tx)?;
 
         Ok(())
     }

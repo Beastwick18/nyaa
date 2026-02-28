@@ -1,15 +1,15 @@
 use color_eyre::Result;
 use ratatui::{
+    Frame,
     layout::Rect,
     style::{Color, Stylize as _},
     widgets::{Block, Paragraph, Widget as _, Wrap},
-    Frame,
 };
 use tokio::sync::mpsc::UnboundedSender;
 
 use crate::{
     action::AppAction,
-    animate::{translate::Translate, Animation, AnimationState, Direction, Smoothing},
+    animate::{Animation, AnimationState, Direction, Smoothing, translate::Translate},
     app::{Context, Mode},
     components,
     widgets::clear_overlap::ClearOverlap,
@@ -57,19 +57,16 @@ impl Component for DownloadClientComponent {
         let mut center_bottom = components::centered_rect(area, 100, 10);
         center_bottom.y = area.height + area.y;
 
-        ClearOverlap.render(center, frame.buffer_mut());
-
         let bg = Block::new().bg(Color::Rgb(0, 36, 54));
         let p = Paragraph::new("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.")
             .fg(Color::White)
             .block(bg)
             .wrap(Wrap { trim: false });
 
-        Translate::new(&self.translate_state, center_bottom.into(), center.into()).render_widget(
-            p,
-            area,
-            frame.buffer_mut(),
-        );
+        let translate = Translate::new(&self.translate_state, center_bottom.into(), center.into());
+        let translate_area = Into::<Rect>::into(translate.area()).intersection(area);
+        ClearOverlap.render(translate_area, frame.buffer_mut());
+        translate.render_widget(p, area, frame.buffer_mut());
 
         Ok(())
     }

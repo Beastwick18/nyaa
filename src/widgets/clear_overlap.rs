@@ -1,4 +1,8 @@
-use ratatui::{buffer::Buffer, layout::Rect, widgets::Widget};
+use ratatui::{
+    buffer::Buffer,
+    layout::Rect,
+    widgets::{Clear, Widget},
+};
 use unicode_width::UnicodeWidthStr as _;
 
 /// Performs the same function as ratatui::widgets::Clear, except it removes wide
@@ -22,5 +26,6 @@ impl Widget for ClearOverlap {
                 }
             }
         }
+        Clear.render(area, buf);
     }
 }

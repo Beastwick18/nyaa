@@ -4,6 +4,7 @@ use ratatui::{
     Frame,
     layout::Rect,
     style::{Color, Stylize as _},
+    text::{Line, Text},
     widgets::{Block, Borders, Clear, Paragraph, Widget as _},
 };
 use tokio::sync::mpsc::UnboundedSender;
@@ -110,24 +111,39 @@ impl Component for Debug {
             Rect::new(area.right().saturating_sub(51), area.y + 1, 50, 25).drag(&self.drag, area);
 
         ClearOverlap.render(center, frame.buffer_mut());
-        Clear.render(center, frame.buffer_mut());
 
         let bg = Block::new()
             .bg(Color::Rgb(0, 36, 54))
             .borders(Borders::ALL)
             .title("Debug");
-        let x = self
+        let combo = self
             .current_keycombo
             .clone()
             .fg(self.current_keycombo_color);
-        let p = Paragraph::new(format!(
-            "rdt: {}\n\nMode: {}\n\nPossible Actions:\n{}\n\nKeycombo: {}",
-            ctx.render_delta_time,
-            ctx.mode,
-            self.possible_actions.join("\n"),
-            x
-        ))
-        .block(bg);
+        let lines: [Line<'_>; _] = [
+            "Render".underlined().into(),
+            format!("rdt: {}", ctx.render_delta_time).into(),
+            "".into(),
+            "Context".underlined().into(),
+            format!("Mode: {}", ctx.mode).into(),
+            format!("Input mode: {}", ctx.input_mode).into(),
+            "".into(),
+            "Query".underlined().into(),
+            format!("Filter: {}", ctx.source_state.filter_idx).into(),
+            "".into(),
+            "Keycombo".underlined().into(),
+            format!("Current combo: {combo}").into(),
+        ];
+        let p = Paragraph::new(Text::from_iter(lines)).block(bg);
+        // let p = Paragraph::new(format!(
+        //     "rdt: {}\n\nMode: {}\n\nPossible Actions:\n{}\n\nKeycombo: {}\n\nFilter: {}",
+        //     ctx.render_delta_time,
+        //     ctx.mode,
+        //     self.possible_actions.join("\n"),
+        //     x,
+        //     ctx.source_state.filter_idx,
+        // ))
+        // .block(bg);
 
         self.drag.set_last_area(center);
         frame.render_widget(p, center);

@@ -244,6 +244,7 @@ pub struct AnimationState {
     speed: f64,
     direction: Direction,
     playing: bool,
+    repeating: bool,
     smoothing: Smoothing,
 }
 
@@ -254,6 +255,7 @@ impl AnimationState {
             speed: speed.abs(),
             direction: Direction::default(),
             playing: false,
+            repeating: false,
             smoothing: Smoothing::default(),
         }
     }
@@ -263,15 +265,15 @@ impl AnimationState {
     }
 
     pub fn then<'a>(&'a mut self, other: &'a mut Self) -> &'a mut Self {
-        if self.is_done() {
-            other
-        } else {
-            self
-        }
+        if self.is_done() { other } else { self }
     }
 
     pub fn playing(mut self, playing: bool) -> Self {
         self.playing = playing;
+        self
+    }
+    pub fn repeating(mut self, repeating: bool) -> Self {
+        self.repeating = repeating;
         self
     }
     pub fn forwards(mut self) -> Self {
@@ -349,5 +351,9 @@ impl AnimationState {
         self.time += delta_time * self.speed * Into::<f64>::into(self.direction);
 
         self.time = self.time.clamp(0.0, 1.0);
+
+        if self.repeating && self.time >= 1.0 {
+            self.time = 0.0;
+        }
     }
 }

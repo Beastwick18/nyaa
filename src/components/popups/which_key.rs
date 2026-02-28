@@ -1,21 +1,22 @@
 use color_eyre::Result;
 use crossterm::event::KeyEvent;
 use ratatui::{
+    Frame,
     layout::{Alignment, Rect},
     style::{Color, Stylize as _},
     symbols,
     text::Line,
     widgets::{Block, Clear, List, Widget as _},
-    Frame,
 };
 use tokio::sync::mpsc::UnboundedSender;
 
 use crate::{
     action::{AppAction, UserAction},
-    animate::{translate::Translate, AnimationState, Direction, Smoothing},
+    animate::{AnimationState, Direction, Smoothing, translate::Translate},
     app::Context,
+    color::ColorRgbExt,
     components::borders,
-    keys::{key_event_to_string, KeyComboStatus},
+    keys::{KeyComboStatus, key_event_to_string},
     widgets::clear_overlap::ClearOverlap,
 };
 
@@ -94,7 +95,12 @@ impl Component for WhichKeyComponent {
         Ok(())
     }
 
-    fn on_key(&mut self, ctx: &Context, _key: &KeyEvent) -> Result<()> {
+    fn on_key(
+        &mut self,
+        ctx: &Context,
+        _key: &KeyEvent,
+        _action_tx: UnboundedSender<AppAction>,
+    ) -> Result<()> {
         if ctx.keycombo.status() != &KeyComboStatus::Pending {
             self.wait_state.goto_start();
             self.wait_state.set_direction(Direction::Backwards);
@@ -127,7 +133,6 @@ impl Component for WhichKeyComponent {
 
         let area = t_area.intersection(area);
         ClearOverlap.render(area, frame.buffer_mut());
-        Clear.render(area, frame.buffer_mut());
 
         let block = Block::new()
             .bg(Color::Rgb(34, 36, 54))
@@ -137,13 +142,13 @@ impl Component for WhichKeyComponent {
             .title_alignment(Alignment::Center);
         let list = List::new(self.possible_actions.iter().map(|(rest, action)| {
             Line::from_iter([
-                self.current_keycombo.as_str().fg(Color::Cyan),
+                self.current_keycombo.as_str().fg(Color::Cyan.to_rgb()),
                 rest.into(),
-                " ➜ ".fg(Color::DarkGray),
-                action.as_str().fg(Color::White),
+                " ➜ ".fg(Color::DarkGray.to_rgb()),
+                action.as_str().fg(Color::White.to_rgb()),
             ])
         }))
-        .fg(Color::White)
+        .fg(Color::White.to_rgb())
         .block(block);
         list.render(area, frame.buffer_mut());
 

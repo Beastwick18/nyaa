@@ -3,7 +3,7 @@ use color_eyre::Result;
 use crossterm::event::KeyEvent;
 use download_client::DownloadClientComponent;
 use notification::NotificationContainer;
-use ratatui::{layout::Rect, widgets::Widget, Frame};
+use ratatui::{Frame, layout::Rect, widgets::Widget};
 use tokio::sync::mpsc::UnboundedSender;
 use which_key::WhichKeyComponent;
 
@@ -11,7 +11,7 @@ use crate::{
     action::AppAction,
     animate::{AnimationState, Direction, Smoothing},
     app::{Context, Mode},
-    components::popups::{debug::Debug, filter::Filters},
+    components::popups::{debug::Debug, filter::Filters, sort::Sorts},
     widgets::dim::Dim,
 };
 
@@ -22,6 +22,7 @@ pub mod debug;
 pub mod download_client;
 pub mod filter;
 pub mod notification;
+pub mod sort;
 pub mod which_key;
 
 #[derive(PartialEq, Eq, Hash, Copy, Clone)]
@@ -46,6 +47,7 @@ impl PopupsComponent {
             ),
             (PopupMode::Some(Mode::Categories), Categories::boxed()),
             (PopupMode::Some(Mode::Filters), Filters::boxed()),
+            (PopupMode::Some(Mode::Sorts), Sorts::boxed()),
             (PopupMode::All, WhichKeyComponent::boxed()),
             (PopupMode::All, Debug::boxed()),
         ];
@@ -87,9 +89,14 @@ impl Component for PopupsComponent {
         Ok(())
     }
 
-    fn on_key(&mut self, ctx: &Context, key: &KeyEvent) -> Result<()> {
+    fn on_key(
+        &mut self,
+        ctx: &Context,
+        key: &KeyEvent,
+        action_tx: UnboundedSender<AppAction>,
+    ) -> Result<()> {
         for (_, popup) in self.popups.iter_mut() {
-            popup.on_key(ctx, key)?;
+            popup.on_key(ctx, key, action_tx.clone())?;
         }
         Ok(())
     }

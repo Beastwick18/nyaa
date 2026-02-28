@@ -63,7 +63,7 @@ tracing = "0.1.40"
 tracing-error = "0.2.0"
 derive_more = { version = "1.0.0", features = ["deref", "deref_mut"] }
 rand = { version = "0.9.0", features = ["small_rng"] }
-enum-assoc = "1.2.4"
+enum-assoc = "1.3.0"
 tui-input = { version = "0.12.1", features = ["serde"] }
 bitflags = "2.10.0"
 strum_macros = "0.27.2"
