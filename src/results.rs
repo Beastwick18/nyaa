@@ -12,14 +12,39 @@ pub struct Results {
     pub search: SearchQuery,
     pub response: ResultResponse,
     pub table: ResultTable,
+    /// Unfiltered items, kept for the "show excluded" toggle.
+    pub all_items: Vec<Item>,
+    /// Rows parallel to `all_items`.
+    pub all_rows: Vec<ResultRow>,
 }
 
 impl Results {
     pub fn new(search: SearchQuery, response: ResultResponse, table: ResultTable) -> Self {
+        // When no exclude filter is active, all_items == response.items.
+        let all_items = response.items.clone();
+        let all_rows = table.rows.clone();
         Self {
             search,
             response,
             table,
+            all_items,
+            all_rows,
+        }
+    }
+
+    pub fn new_with_all(
+        search: SearchQuery,
+        response: ResultResponse,
+        table: ResultTable,
+        all_items: Vec<Item>,
+        all_rows: Vec<ResultRow>,
+    ) -> Self {
+        Self {
+            search,
+            response,
+            table,
+            all_items,
+            all_rows,
         }
     }
 }

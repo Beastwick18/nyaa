@@ -171,6 +171,7 @@ impl EventSync for TestSync {
         _config: nyaa::source::SourceConfig,
         _theme: nyaa::theme::Theme,
         _extra: SourceExtraConfig,
+        _exclude: Option<nyaa::config::ExcludeConfig>,
     ) {
     }
 
