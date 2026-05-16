@@ -39,35 +39,44 @@ impl ResultsWidget {
     }
 
     fn try_select_add(&self, ctx: &mut Context, start: usize, stop: usize) {
-        if let Some(item) = ctx.results.response.items.get(start..=stop) {
-            item.iter().for_each(|i| {
-                if !ctx.batch.iter().any(|s| s.id == i.id) {
-                    ctx.batch.push(i.to_owned());
-                }
-            });
-        }
+        let items: Vec<_> = ctx
+            .visible_items()
+            .get(start..=stop)
+            .map(|s| s.to_vec())
+            .unwrap_or_default();
+        items.iter().for_each(|i| {
+            if !ctx.batch.iter().any(|s| s.id == i.id) {
+                ctx.batch.push(i.to_owned());
+            }
+        });
     }
 
     fn try_select_remove(&self, ctx: &mut Context, start: usize, stop: usize) {
-        if let Some(item) = ctx.results.response.items.get(start..=stop) {
-            item.iter().for_each(|i| {
-                if let Some(p) = ctx.batch.iter().position(|s| s.id == i.id) {
-                    ctx.batch.remove(p);
-                }
-            })
-        }
+        let items: Vec<_> = ctx
+            .visible_items()
+            .get(start..=stop)
+            .map(|s| s.to_vec())
+            .unwrap_or_default();
+        items.iter().for_each(|i| {
+            if let Some(p) = ctx.batch.iter().position(|s| s.id == i.id) {
+                ctx.batch.remove(p);
+            }
+        });
     }
 
     fn try_select_toggle(&self, ctx: &mut Context, start: usize, stop: usize) {
-        if let Some(item) = ctx.results.response.items.get(start..=stop) {
-            item.iter().for_each(|i| {
-                if let Some(p) = ctx.batch.iter().position(|s| s.id == i.id) {
-                    ctx.batch.remove(p);
-                } else {
-                    ctx.batch.push(i.to_owned());
-                }
-            })
-        }
+        let items: Vec<_> = ctx
+            .visible_items()
+            .get(start..=stop)
+            .map(|s| s.to_vec())
+            .unwrap_or_default();
+        items.iter().for_each(|i| {
+            if let Some(p) = ctx.batch.iter().position(|s| s.id == i.id) {
+                ctx.batch.remove(p);
+            } else {
+                ctx.batch.push(i.to_owned());
+            }
+        });
     }
 
     fn select_on_move(
@@ -128,14 +137,7 @@ impl super::Widget for ResultsWidget {
                 Paragraph::new(message).render(load_area, buf);
                 vec![]
             }
-            _ => ctx
-                .results
-                .table
-                .rows
-                .clone()
-                .into_iter()
-                .map(Into::into)
-                .collect(),
+            _ => ctx.visible_rows().iter().cloned().map(Into::into).collect(),
         };
 
         let sb = super::scrollbar(ctx, ScrollbarOrientation::VerticalRight).begin_symbol(Some(""));
@@ -154,11 +156,13 @@ impl super::Widget for ResultsWidget {
             ctx.src.to_string()
         );
 
+        let excluded_indicator = if ctx.show_excluded { " [show all]" } else { "" };
         let title = title!(
-            "Results {}-{} ({} total): Page {}/{}",
+            "Results {}-{} ({} total){}: Page {}/{}",
             first_item + 1,
             num_items + first_item,
             ctx.results.response.total_results,
+            excluded_indicator,
             ctx.page,
             ctx.results.response.last_page,
         );
@@ -200,9 +204,9 @@ impl super::Widget for ResultsWidget {
 
         if area.height >= 3 {
             let offset = self.table.state.offset();
-            let start = offset.min(ctx.results.response.items.len());
-            let end = (offset + visible_height).min(ctx.results.response.items.len());
-            if let Some(visible_items) = ctx.results.response.items.get(start..end) {
+            let start = offset.min(ctx.visible_items().len());
+            let end = (offset + visible_height).min(ctx.visible_items().len());
+            if let Some(visible_items) = ctx.visible_items().get(start..end) {
                 let selected_ids: Vec<String> =
                     ctx.batch.clone().into_iter().map(|i| i.id).collect();
                 let vert_left = ctx.theme.border.to_border_set().vertical_left;
@@ -259,6 +263,11 @@ impl super::Widget for ResultsWidget {
                         ctx.mode = Mode::Loading(LoadType::Searching);
                     }
                 }
+                (Char('.'), &KeyModifiers::NONE) => {
+                    ctx.show_excluded = !ctx.show_excluded;
+                    self.table.select(0);
+                    *self.table.state.offset_mut() = 0;
+                }
                 (Char('n') | Char('l') | Right, &KeyModifiers::NONE) => {
                     if ctx.page < ctx.results.response.last_page {
                         ctx.page += 1;
@@ -273,27 +282,27 @@ impl super::Widget for ResultsWidget {
                 }
                 (Char('j') | KeyCode::Down, &KeyModifiers::NONE) => {
                     let prev = self.table.selected().unwrap_or(0);
-                    let selected = self.table.next(ctx.results.response.items.len(), 1);
+                    let selected = self.table.next(ctx.visible_items().len(), 1);
                     self.select_on_move(ctx, prev, selected, selected);
                 }
                 (Char('k') | KeyCode::Up, &KeyModifiers::NONE) => {
                     let prev = self.table.selected().unwrap_or(0);
-                    let selected = self.table.next(ctx.results.response.items.len(), -1);
+                    let selected = self.table.next(ctx.visible_items().len(), -1);
                     self.select_on_move(ctx, prev, selected, selected);
                 }
                 (Char('J'), &KeyModifiers::SHIFT) => {
                     let prev = self.table.selected().unwrap_or(0);
-                    let selected = self.table.next(ctx.results.response.items.len(), 4);
+                    let selected = self.table.next(ctx.visible_items().len(), 4);
                     self.select_on_move(ctx, prev, prev + 1, selected);
                 }
                 (Char('K'), &KeyModifiers::SHIFT) => {
                     let prev = self.table.selected().unwrap_or(0);
-                    let selected = self.table.next(ctx.results.response.items.len(), -4);
+                    let selected = self.table.next(ctx.visible_items().len(), -4);
                     self.select_on_move(ctx, prev, selected, prev.saturating_sub(1));
                 }
                 (Char('G'), &KeyModifiers::SHIFT) => {
                     let prev = self.table.selected().unwrap_or(0);
-                    let selected = ctx.results.response.items.len().saturating_sub(1);
+                    let selected = ctx.visible_items().len().saturating_sub(1);
                     self.table.select(selected);
 
                     if self.visual_mode != VisualMode::None && prev != selected {
@@ -333,9 +342,7 @@ impl super::Widget for ResultsWidget {
                 }
                 (Char('o'), &KeyModifiers::NONE) => {
                     let link = ctx
-                        .results
-                        .response
-                        .items
+                        .visible_items()
                         .get(self.table.state.selected().unwrap_or(0))
                         .map(|item| item.post_link.clone())
                         .unwrap_or("https://nyaa.si".to_owned());
@@ -385,7 +392,7 @@ impl super::Widget for ResultsWidget {
                 }
                 (Char(' '), &KeyModifiers::NONE) => {
                     if let Some(sel) = self.table.state.selected() {
-                        if let Some(item) = &mut ctx.results.response.items.get_mut(sel) {
+                        if let Some(item) = ctx.visible_items().get(sel).cloned() {
                             if let Some(p) = ctx.batch.iter().position(|s| s.id == item.id) {
                                 ctx.batch.remove(p);
                             } else {
@@ -426,6 +433,7 @@ impl super::Widget for ResultsWidget {
             ("N, L", "Last Page"),
             ("P, H", "First Page"),
             ("r", "Reload"),
+            (".", "Toggle show/hide excluded items"),
             ("o", "Open in browser"),
             (
                 "yt, ym, yp, yi, yn",

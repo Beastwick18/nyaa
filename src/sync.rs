@@ -12,7 +12,7 @@ use crate::{
     app::LoadType,
     client::{Client, ClientConfig, DownloadClientResult},
     config::{ExcludeConfig, CONFIG_FILE},
-    results::Results,
+    results::{ResultTable, Results},
     source::{Item, SourceConfig, SourceExtraConfig, SourceResponse, SourceResults, Sources},
     theme::{Theme, THEMES_PATH},
     widget::sort::SelectedSort,
@@ -105,16 +105,39 @@ impl EventSync for AppSync {
         let res = src.load(load_type, &client, &search, &config, &extra).await;
         let fmt = match res {
             Ok(SourceResponse::Results(mut res)) => {
+                // Format rows for every item once, then split into all vs. visible.
+                let all_table = src.format_table(&res.items, &search, &config, &theme);
+                let all_items = res.items.clone();
+                let all_rows = all_table.rows.clone();
+
                 if let Some(exc) = exclude {
                     let filter = exc.into_filter();
-                    res.items.retain(|item| !filter.should_exclude(&item.title));
+                    // Filter items and their corresponding rows together.
+                    let (items, rows): (Vec<_>, Vec<_>) = all_items
+                        .iter()
+                        .cloned()
+                        .zip(all_rows.iter().cloned())
+                        .filter(|(item, _)| !filter.should_exclude(&item.title))
+                        .unzip();
+                    res.items = items;
                     res.total_results = res.items.len();
+                    let visible_table = ResultTable {
+                        headers: all_table.headers,
+                        rows,
+                        binding: all_table.binding,
+                    };
+                    Ok(SourceResults::Results(Results::new_with_all(
+                        search,
+                        res,
+                        visible_table,
+                        all_items,
+                        all_rows,
+                    )))
+                } else {
+                    Ok(SourceResults::Results(Results::new_with_all(
+                        search, res, all_table, all_items, all_rows,
+                    )))
                 }
-                Ok(SourceResults::Results(Results::new(
-                    search.clone(),
-                    res.clone(),
-                    src.format_table(&res.items, &search, &config, &theme),
-                )))
             }
             #[cfg(feature = "captcha")]
             Ok(SourceResponse::Captcha(c)) => Ok(SourceResults::Captcha(c)),

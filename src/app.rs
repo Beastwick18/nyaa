@@ -22,7 +22,7 @@ use crate::{
     client::{Client, DownloadClientResult, SingleDownloadResult},
     clip::ClipboardManager,
     config::{Config, ConfigManager},
-    results::Results,
+    results::{ResultRow, Results},
     source::{
         nyaa_html::NyaaHtmlSource, request_client, Item, Source, SourceInfo, SourceResults, Sources,
     },
@@ -174,6 +174,7 @@ pub struct Context {
     pub batch: Vec<Item>,
     pub last_key: String,
     pub results: Results,
+    pub show_excluded: bool,
     pub deltatime: f64,
     //errors: Vec<String>,
     notifications: Vec<Notification>,
@@ -218,6 +219,24 @@ impl Context {
     pub fn quit(&mut self) {
         self.should_quit = true;
     }
+
+    /// Items currently visible in the results table (respects the show_excluded toggle).
+    pub fn visible_items(&self) -> &[Item] {
+        if self.show_excluded {
+            &self.results.all_items
+        } else {
+            &self.results.response.items
+        }
+    }
+
+    /// Pre-rendered rows currently visible (parallel to `visible_items`).
+    pub fn visible_rows(&self) -> &[ResultRow] {
+        if self.show_excluded {
+            &self.results.all_rows
+        } else {
+            &self.results.table.rows
+        }
+    }
 }
 
 impl Default for Context {
@@ -237,6 +256,7 @@ impl Default for Context {
             batch: vec![],
             last_key: "".to_owned(),
             results: Results::default(),
+            show_excluded: false,
             deltatime: 0.0,
             failed_config_load: true,
             should_quit: false,
@@ -347,7 +367,7 @@ impl App {
                             .results
                             .table
                             .selected()
-                            .and_then(|i| ctx.results.response.items.get(i))
+                            .and_then(|i| ctx.visible_items().get(i))
                         {
                             tokio::spawn(sync.clone().download(
                                 tx_dl.clone(),
@@ -650,7 +670,7 @@ impl App {
             ['y', c] => {
                 let s = self.widgets.results.table.state.selected().unwrap_or(0);
                 ctx.mode = Mode::Normal;
-                match ctx.results.response.items.get(s).cloned() {
+                match ctx.visible_items().get(s).cloned() {
                     Some(item) => {
                         let link = match c {
                             't' => item.torrent_link,
@@ -687,5 +707,115 @@ impl App {
             }
             _ => ctx.mode = Mode::KeyCombo(keys),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        config::ExcludeConfig,
+        results::{ResultResponse, ResultRow, ResultTable, Results},
+        source::Item,
+        sync::SearchQuery,
+    };
+
+    use super::Context;
+
+    fn make_item(title: &str) -> Item {
+        Item {
+            title: title.to_owned(),
+            ..Default::default()
+        }
+    }
+
+    fn make_results(titles: &[&str], excluded_titles: &[&str]) -> Results {
+        let all_items: Vec<Item> = titles.iter().map(|t| make_item(t)).collect();
+        let visible_items: Vec<Item> = all_items
+            .iter()
+            .filter(|i| !excluded_titles.contains(&i.title.as_str()))
+            .cloned()
+            .collect();
+
+        let make_row = |_: &Item| ResultRow::default();
+        let all_rows: Vec<ResultRow> = all_items.iter().map(make_row).collect();
+        let visible_rows: Vec<ResultRow> = visible_items.iter().map(make_row).collect();
+
+        Results::new_with_all(
+            SearchQuery::default(),
+            ResultResponse {
+                items: visible_items,
+                last_page: 1,
+                total_results: titles.len() - excluded_titles.len(),
+            },
+            ResultTable {
+                headers: ResultRow::default(),
+                rows: visible_rows,
+                binding: vec![],
+            },
+            all_items,
+            all_rows,
+        )
+    }
+
+    #[test]
+    fn visible_items_default_hides_excluded() {
+        let mut ctx = Context::default();
+        ctx.results = make_results(&["Bleach - 01", "One Piece - 01"], &["Bleach - 01"]);
+
+        assert_eq!(ctx.show_excluded, false);
+        let items = ctx.visible_items();
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].title, "One Piece - 01");
+    }
+
+    #[test]
+    fn visible_items_show_excluded_reveals_all() {
+        let mut ctx = Context::default();
+        ctx.results = make_results(&["Bleach - 01", "One Piece - 01"], &["Bleach - 01"]);
+        ctx.show_excluded = true;
+
+        let items = ctx.visible_items();
+        assert_eq!(items.len(), 2);
+    }
+
+    #[test]
+    fn visible_rows_matches_visible_items_length() {
+        let mut ctx = Context::default();
+        ctx.results = make_results(&["A", "B", "C"], &["B"]);
+
+        assert_eq!(ctx.visible_items().len(), ctx.visible_rows().len());
+        ctx.show_excluded = true;
+        assert_eq!(ctx.visible_items().len(), ctx.visible_rows().len());
+    }
+
+    #[test]
+    fn toggle_changes_visible_count() {
+        let mut ctx = Context::default();
+        ctx.results = make_results(&["A", "B", "C"], &["A", "C"]);
+
+        assert_eq!(ctx.visible_items().len(), 1); // only B
+        ctx.show_excluded = true;
+        assert_eq!(ctx.visible_items().len(), 3); // all
+        ctx.show_excluded = false;
+        assert_eq!(ctx.visible_items().len(), 1); // back to filtered
+    }
+
+    #[test]
+    fn no_exclude_config_shows_all_items() {
+        let mut ctx = Context::default();
+        // When there is no exclude config, all_items == response.items.
+        ctx.results = make_results(&["X", "Y", "Z"], &[]);
+
+        assert_eq!(ctx.visible_items().len(), 3);
+        ctx.show_excluded = true;
+        assert_eq!(ctx.visible_items().len(), 3);
+    }
+
+    #[test]
+    fn exclude_config_default_is_not_active() {
+        // ExcludeConfig with empty lists should never exclude anything.
+        let cfg = ExcludeConfig::default();
+        let filter = cfg.into_filter();
+        assert!(!filter.should_exclude("Bleach - 01 [1080p]"));
     }
 }
